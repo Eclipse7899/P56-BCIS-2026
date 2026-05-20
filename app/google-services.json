@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "537728162174",
+    "project_id": "disaster-monitoring-2d085",
+    "storage_bucket": "disaster-monitoring-2d085.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537728162174:android:059f1d70ee426ee7a4bb2f",
+        "android_client_info": {
+          "package_name": "com.p56.safereach"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD08TcOmoSczzsSzFzwHYjNgp59YDX6A5U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
