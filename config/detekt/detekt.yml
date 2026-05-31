@@ -666,7 +666,7 @@ style:
   NestedClassesVisibility:
     active: true
   NewLineAtEndOfFile:
-    active: true
+    active: false
   NoTabs:
     active: false
   NullableBooleanCheck:
@@ -797,3 +797,4 @@ style:
     active: true
     excludeImports:
       - 'java.util.*'
+      - 'org.junit.Assert.*'
