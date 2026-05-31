@@ -2,5 +2,11 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.compose) apply false
-    alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.detekt)
+}
+
+detekt {
+    toolVersion = libs.versions.detekt.get()
+    config.setFrom(file("config/detekt/detekt.yml"))
+    buildUponDefaultConfig = true
 }
