@@ -1,3 +1,5 @@
+@file:Suppress("MagicNumber")
+
 package com.p56.safereach.ui.theme
 
 import androidx.compose.ui.graphics.Color
