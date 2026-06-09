@@ -11,7 +11,7 @@ activityCompose = "1.13.0"
 kotlin = "2.4.0"
 kotlinSerialization = "2.4.0"
 kotlinMultiplatform = "2.4.0"
-kotlinSerializationProtobuf = "2.4.0"
+kotlinSerializationProtobuf = "1.11.0"
 composeBom = "2026.05.01"
 detekt = "1.23.8"
 google-services = "4.4.4"
@@ -34,7 +34,7 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material3-adaptive-navigation-suite = { group = "androidx.compose.material3", name = "material3-adaptive-navigation-suite" }
-kotlin-serialization-protobuf = { group = "org.jetbrains.kotlin.plugin.serialization", name = "kotlin-serialization-protobuf", version.ref = "kotlinSerializationProtobuf" }
+kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version.ref = "kotlinSerializationProtobuf" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
