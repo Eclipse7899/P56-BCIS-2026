@@ -90,6 +90,7 @@ class Advertiser(
             }
         }
 
+        currentCallback = callback
         advertiser.startAdvertisingSet(
             parameters,
             advertisingData,

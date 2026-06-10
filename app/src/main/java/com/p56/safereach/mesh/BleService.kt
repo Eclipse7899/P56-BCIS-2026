@@ -71,8 +71,14 @@ class BleService : Service() {
     @OptIn(ExperimentalSerializationApi::class)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_UPDATE_MESSAGE) {
-            val alert = intent.getStringExtra(EXTRA_DATA)
-                ?.let { ProtoBuf.decodeFromHexString<Alert>(it) }
+            val alert = intent.getStringExtra(EXTRA_DATA)?.let { encoded ->
+                try {
+                    ProtoBuf.decodeFromHexString<Alert>(encoded)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to decode EXTRA_DATA alert payload; ignoring", e)
+                    null
+                }
+            }
             if (alert == null) return START_STICKY
 
             if (!hasBlePermissions()) {
@@ -145,7 +151,7 @@ class BleService : Service() {
 
     companion object {
         private const val TAG = "BleService"
-        const val ACTION_UPDATE_MESSAGE = "com.example.p56_demo.mesh.ACTION_UPDATE_MESSAGE"
+        const val ACTION_UPDATE_MESSAGE = "com.p56.safereach.mesh.ACTION_UPDATE_MESSAGE"
         const val EXTRA_DATA = "extra_message"
         private const val NOTIFICATION_CHANNEL_ID = "ble_service"
         private const val NOTIFICATION_ID = 1001

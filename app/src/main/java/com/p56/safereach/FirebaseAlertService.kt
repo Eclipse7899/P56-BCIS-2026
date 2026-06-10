@@ -16,8 +16,12 @@ class FirebaseAlertService : FirebaseMessagingService() {
         RemoteMessage
     ) {
         super.onMessageReceived(remoteMessage)
-        remoteMessage.data["alert"]
-            ?.let { ProtoBuf.decodeFromHexString<Alert>(it) }
-            ?.let { AlertStateRepository.update(it) }
+        remoteMessage.data["alert"]?.let { encoded ->
+            try {
+                AlertStateRepository.update(ProtoBuf.decodeFromHexString<Alert>(encoded))
+            } catch (e: Exception) {
+                android.util.Log.w("FirebaseAlertService", "Failed to decode incoming alert", e)
+            }
+        }
     }
 }
