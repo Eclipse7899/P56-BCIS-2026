@@ -10,6 +10,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
+import com.p56.safereach.secondsToMillis
 import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -88,14 +89,20 @@ class Scanner(
 
             Log.i(
                 TAG,
-                "startScan: Starting BLE scan for ${if (durationSeconds > 0) "$durationSeconds seconds" else "indefinitely"}"
+                "startScan: Starting BLE scan for " +
+                        if (durationSeconds > 0)
+                            "$durationSeconds seconds"
+                        else
+                            "indefinitely"
             )
 
             val scanCallback = object : ScanCallback() {
                 override fun onScanResult(callbackType: Int, result: ScanResult) {
                     Log.d(
                         TAG,
-                        "scanCallback.onScanResult: Received scan result - device: ${result.device.address}, RSSI: ${result.rssi}, callbackType: $callbackType"
+                        "scanCallback.onScanResult: Received scan result - device: ${result.device.address}, " +
+                                "RSSI: ${result.rssi}, " +
+                                "callbackType: $callbackType"
                     )
                     if (!trySend(result).isSuccess) {
                         Log.w(
@@ -119,7 +126,7 @@ class Scanner(
                     scanCallback
                 )
                 Log.d(TAG, "startScan: BLE scan started successfully")
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
                 Log.e(TAG, "startScan: Exception when starting scan", e)
                 onClose()
                 close(e)
@@ -129,7 +136,7 @@ class Scanner(
             val timeoutJob = if (durationSeconds > 0) {
                 Log.d(TAG, "startScan: Setting up timeout for $durationSeconds seconds")
                 launch {
-                    delay(durationSeconds * 1000)
+                    delay(secondsToMillis(durationSeconds))
                     Log.i(
                         TAG,
                         "startScan: Timeout reached - stopping BLE scan"
@@ -147,12 +154,7 @@ class Scanner(
                 Log.d(TAG, "awaitClose: Cancelling timeout job if it exists")
                 timeoutJob?.cancel()
                 Log.d(TAG, "awaitClose: Stopping BLE scan callback")
-                try {
-                    bluetoothLeScanner.stopScan(scanCallback)
-                    Log.d(TAG, "awaitClose: BLE scan stopped successfully")
-                } catch (e: Exception) {
-                    Log.e(TAG, "awaitClose: Exception when stopping scan", e)
-                }
+                bluetoothLeScanner.stopScan(scanCallback)
                 Log.d(TAG, "awaitClose: Calling onClose release handler")
                 onClose()
                 Log.d(TAG, "awaitClose: Scan cleanup completed")

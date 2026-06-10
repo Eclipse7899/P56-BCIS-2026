@@ -30,8 +30,9 @@ class Advertiser(
     private fun <T> advertisingLock(
         block: () -> T
     ): T {
-        if (!advertisingMutex.tryLock()) {
-            throw IllegalStateException("Advertising already in progress")
+        check (advertisingMutex.tryLock()) {
+            Log.e(TAG, "advertisingLock: Failed to acquire lock - advertising already in progress")
+            "Advertising already in progress"
         }
         return try {
             block()
