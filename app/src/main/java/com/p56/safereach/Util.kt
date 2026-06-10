@@ -51,16 +51,15 @@ private fun <T> verify(signed: Signed<T>): Boolean {
     return true
 }
 
-fun <T> serialize(message: T): ByteArray {
-    val signedMessage = sign(message)
-    return ProtoBuf.encodeToByteArray(signedMessage)
+inline fun <reified T> serialize(message: T): ByteArray {
+    return ProtoBuf.encodeToByteArray(message)
 }
 
 inline fun <reified T> deserialize(data: ByteArray): T {
     return ProtoBuf.decodeFromByteArray<T>(data)
 }
 
-fun <T> prepareForTransmission(data: T): ByteArray {
+inline fun <reified T> prepareForTransmission(data: T): ByteArray {
     return serialize(data)
 }
 
