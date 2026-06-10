@@ -113,27 +113,37 @@ fun SafeReachApp() {
             when (currentDestination) {
                 AppDestinations.HOME -> Greeting(
                     name = "Android",
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .padding(16.dp)
                 )
 
                 AppDestinations.FAVORITES -> Greeting(
                     name = "Favorites",
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .padding(16.dp)
                 )
 
                 AppDestinations.PROFILE -> Greeting(
                     name = "Profile",
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier
+                        .padding(innerPadding)
+                        .padding(16.dp)
                 )
 
                 AppDestinations.DEBUG -> {
                     Column(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .padding(16.dp)
                     ) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        BleMessageEditor(onUpdateAlert = { alert ->
-                            AlertStateRepository.update(alert)
-                        })
+                        BleMessageEditor(
+                            onUpdateAlert = { alert ->
+                                AlertStateRepository.update(alert)
+                            }
+                        )
                     }
                 }
             }
@@ -148,7 +158,7 @@ enum class AppDestinations(
     HOME("Home", R.drawable.ic_home),
     FAVORITES("Favorites", R.drawable.ic_favorite),
     PROFILE("Profile", R.drawable.ic_account_box),
-    DEBUG("Debug", R.drawable.ic_account_box),
+    DEBUG("Debug", R.drawable.ic_debug),
 }
 
 @Composable
@@ -181,8 +191,7 @@ fun BleMessageEditor(
     var severityMenuExpanded by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
