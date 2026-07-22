@@ -1,9 +1,11 @@
 package com.p56.safereach
 
 import android.annotation.SuppressLint
+import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.protobuf.ProtoBuf
 
@@ -19,8 +21,10 @@ class FirebaseAlertService : FirebaseMessagingService() {
         remoteMessage.data["alert"]?.let { encoded ->
             try {
                 AlertStateRepository.update(ProtoBuf.decodeFromHexString<Alert>(encoded))
-            } catch (e: Exception) {
-                android.util.Log.w("FirebaseAlertService", "Failed to decode incoming alert", e)
+            } catch (e: SerializationException) {
+                Log.w("FirebaseAlertService", "Failed to decode incoming alert", e)
+            } catch (e: IllegalArgumentException) {
+                Log.w("FirebaseAlertService", "Failed to decode incoming alert - invalid hex string", e)
             }
         }
     }

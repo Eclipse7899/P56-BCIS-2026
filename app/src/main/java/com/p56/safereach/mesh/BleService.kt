@@ -8,12 +8,10 @@ import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
@@ -67,38 +65,30 @@ class BleService : Service() {
         }
     }
 
-    @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT])
+    @RequiresPermission(
+        allOf = [Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT]
+    )
     @OptIn(ExperimentalSerializationApi::class)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_UPDATE_MESSAGE) {
-            val alert = intent.getStringExtra(EXTRA_DATA)?.let { encoded ->
-                try {
-                    ProtoBuf.decodeFromHexString<Alert>(encoded)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to decode EXTRA_DATA alert payload; ignoring", e)
-                    null
-                }
-            }
-            if (alert == null) return START_STICKY
+        var shouldUpdate = false
 
-            if (!hasBlePermissions()) {
-                Log.w(TAG, "Ignoring ACTION_UPDATE_MESSAGE; missing runtime permissions")
-                return START_STICKY
-            }
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_ADVERTISE
-                ) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                Log.w(TAG, "Missing Bluetooth permissions for update; ignoring")
-                return START_STICKY
-            }
+        val alert = intent
+            ?.takeIf { it.action == ACTION_UPDATE_MESSAGE }
+            ?.getStringExtra(EXTRA_DATA)
+            ?.runCatching { ProtoBuf.decodeFromHexString<Alert>(this) }
+            ?.onFailure { Log.w(TAG, "Failed to decode EXTRA_DATA alert payload; ignoring", it) }
+            ?.getOrNull()
 
-            coordinator?.updateAlert(alert)
+        if (alert != null && hasBlePermissions()) {
+            shouldUpdate = true
+        } else if (alert != null) {
+            Log.w(TAG, "Ignoring ACTION_UPDATE_MESSAGE; missing runtime permissions")
         }
+
+        if (shouldUpdate) {
+            coordinator?.updateAlert(alert!!)
+        }
+
         return START_STICKY
     }
 

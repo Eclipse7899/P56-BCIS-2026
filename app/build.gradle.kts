@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.detekt)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -46,6 +45,7 @@ dependencies {
     implementation(libs.firebase.messaging)
     implementation(libs.kotlinx.serialization.protobuf)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.fragment)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)

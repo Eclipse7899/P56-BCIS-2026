@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val SCAN_RETRY_MS = 2000L
 
@@ -165,7 +166,7 @@ class BleCoordinator(
                     }
                 } catch (t: Throwable) {
                     Log.i(TAG, "Scan loop error; retrying", t)
-                    delay(SCAN_RETRY_MS)
+                    delay(SCAN_RETRY_MS.milliseconds)
                 }
             }
             Log.i(TAG, "Scan loop stopped")

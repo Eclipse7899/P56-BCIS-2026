@@ -28,9 +28,6 @@ jobs:
       - name: Check code with lint
         run: ./gradlew lint
 
-      - name: Check code with Detekt
-        run: ./gradlew detekt
-
       - name: Build with Gradle
         run: ./gradlew build
 

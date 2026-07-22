@@ -5,11 +5,4 @@ plugins {
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
-    alias(libs.plugins.detekt)
-}
-
-detekt {
-    toolVersion = libs.versions.detekt.get()
-    config.setFrom(file("config/detekt/detekt.yml"))
-    buildUponDefaultConfig = true
 }

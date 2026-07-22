@@ -18,26 +18,23 @@ class Advertiser(
 ) {
     private val advertisingMutex = Mutex()
 
-    private fun unlockAdvertisingIfHeld() {
-        if (advertisingMutex.isLocked) {
-            advertisingMutex.unlock()
-        }
-    }
-
     private var currentCallback: AdvertisingSetCallback? = null
 
     @Throws(IllegalStateException::class)
-    private fun <T> advertisingLock(
-        block: () -> T
-    ): T {
-        if (!advertisingMutex.tryLock()) {
+    private fun <T> advertisingLock(block: () -> T): T {
+        val acquired = advertisingMutex.tryLock()
+
+        if (!acquired) {
+            Log.e(TAG, "advertisingLock: Failed to acquire lock - advertising already in progress")
             throw IllegalStateException("Advertising already in progress")
         }
-        return try {
-            block()
+
+        try {
+            return block()
         } catch (t: Throwable) {
-            unlockAdvertisingIfHeld()
             throw t
+        } finally {
+            advertisingMutex.unlock()
         }
     }
 
@@ -46,7 +43,6 @@ class Advertiser(
         val advertiser = adapter.bluetoothLeAdvertiser
         if (advertiser == null) {
             Log.i(TAG, "BLE advertiser unavailable")
-            unlockAdvertisingIfHeld()
             return@advertisingLock
         }
 
@@ -67,7 +63,6 @@ class Advertiser(
             override fun onAdvertisingSetStopped(advertisingSet: AdvertisingSet?) {
                 Log.i(TAG, "Advertising stopped")
                 currentCallback = null
-                unlockAdvertisingIfHeld()
                 endedCallback()
             }
 
@@ -82,7 +77,6 @@ class Advertiser(
                         "Advertising failed to start with status $status and txPower $txPower"
                     )
                     currentCallback = null
-                    unlockAdvertisingIfHeld()
                     endedCallback()
                 } else {
                     Log.i(TAG, "Advertising set started successfully with txPower $txPower")
