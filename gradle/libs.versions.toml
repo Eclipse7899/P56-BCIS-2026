@@ -14,7 +14,6 @@ kotlinSerialization = "2.4.0"
 kotlinMultiplatform = "2.4.0"
 kotlinSerializationProtobuf = "1.11.0"
 composeBom = "2026.05.01"
-detekt = "1.23.8"
 google-services = "4.4.4"
 
 [libraries]
@@ -43,5 +42,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
