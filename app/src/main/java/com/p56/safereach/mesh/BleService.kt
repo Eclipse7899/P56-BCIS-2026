@@ -8,12 +8,10 @@ import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import androidx.annotation.RequiresPermission
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
