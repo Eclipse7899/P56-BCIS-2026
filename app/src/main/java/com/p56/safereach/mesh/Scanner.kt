@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlin.time.Duration.Companion.milliseconds
 
 class Scanner(
     bluetoothAdapter: BluetoothAdapter,
@@ -136,7 +137,7 @@ class Scanner(
             val timeoutJob = if (durationSeconds > 0) {
                 Log.d(TAG, "startScan: Setting up timeout for $durationSeconds seconds")
                 launch {
-                    delay(secondsToMillis(durationSeconds))
+                    delay(secondsToMillis(durationSeconds).milliseconds)
                     Log.i(
                         TAG,
                         "startScan: Timeout reached - stopping BLE scan"
