@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
-import com.p56.safereach.home.HomeScreen
+import com.p56.safereach.navigation.SafeReachApp
 
 @Composable
 fun MainScreen(context: Context) {
@@ -26,6 +26,6 @@ fun MainScreen(context: Context) {
     if (user == null) {
         SignIn(context = context)
     } else {
-        HomeScreen(name = user!!.displayName ?: "User")
+        SafeReachApp()
     }
 }
