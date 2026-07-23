@@ -476,8 +476,7 @@ Mock external services and data:
 fun authenticate_validCredentials_returnsToken() {
     // Mock Firebase authentication
     val mockFirebase = mockk<FirebaseAuth>()
-    every { mockFirebase.signInWithEmailAndPassword(any(), any()) } 
-        returns Tasks.forResult(mockk())
+    every { mockFirebase.signInWithEmailAndPassword(any(), any()) } returns Task.forResult(mockk<AuthResult>())
     
     val authService = AuthService(mockFirebase)
     val result = authService.authenticate("user@example.com", "password")
