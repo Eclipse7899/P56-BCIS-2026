@@ -20,6 +20,7 @@ import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.R
 import com.p56.safereach.debug.DebugScreen
 import com.p56.safereach.home.HomeScreen
+import com.p56.safereach.profile.ProfileScreen
 
 @PreviewScreenSizes
 @Composable
@@ -45,26 +46,31 @@ fun SafeReachApp() {
     ) {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             when (currentDestination) {
-                AppDestinations.HOME -> HomeScreen(
-                    name = "Android",
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(16.dp)
-                )
+                AppDestinations.HOME ->
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .padding(16.dp)
+                    ) {
+                        HomeScreen(name = "User")
+                    }
 
-                AppDestinations.FAVORITES -> HomeScreen(
-                    name = "Favorites",
+                AppDestinations.FAVORITES -> Column(
                     modifier = Modifier
                         .padding(innerPadding)
                         .padding(16.dp)
-                )
+                ) {
+                    Text(text = "Favorites Screen")
+                }
 
-                AppDestinations.PROFILE -> HomeScreen(
-                    name = "Profile",
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(16.dp)
-                )
+                AppDestinations.PROFILE ->
+                    Column(
+                        modifier = Modifier
+                            .padding(innerPadding)
+                            .padding(16.dp)
+                    ) {
+                        ProfileScreen()
+                    }
 
                 AppDestinations.DEBUG -> {
                     Column(
