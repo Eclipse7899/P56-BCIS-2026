@@ -105,7 +105,7 @@ fun SignIn(context: Context) {
                         painterResource(id = R.drawable.ic_visibility_off_24px)
 
                     val description = if (passwordVisible) "Hide password" else "Show password"
-                    IconButton(onClick = {passwordVisible = !passwordVisible}){
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(painter = painter, contentDescription = description)
                     }
                 }
@@ -131,14 +131,15 @@ fun SignIn(context: Context) {
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                Toast.makeText(context,
+                                Toast.makeText(
+                                    context,
                                     "Sign in failed",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         }
                 }
-            ){
+            ) {
                 AnimatedContent(targetState = loading) { isLoading ->
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -163,7 +164,7 @@ fun SignIn(context: Context) {
                 onClick = {
                 }
 
-            ){
+            ) {
                 Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
             }
         }

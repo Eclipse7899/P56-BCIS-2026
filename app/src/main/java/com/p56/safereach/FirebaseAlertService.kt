@@ -24,7 +24,11 @@ class FirebaseAlertService : FirebaseMessagingService() {
             } catch (e: SerializationException) {
                 Log.w("FirebaseAlertService", "Failed to decode incoming alert", e)
             } catch (e: IllegalArgumentException) {
-                Log.w("FirebaseAlertService", "Failed to decode incoming alert - invalid hex string", e)
+                Log.w(
+                    "FirebaseAlertService",
+                    "Failed to decode incoming alert - invalid hex string",
+                    e
+                )
             }
         }
     }
