@@ -24,27 +24,27 @@ SafeReach follows strict naming conventions for Kotlin and TypeScript to ensure 
 
 #### Kotlin
 
-| Element        | Convention                             | Example                                          |
-|----------------|----------------------------------------|--------------------------------------------------|
-| **Classes**    | PascalCase                             | `class UserRepository`                           |
-| **Interfaces** | PascalCase                             | `interface DataSource`                           |
-| **Enums**      | PascalCase (class), UPPERCASE (values) | `enum class AppDestinations { HOME, FAVORITES }` |
-| **Functions**  | camelCase                              | `fun getUserData()`                              |
-| **Variables**  | camelCase                              | `val userName`, `var isVisible`                  |
-| **Constants**  | UPPERCASE_WITH_UNDERSCORES             | `const val MAX_RETRIES = 3`                      |
-| **Packages**   | lowercase, no special characters       | `com.p56.safereach.ui.theme`                     |
+| Element | Convention | Example |
+|---------|-----------|---------|
+| **Classes** | PascalCase | `class UserRepository` |
+| **Interfaces** | PascalCase | `interface DataSource` |
+| **Enums** | PascalCase (class), UPPERCASE (values) | `enum class AppDestinations { HOME, FAVORITES }` |
+| **Functions** | camelCase | `fun getUserData()` |
+| **Variables** | camelCase | `val userName`, `var isVisible` |
+| **Constants** | UPPERCASE_WITH_UNDERSCORES | `const val MAX_RETRIES = 3` |
+| **Packages** | lowercase, no special characters | `com.p56.safereach.ui.theme` |
 
 #### TypeScript
 
-| Element        | Convention                             | Example                            |
-|----------------|----------------------------------------|------------------------------------|
-| **Classes**    | PascalCase                             | `class UserService`                |
-| **Interfaces** | PascalCase                             | `interface User`                   |
-| **Enums**      | PascalCase (class), UPPERCASE (values) | `enum Status { ACTIVE, INACTIVE }` |
-| **Functions**  | camelCase                              | `function getUserData()`           |
-| **Variables**  | camelCase                              | `const userName = ""`              |
-| **Constants**  | UPPERCASE_WITH_UNDERSCORES             | `const MAX_RETRIES = 3`            |
-| **Namespaces** | lowercase, kebab-case for files        | `user-service.ts`                  |
+| Element | Convention | Example |
+|---------|-----------|---------|
+| **Classes** | PascalCase | `class UserService` |
+| **Interfaces** | PascalCase | `interface User` |
+| **Enums** | PascalCase (class), UPPERCASE (values) | `enum Status { ACTIVE, INACTIVE }` |
+| **Functions** | camelCase | `function getUserData()` |
+| **Variables** | camelCase | `const userName = ""` |
+| **Constants** | UPPERCASE_WITH_UNDERSCORES | `const MAX_RETRIES = 3` |
+| **Namespaces** | lowercase, kebab-case for files | `user-service.ts` |
 
 ### Formatting Standards
 
@@ -548,12 +548,12 @@ The pipeline automatically runs on every push and pull request:
 
 ### Failure Handling
 
-| Status          | Action                                |
-|-----------------|---------------------------------------|
-| **Lint Fails**  | PR blocked, fix and push again        |
-| **Tests Fail**  | PR blocked, fix tests and push        |
+| Status | Action |
+|--------|--------|
+| **Lint Fails** | PR blocked, fix and push again |
+| **Tests Fail** | PR blocked, fix tests and push |
 | **Build Fails** | PR blocked, debug build configuration |
-| **All Pass**    | PR ready for review and merge         |
+| **All Pass** | PR ready for review and merge |
 
 ### Branch-Specific Rules
 
