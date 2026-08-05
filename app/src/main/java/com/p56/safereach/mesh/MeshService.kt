@@ -25,7 +25,7 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.protobuf.ProtoBuf
 
-class BleService : Service() {
+class MeshService : Service() {
     private val binder = LocalBinder()
     private var coordinator: BleCoordinator? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
