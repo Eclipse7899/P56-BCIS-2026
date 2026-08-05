@@ -11,7 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.p56.safereach.auth.MainScreen
 import com.p56.safereach.mesh.BlePermissions
-import com.p56.safereach.mesh.BleService
+import com.p56.safereach.mesh.MeshService
 import com.p56.safereach.ui.theme.SafeReachTheme
 
 class MainActivity : ComponentActivity() {
@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
         BlePermissions.missingRuntimePermissions(this).isEmpty()
 
     private fun startBleService() {
-        val intent = Intent(this, BleService::class.java)
+        val intent = Intent(this, MeshService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
 
