@@ -10,7 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.p56.safereach.auth.MainScreen
-import com.p56.safereach.mesh.BlePermissions
+import com.p56.safereach.mesh.ble.BlePermissions
 import com.p56.safereach.mesh.MeshService
 import com.p56.safereach.ui.theme.SafeReachTheme
 
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         if (hasAllRequiredPermissions()) {
             startBleService()
         } else {
-            requestBlePermissionsLauncher.launch(BlePermissions.requiredRuntimePermissions())
+            requestBlePermissionsLauncher.launch(BlePermissions.requiredRuntimePermissions().toTypedArray())
         }
     }
 

@@ -5,14 +5,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object AlertStateRepository {
-    private val messageState = MutableStateFlow<Alert?>(null)
-    val message: StateFlow<Alert?> = messageState.asStateFlow()
+    private val messageState = MutableStateFlow<MeshMeta<Alert>?>(null)
+    val alert: StateFlow<MeshMeta<Alert>?> = messageState.asStateFlow()
 
-    fun update(value: Alert) {
-        if (value.timestamp <= (messageState.value?.timestamp ?: 0L)) {
-            return
-        }
+    fun update(value: MeshMeta<Alert>) {
         messageState.value = value
+    }
+
+    fun clear() {
+        messageState.value = null
     }
 }
 

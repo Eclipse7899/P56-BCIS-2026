@@ -1,5 +1,7 @@
-package com.p56.safereach.mesh
+package com.p56.safereach.mesh.ble.advertisement
 
+import android.Manifest
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattServer
@@ -10,7 +12,13 @@ import android.content.Context
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
 
-class GattServer(
+/**
+ * A GATT server that provides a read-only characteristic for BLE devices to retrieve data.
+ *
+ * @property context The application context.
+ * @property btManager The Bluetooth manager used to open the GATT server.
+ */
+class BleAdvGattServer(
     private val context: Context,
     private val btManager: BluetoothManager
 ) {
@@ -19,9 +27,9 @@ class GattServer(
     private var currentData: ByteArray = byteArrayOf()
 
     private val serverCallback = object : BluetoothGattServerCallback() {
-        @RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onCharacteristicReadRequest(
-            device: android.bluetooth.BluetoothDevice,
+            device: BluetoothDevice,
             requestId: Int,
             offset: Int,
             characteristic: BluetoothGattCharacteristic
@@ -48,7 +56,12 @@ class GattServer(
         }
     }
 
-    @RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+    /**
+     * Starts the GATT server with the provided data.
+     *
+     * @param data The byte array to be served.
+     */
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun start(data: ByteArray) {
         currentData = data
         server?.close()
@@ -71,7 +84,10 @@ class GattServer(
         }
     }
 
-    @RequiresPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+    /**
+     * Stops the GATT server and releases resources.
+     */
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun stop() {
         server?.close()
         server = null

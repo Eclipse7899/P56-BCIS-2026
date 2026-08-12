@@ -17,6 +17,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import com.p56.safereach.AlertStateRepository
+import com.p56.safereach.MeshMeta
+import com.p56.safereach.MeshPacket
 import com.p56.safereach.R
 import com.p56.safereach.debug.DebugScreen
 import com.p56.safereach.home.HomeScreen
@@ -80,7 +82,16 @@ fun SafeReachApp() {
                     ) {
                         DebugScreen(
                             onUpdateAlert = { alert ->
-                                AlertStateRepository.update(alert)
+                                AlertStateRepository.update(
+                                    MeshMeta(
+                                        receivedAt = System.currentTimeMillis(),
+                                        receivedFrom = "Debug",
+                                        packet = MeshPacket(
+                                            hopCount = 0,
+                                            data = alert
+                                        )
+                                    )
+                                )
                             }
                         )
                     }

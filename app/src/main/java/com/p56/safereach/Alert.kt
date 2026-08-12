@@ -40,3 +40,17 @@ data class Alert(
     @ProtoNumber(4) val type: AlertType,
     @ProtoNumber(5) val severity: Severity
 )
+
+data class MeshMeta<T>(
+    val receivedAt: Long,
+    val receivedFrom: String?,
+    val packet: MeshPacket<T>
+)
+
+
+@Serializable
+@OptIn(ExperimentalSerializationApi::class)
+data class MeshPacket<T>(
+    @ProtoNumber(1) val hopCount: Long,
+    @ProtoNumber(2) val data: T
+)
