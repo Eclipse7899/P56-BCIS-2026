@@ -1,132 +1,156 @@
 package com.p56.safereach.mesh
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.content.Intent
-import android.os.Binder
 import android.os.IBinder
-import android.util.Log
-import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
+import com.p56.safereach.Constants.APP_DISPLAY_NAME
+import com.p56.safereach.MeshPacket
+import com.p56.safereach.MeshMeta
 import com.p56.safereach.R
+import com.p56.safereach.mesh.ble.BleOrchestrator
+import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
+import com.p56.safereach.mesh.ble.fsm.BleIntent
+import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.mesh.ble.scanning.BleScanActor
+import com.p56.safereach.mesh.ble.scanning.BleScanResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromHexString
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 
+@OptIn(ExperimentalSerializationApi::class)
 class MeshService : Service() {
-    private val binder = LocalBinder()
-    private var coordinator: BleCoordinator? = null
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private lateinit var orchestrator: BleOrchestrator
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    @SuppressLint("MissingPermission")
+    private val dataChannel = Channel<BleScanResult>(Channel.UNLIMITED)
+
     override fun onCreate() {
         super.onCreate()
-
-        if (!hasBlePermissions()) {
-            Log.w(TAG, "Service started without required permissions; stopping")
-            stopSelf()
-            return
-        }
-
-        startForeground(NOTIFICATION_ID, buildNotification())
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val adapter = btManager.adapter
-        if (adapter == null) {
-            stopSelf()
-            return
-        }
-        coordinator = BleCoordinator(this, btManager, adapter)
-        coordinator?.start { alert ->
-            AlertStateRepository.update(alert)
-        }
+        val advActor = BleAdvActor(serviceScope, btManager)
+        val scanActor = BleScanActor(serviceScope, btManager, onScan = {
+            dataChannel.trySend(it)
+        })
+        orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
+        observeAlertStateRepository()
+        observeIncomingData()
+        observeCoordinatorState()
+    }
 
+    private fun observeAlertStateRepository() {
         serviceScope.launch {
-            AlertStateRepository.message.collect { alert ->
-                if (alert != null) {
-                    if (hasBlePermissions()) {
-                        coordinator?.updateAlert(alert)
-                    } else {
-                        Log.w(TAG, "Skipping updateAlert from repository; permissions were revoked")
+            AlertStateRepository.alert.collect { meshMeta ->
+                if (meshMeta != null) {
+                    val newPacket = meshMeta.packet.copy(hopCount = meshMeta.packet.hopCount + 1)
+                    val payloadBytes: ByteArray = ProtoBuf.encodeToByteArray(newPacket)
+                    orchestrator.send(BleIntent.Active(payloadBytes))
+                }
+                else {
+                    orchestrator.send(BleIntent.Passive)
+                }
+            }
+        }
+    }
+
+    private fun observeIncomingData() {
+        serviceScope.launch {
+            for (message in dataChannel) {
+                val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
+                val meta = MeshMeta(
+                    message.timestamp,
+                    message.receivedFrom,
+                    meshPacket
+                )
+
+                val current = AlertStateRepository.alert.value
+                if (current == null){
+                    AlertStateRepository.update(meta)
+                }
+                else if (current.packet.data.timestamp > message.timestamp) {
+                    AlertStateRepository.update(meta)
+                }
+            }
+        }
+    }
+
+    private fun observeCoordinatorState() {
+        serviceScope.launch {
+            orchestrator.state.collect {
+                when (it) {
+                    is BleState.Active -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is running",
+                            "Scanning and advertising in the background"
+                        )
+                    }
+
+                    BleState.Failed -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is stopped",
+                            "Failed to start mesh")
+                    }
+
+                    BleState.Off -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is stopped",
+                            "Mesh stopped")
+                    }
+
+                    BleState.Passive -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is running",
+                            "Scanning in the background")
                     }
                 }
             }
         }
     }
 
-    @RequiresPermission(
-        allOf = [Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT]
-    )
     @OptIn(ExperimentalSerializationApi::class)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        var shouldUpdate = false
-
-        val alert = intent
-            ?.takeIf { it.action == ACTION_UPDATE_MESSAGE }
-            ?.getStringExtra(EXTRA_DATA)
-            ?.runCatching { ProtoBuf.decodeFromHexString<Alert>(this) }
-            ?.onFailure { Log.w(TAG, "Failed to decode EXTRA_DATA alert payload; ignoring", it) }
-            ?.getOrNull()
-
-        if (alert != null && hasBlePermissions()) {
-            shouldUpdate = true
-        } else if (alert != null) {
-            Log.w(TAG, "Ignoring ACTION_UPDATE_MESSAGE; missing runtime permissions")
-        }
-
-        if (shouldUpdate) {
-            coordinator?.updateAlert(alert!!)
-        }
-
+        orchestrator.send(BleIntent.Passive)
+        startForeground(NOTIFICATION_ID, buildNotification())
         return START_STICKY
     }
 
-    @SuppressLint("MissingPermission")
     override fun onDestroy() {
-        serviceScope.cancel()
-        if (hasBlePermissions()) {
-            coordinator?.stop()
-        } else {
-            Log.w(TAG, "Skipping coordinator.stop(); permissions were revoked")
-        }
         super.onDestroy()
+        orchestrator.send(BleIntent.Off)
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
-
-    inner class LocalBinder : Binder() {
-        @SuppressLint("MissingPermission")
-        fun updateMessage(alert: Alert) {
-            if (hasBlePermissions()) {
-                coordinator?.updateAlert(alert)
-            } else {
-                Log.w(TAG, "Ignoring bound updateMessage call; missing runtime permissions")
-            }
-        }
-    }
-
-    private fun hasBlePermissions(): Boolean =
-        BlePermissions.missingRuntimePermissions(this).isEmpty()
+    override fun onBind(intent: Intent?): IBinder? = null
 
     private fun buildNotification(): Notification {
         ensureNotificationChannel()
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("BLE active")
-            .setContentText("Scanning and advertising in the background")
+            .setContentTitle("BLE starting")
+            .setContentText("Initializing BLE services")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .build()
+    }
+
+    private fun updateNotification(title: String, text: String) {
+        val notification = buildNotification().apply {
+            this.extras.putString(Notification.EXTRA_TITLE, title)
+            this.extras.putString(Notification.EXTRA_TEXT, text)
+        }
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun ensureNotificationChannel() {
@@ -141,8 +165,6 @@ class MeshService : Service() {
 
     companion object {
         private const val TAG = "BleService"
-        const val ACTION_UPDATE_MESSAGE = "com.p56.safereach.mesh.ACTION_UPDATE_MESSAGE"
-        const val EXTRA_DATA = "extra_message"
         private const val NOTIFICATION_CHANNEL_ID = "ble_service"
         private const val NOTIFICATION_ID = 1001
     }
