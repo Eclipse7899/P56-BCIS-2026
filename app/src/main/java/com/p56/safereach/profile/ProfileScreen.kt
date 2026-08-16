@@ -32,6 +32,9 @@ fun ProfileScreen() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val username = currentUser?.displayName ?: "User"
     val email = currentUser?.email ?: "Email"
+    val username = currentUser?.email
+        ?.substringBefore("@")
+        ?: "User"
     ProfileContent(
         username = username,
         email = email,
