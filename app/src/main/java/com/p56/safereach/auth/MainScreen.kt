@@ -24,7 +24,11 @@ fun MainScreen(context: Context) {
         }
     }
     if (user == null) {
-        SignIn(context = context)
+        SignIn(
+            context = context,
+            onForgotPasswordClick = {},
+            onRegisterClick = {}
+        )
     } else {
         SafeReachApp()
     }

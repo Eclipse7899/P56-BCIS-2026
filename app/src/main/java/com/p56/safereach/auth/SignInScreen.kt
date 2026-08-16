@@ -42,7 +42,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.p56.safereach.R
 
 @Composable
-fun SignIn(context: Context) {
+fun SignIn(context: Context,
+           onForgotPasswordClick: () -> Unit,
+           onRegisterClick: () -> Unit) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var loading by rememberSaveable { mutableStateOf(false) }
@@ -112,6 +114,15 @@ fun SignIn(context: Context) {
                     }
                 }
             )
+            // Shello Code
+
+            TextButton(
+                shape = MaterialTheme.shapes.extraSmall,
+                onClick = {onForgotPasswordClick()}
+            ) {
+                Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
+            }
+            //
             Spacer(modifier = Modifier.height(16.dp))
             val buttonDisabled = loading || email.isBlank() || password.isBlank()
             Button(
@@ -160,14 +171,15 @@ fun SignIn(context: Context) {
                     }
                 }
             }
+            //Shello
             Spacer(modifier = Modifier.height(4.dp))
-            TextButton(
-                shape = MaterialTheme.shapes.extraSmall,
+            TextButton(modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                }
-
-            ) {
-                Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
+                    onRegisterClick()
+            }
+            ){
+                Text(
+                    text = "Don't have an account? Register Now")
             }
         }
     }
@@ -176,5 +188,9 @@ fun SignIn(context: Context) {
 @Composable
 @Preview(showBackground = true)
 fun SignInPreview() {
-    SignIn(context = LocalContext.current)
+    SignIn(
+        context = LocalContext.current,
+        onForgotPasswordClick = {},
+        onRegisterClick = {}
+    )
 }
