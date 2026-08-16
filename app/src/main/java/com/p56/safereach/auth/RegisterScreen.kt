@@ -47,7 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalFocusManager
 
 @Composable
-fun Register(
+fun RegisterScreen(
     context: Context,
     onSighInClick: () -> Unit,
     onRegisterSuccess: () -> Unit
@@ -208,8 +208,8 @@ fun Register(
 
 @Composable
 @Preview(showBackground = true)
-fun RegisterPreview() {
-    Register(
+fun RegisterScreenPreview() {
+    RegisterScreen(
         context = LocalContext.current,
         onSighInClick = {},
         onRegisterSuccess = {}
