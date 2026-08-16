@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.Row
 fun ProfileScreen() {
     // Shello Code
     val currentUser = FirebaseAuth.getInstance().currentUser
-    val username = currentUser?.displayName ?: "User"
     val email = currentUser?.email ?: "Email"
     val username = currentUser?.email
         ?.substringBefore("@")
