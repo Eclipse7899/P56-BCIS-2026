@@ -14,9 +14,13 @@ import com.p56.safereach.navigation.SafeReachApp
 fun MainScreen(context: Context) {
     val auth = FirebaseAuth.getInstance()
     var user by remember { mutableStateOf(auth.currentUser) }
+    var authScreen by remember { mutableStateOf("signin") }
     DisposableEffect(Unit) {
         val listener = FirebaseAuth.AuthStateListener {
             user = it.currentUser
+            if (it.currentUser == null) {
+                authScreen = "signin"
+            }
         }
         auth.addAuthStateListener(listener)
         onDispose {
@@ -24,7 +28,30 @@ fun MainScreen(context: Context) {
         }
     }
     if (user == null) {
-        SignIn(context = context)
+        when (authScreen) {
+            "signin" -> {
+                SignIn(
+                    context = context,
+                    onForgotPasswordClick = { authScreen = "forgotPassword" },
+                    onRegisterClick = { authScreen = "register" }
+                )
+            }
+
+            "forgotPassword" -> {
+                ForgotPasswordScreen(
+                    context = context,
+                    onBackToSignIn = { authScreen = "signin" }
+                )
+            }
+
+            "register" -> {
+                RegisterScreen(
+                    context = context,
+                    onBackToSignIn = { authScreen = "signin" },
+                    onRegisterSuccess = {}
+                )
+            }
+        }
     } else {
         SafeReachApp()
     }
