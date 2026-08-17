@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,12 +44,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.p56.safereach.R
-import androidx.compose.ui.platform.LocalFocusManager
 
 @Composable
-fun SignIn(context: Context,
-           onForgotPasswordClick: () -> Unit,
-           onRegisterClick: () -> Unit) {
+fun SignIn(
+    context: Context,
+    onForgotPasswordClick: () -> Unit,
+    onRegisterClick: () -> Unit
+) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var loading by rememberSaveable { mutableStateOf(false) }
@@ -59,8 +61,8 @@ fun SignIn(context: Context,
             .fillMaxSize()
             .clickable(
                 indication = null,
-                interactionSource = remember {MutableInteractionSource()}
-            ){focusManager.clearFocus()}
+                interactionSource = remember { MutableInteractionSource() }
+            ) { focusManager.clearFocus() }
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -123,15 +125,12 @@ fun SignIn(context: Context,
                     }
                 }
             )
-            // Shello Code
-
             TextButton(
                 shape = MaterialTheme.shapes.extraSmall,
-                onClick = {onForgotPasswordClick()}
+                onClick = { onForgotPasswordClick() }
             ) {
                 Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
             }
-            //
             Spacer(modifier = Modifier.height(16.dp))
             val buttonDisabled = loading || email.isBlank() || password.isBlank()
             Button(
@@ -180,15 +179,16 @@ fun SignIn(context: Context,
                     }
                 }
             }
-            //Shello
             Spacer(modifier = Modifier.height(4.dp))
-            TextButton(modifier = Modifier.fillMaxWidth(),
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     onRegisterClick()
-            }
-            ){
+                }
+            ) {
                 Text(
-                    text = "Don't have an account? Register Now")
+                    text = "Don't have an profile? Register Now"
+                )
             }
         }
     }
