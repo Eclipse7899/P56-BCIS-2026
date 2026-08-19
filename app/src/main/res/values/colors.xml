@@ -7,4 +7,34 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Status & Feedback Colors -->
+    <!-- Success -->
+    <color name="status_success">#FF2E7D32</color>
+    <color name="status_success_container">#FFE8F5E9</color>
+    <color name="status_success_light">#FF4CAF50</color>
+    <color name="status_on_success">#FFFFFFFF</color>
+
+    <!-- Error -->
+    <color name="status_error">#FFC62828</color>
+    <color name="status_error_container">#FFFFEBEE</color>
+    <color name="status_error_light">#FFE53935</color>
+    <color name="status_on_error">#FFFFFFFF</color>
+
+    <!-- Warning -->
+    <color name="status_warning">#FFF57C00</color>
+    <color name="status_warning_container">#FFFFF3E0</color>
+    <color name="status_warning_light">#FFFF9800</color>
+    <color name="status_on_warning">#FFFFFFFF</color>
+
+    <!-- Info / Active -->
+    <color name="status_info">#FF1976D2</color>
+    <color name="status_info_container">#FFE3F2FD</color>
+    <color name="status_info_light">#FF2196F3</color>
+    <color name="status_on_info">#FFFFFFFF</color>
+
+    <!-- Inactive / Neutral / Off -->
+    <color name="status_neutral">#FF757575</color>
+    <color name="status_neutral_container">#FFF5F5F5</color>
+    <color name="status_on_neutral">#FFFFFFFF</color>
 </resources>
