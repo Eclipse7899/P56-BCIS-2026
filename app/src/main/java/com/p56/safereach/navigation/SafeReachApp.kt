@@ -46,7 +46,9 @@ fun SafeReachApp() {
             }
         }
     ) {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        Scaffold(
+            modifier = Modifier.fillMaxSize()
+        ) { innerPadding ->
             when (currentDestination) {
                 AppDestinations.HOME ->
                     Column(
@@ -69,7 +71,6 @@ fun SafeReachApp() {
                     Column(
                         modifier = Modifier
                             .padding(innerPadding)
-                            .padding(16.dp)
                     ) {
                         ProfileScreen()
                     }
@@ -78,7 +79,6 @@ fun SafeReachApp() {
                     Column(
                         modifier = Modifier
                             .padding(innerPadding)
-                            .padding(16.dp)
                     ) {
                         DebugScreen(
                             onUpdateAlert = { alert ->

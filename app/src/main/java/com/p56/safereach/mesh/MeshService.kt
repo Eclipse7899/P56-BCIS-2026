@@ -16,10 +16,12 @@ import com.p56.safereach.MeshMeta
 import com.p56.safereach.R
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.BleScanActor
 import com.p56.safereach.mesh.ble.scanning.BleScanResult
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,6 +41,7 @@ class MeshService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        MeshStatusRepository.updateServiceRunning(true)
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val advActor = BleAdvActor(serviceScope, btManager)
         val scanActor = BleScanActor(serviceScope, btManager, onScan = {
@@ -47,7 +50,21 @@ class MeshService : Service() {
         orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
         observeAlertStateRepository()
         observeIncomingData()
-        observeCoordinatorState()
+        observeOrchestratorState()
+        observeSubsystemStates(advActor, scanActor)
+    }
+
+    private fun observeSubsystemStates(advActor: BleAdvActor, scanActor: BleScanActor) {
+        serviceScope.launch {
+            advActor.state.collect {
+                MeshStatusRepository.updateAdvertiserState(it)
+            }
+        }
+        serviceScope.launch {
+            scanActor.state.collect {
+                MeshStatusRepository.updateScannerState(it)
+            }
+        }
     }
 
     private fun observeAlertStateRepository() {
@@ -86,9 +103,10 @@ class MeshService : Service() {
         }
     }
 
-    private fun observeCoordinatorState() {
+    private fun observeOrchestratorState() {
         serviceScope.launch {
             orchestrator.state.collect {
+                MeshStatusRepository.updateOrchestratorState(it)
                 when (it) {
                     is BleState.Active -> {
                         updateNotification(
@@ -128,6 +146,10 @@ class MeshService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        MeshStatusRepository.updateServiceRunning(false)
+        MeshStatusRepository.updateOrchestratorState(BleState.Off)
+        MeshStatusRepository.updateAdvertiserState(BleAdvState.Idle)
+        MeshStatusRepository.updateScannerState(BleScanState.Idle)
         orchestrator.send(BleIntent.Off)
     }
 
