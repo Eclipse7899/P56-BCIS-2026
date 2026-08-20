@@ -23,7 +23,7 @@ class BleBeaconScanExecutor(
 
     private val settings = ScanSettings.Builder()
         .setLegacy(false)
-        .setPhy(BluetoothDevice.PHY_LE_CODED)
+        .setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
         .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
         .build()
 
