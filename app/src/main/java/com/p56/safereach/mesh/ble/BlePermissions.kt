@@ -22,13 +22,13 @@ object BlePermissions {
 
     fun requiredScanPermissions(): Set<String> {
         val permissions = mutableSetOf<String>()
+        permissions += Manifest.permission.ACCESS_FINE_LOCATION
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissions += Manifest.permission.BLUETOOTH_SCAN
             permissions += Manifest.permission.BLUETOOTH_CONNECT
         } else {
             permissions += Manifest.permission.BLUETOOTH
             permissions += Manifest.permission.BLUETOOTH_ADMIN
-            permissions += Manifest.permission.ACCESS_FINE_LOCATION
             permissions += Manifest.permission.ACCESS_COARSE_LOCATION
         }
         return permissions
