@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,7 +40,41 @@ import com.p56.safereach.ui.theme.alertShapeFillColorSeverityMedium
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
-    val mapViewportState = rememberMapViewportState()
+    val context = LocalContext.current
+    val mapViewportState = rememberMapViewportState {
+        MapPreferences.getSavedCameraOptions(context)?.let { cameraOptions ->
+            setCameraOptions(cameraOptions)
+        }
+    }
+
+    LaunchedEffect(mapViewportState.cameraState) {
+        val camera = mapViewportState.cameraState ?: return@LaunchedEffect
+        val center = camera.center
+        MapPreferences.saveCameraPosition(
+            context = context,
+            lat = center.latitude(),
+            lon = center.longitude(),
+            zoom = camera.zoom,
+            pitch = camera.pitch,
+            bearing = camera.bearing
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            val camera = mapViewportState.cameraState ?: return@onDispose
+            val center = camera.center
+            MapPreferences.saveCameraPosition(
+                context = context,
+                lat = center.latitude(),
+                lon = center.longitude(),
+                zoom = camera.zoom,
+                pitch = camera.pitch,
+                bearing = camera.bearing
+            )
+        }
+    }
+
     val msg by AlertStateRepository.alert.collectAsStateWithLifecycle()
     Column(modifier = modifier) {
         MapboxMap(
@@ -45,13 +82,13 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .padding(4.dp)
                 .clip(shape = RoundedCornerShape(24.dp)),
-            mapViewportState = mapViewportState
+            mapViewportState = mapViewportState,
         ){
             MapEffect(Unit) { mapView ->
                 mapView.location.updateSettings {
                     locationPuck = createDefault2DPuck(withBearing = true)
                     enabled = true
-                    puckBearing = PuckBearing.COURSE
+                    puckBearing = PuckBearing.HEADING
                     puckBearingEnabled = true
                 }
                 mapViewportState.transitionToFollowPuckState()

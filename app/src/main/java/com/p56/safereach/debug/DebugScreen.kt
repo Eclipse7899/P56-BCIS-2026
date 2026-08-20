@@ -216,9 +216,9 @@ fun SetStatusDebugCard(
     var description by rememberSaveable { mutableStateOf("") }
     var selectedType by rememberSaveable { mutableStateOf(AlertType.EARTHQUAKE) }
     var selectedSeverity by rememberSaveable { mutableStateOf(Severity.MEDIUM) }
-    var lat by rememberSaveable { mutableDoubleStateOf(0.0) }
-    var long by rememberSaveable { mutableDoubleStateOf(0.0) }
-    var radius by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var lat by rememberSaveable { mutableStateOf<Double?>(null) }
+    var long by rememberSaveable { mutableStateOf<Double?>(null) }
+    var radius by rememberSaveable { mutableStateOf<Double?>(null) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var severityMenuExpanded by remember { mutableStateOf(false) }
     var openAlertDialog by remember { mutableStateOf(false) }
@@ -306,13 +306,26 @@ fun SetStatusDebugCard(
                         description.ifBlank { "" },
                         selectedType,
                         selectedSeverity,
-                        Shape.Circle(LatLong(lat, long), radius)
+                        Shape.Circle(
+                            LatLong(
+                                lat ?: 0.0,
+                                long ?: 0.0),
+                            radius ?: 0.0)
                     )
                     onSent(alert)
                     title = ""
                     description = ""
+                    selectedType = AlertType.EARTHQUAKE
+                    selectedSeverity = Severity.MEDIUM
+                    lat = null
+                    long = null
+                    radius = null
                 },
-                enabled = title.isNotBlank() || description.isNotBlank()
+                enabled =
+                    title.isNotBlank() &&
+                    lat != null &&
+                    long != null &&
+                    radius != null
             ) {
                 Text("Send Over Mesh")
             }

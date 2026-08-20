@@ -1,0 +1,58 @@
+package com.p56.safereach.home
+
+import android.content.Context
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import androidx.core.content.edit
+
+object MapPreferences {
+    private const val PREFS_NAME = "MapPrefs"
+    private const val KEY_LAT = "lat"
+    private const val KEY_LON = "lon"
+    private const val KEY_ZOOM = "zoom"
+    private const val KEY_PITCH = "pitch"
+    private const val KEY_BEARING = "bearing"
+    const val DEFAULT_ZOOM = 9.0
+
+    fun saveCameraPosition(
+        context: Context,
+        lat: Double,
+        lon: Double,
+        zoom: Double,
+        pitch: Double = 0.0,
+        bearing: Double = 0.0
+    ) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit {
+                putFloat(KEY_LAT, lat.toFloat())
+                    .putFloat(KEY_LON, lon.toFloat())
+                    .putFloat(KEY_ZOOM, zoom.toFloat())
+                    .putFloat(KEY_PITCH, pitch.toFloat())
+                    .putFloat(KEY_BEARING, bearing.toFloat())
+            }
+    }
+
+    fun hasSavedPosition(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.contains(KEY_LAT) && prefs.contains(KEY_LON)
+    }
+
+    fun getSavedCameraOptions(context: Context): CameraOptions? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!prefs.contains(KEY_LAT) || !prefs.contains(KEY_LON)) {
+            return null
+        }
+        val lat = prefs.getFloat(KEY_LAT, 0.0f).toDouble()
+        val lon = prefs.getFloat(KEY_LON, 0.0f).toDouble()
+        val zoom = prefs.getFloat(KEY_ZOOM, DEFAULT_ZOOM.toFloat()).toDouble()
+        val pitch = prefs.getFloat(KEY_PITCH, 0.0f).toDouble()
+        val bearing = prefs.getFloat(KEY_BEARING, 0.0f).toDouble()
+
+        return CameraOptions.Builder()
+            .center(Point.fromLngLat(lon, lat))
+            .zoom(zoom)
+            .pitch(pitch)
+            .bearing(bearing)
+            .build()
+    }
+}
