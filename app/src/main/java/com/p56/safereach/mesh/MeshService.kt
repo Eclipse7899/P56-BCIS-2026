@@ -7,6 +7,7 @@ import android.app.Service
 import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
@@ -84,18 +85,24 @@ class MeshService : Service() {
     private fun observeIncomingData() {
         serviceScope.launch {
             for (message in dataChannel) {
-                val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
-                val meta = MeshMeta(
-                    message.receivedAt,
-                    message.receivedFrom,
-                    meshPacket
-                )
+                try{
+                    val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
+                    val meta = MeshMeta(
+                        message.receivedAt,
+                        message.receivedFrom,
+                        meshPacket
+                    )
 
-                val current = AlertStateRepository.alert.value
-                if (current == null) {
-                    AlertStateRepository.update(meta)
-                } else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
-                    AlertStateRepository.update(meta)
+                    val current = AlertStateRepository.alert.value
+                    if (current == null) {
+                        AlertStateRepository.update(meta)
+                    } else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
+                        AlertStateRepository.update(meta)
+                    }
+                }
+                catch (e: Exception){
+                    Log.w(TAG, "Failed to decode incoming mesh packet", e)
+                    continue
                 }
             }
         }

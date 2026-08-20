@@ -15,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
-import androidx.compose.ui.unit.dp
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.MeshMeta
 import com.p56.safereach.MeshPacket
@@ -54,18 +53,9 @@ fun SafeReachApp() {
                     Column(
                         modifier = Modifier
                             .padding(innerPadding)
-                            .padding(16.dp)
                     ) {
-                        HomeScreen(name = "User")
+                        HomeScreen()
                     }
-
-                AppDestinations.FAVORITES -> Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(16.dp)
-                ) {
-                    Text(text = "Favorites Screen")
-                }
 
                 AppDestinations.PROFILE ->
                     Column(
@@ -106,7 +96,6 @@ enum class AppDestinations(
     val icon: Int,
 ) {
     HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
     PROFILE("Profile", R.drawable.ic_account_box),
     DEBUG("Debug", R.drawable.ic_debug),
 }
