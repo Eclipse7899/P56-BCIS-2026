@@ -82,7 +82,10 @@ class BleBeaconAdvExecutor(
                         }
 
                         else -> {
-                            Log.w(TAG, "Received started callback but not in Starting state: $opStatus")
+                            Log.w(
+                                TAG,
+                                "Received started callback but not in Starting state: $opStatus"
+                            )
                         }
                     }
                 }
@@ -136,7 +139,10 @@ class BleBeaconAdvExecutor(
                         }
 
                         else -> {
-                            Log.w(TAG, "Received data set callback but not in Updating state: $operation")
+                            Log.w(
+                                TAG,
+                                "Received data set callback but not in Updating state: $operation"
+                            )
                         }
                     }
                 }
@@ -169,7 +175,12 @@ class BleBeaconAdvExecutor(
     suspend fun start(data: ByteArray): BleAdvEvent.Started {
         Log.d(TAG, "start: data size=${data.size}")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvException(BleAdvFail.InternalError).also { Log.e(TAG, "BluetoothLeAdvertiser is null") }
+            ?: throw BleAdvException(BleAdvFail.InternalError).also {
+                Log.e(
+                    TAG,
+                    "BluetoothLeAdvertiser is null"
+                )
+            }
         val set = withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) {
             awaitOperation(
                 advertiser,
@@ -196,7 +207,12 @@ class BleBeaconAdvExecutor(
     suspend fun stop() {
         Log.d(TAG, "stop")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvException(BleAdvFail.InternalError).also { Log.e(TAG, "BluetoothLeAdvertiser is null") }
+            ?: throw BleAdvException(BleAdvFail.InternalError).also {
+                Log.e(
+                    TAG,
+                    "BluetoothLeAdvertiser is null"
+                )
+            }
         return withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) {
             awaitOperation(
                 advertiser,
@@ -214,7 +230,12 @@ class BleBeaconAdvExecutor(
     suspend fun update(data: ByteArray, set: AdvertisingSet) {
         Log.d(TAG, "update: data size=${data.size}")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvException(BleAdvFail.InternalError).also { Log.e(TAG, "BluetoothLeAdvertiser is null") }
+            ?: throw BleAdvException(BleAdvFail.InternalError).also {
+                Log.e(
+                    TAG,
+                    "BluetoothLeAdvertiser is null"
+                )
+            }
         return withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) {
             awaitOperation(
                 advertiser,

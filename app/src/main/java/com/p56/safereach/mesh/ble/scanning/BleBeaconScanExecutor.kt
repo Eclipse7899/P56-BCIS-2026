@@ -75,7 +75,12 @@ class BleBeaconScanExecutor(
     fun stop(callback: ScanCallback) {
         Log.d(TAG, "Stopping scan")
         val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also { Log.e(TAG, "Bluetooth LE scanner is not available during stop") }
+            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also {
+                Log.e(
+                    TAG,
+                    "Bluetooth LE scanner is not available during stop"
+                )
+            }
         bluetoothLeScanner.stopScan(callback)
         Log.d(TAG, "Scan stopped successfully")
     }

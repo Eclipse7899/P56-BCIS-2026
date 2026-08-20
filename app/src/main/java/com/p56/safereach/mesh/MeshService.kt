@@ -11,8 +11,8 @@ import androidx.core.app.NotificationCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
-import com.p56.safereach.MeshPacket
 import com.p56.safereach.MeshMeta
+import com.p56.safereach.MeshPacket
 import com.p56.safereach.R
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
@@ -74,8 +74,7 @@ class MeshService : Service() {
                     val newPacket = meshMeta.packet.copy(hopCount = meshMeta.packet.hopCount + 1)
                     val payloadBytes: ByteArray = ProtoBuf.encodeToByteArray(newPacket)
                     orchestrator.send(BleIntent.Active(payloadBytes))
-                }
-                else {
+                } else {
                     orchestrator.send(BleIntent.Passive)
                 }
             }
@@ -93,10 +92,9 @@ class MeshService : Service() {
                 )
 
                 val current = AlertStateRepository.alert.value
-                if (current == null){
+                if (current == null) {
                     AlertStateRepository.update(meta)
-                }
-                else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
+                } else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
                     AlertStateRepository.update(meta)
                 }
             }
@@ -118,19 +116,22 @@ class MeshService : Service() {
                     BleState.Failed -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is stopped",
-                            "Failed to start mesh")
+                            "Failed to start mesh"
+                        )
                     }
 
                     BleState.Off -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is stopped",
-                            "Mesh stopped")
+                            "Mesh stopped"
+                        )
                     }
 
                     BleState.Passive -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is running",
-                            "Scanning in the background")
+                            "Scanning in the background"
+                        )
                     }
                 }
             }
