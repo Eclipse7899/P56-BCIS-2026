@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.mapbox.sdk)
     implementation(libs.mapbox.compose)
+    implementation(libs.mapbox.turf)
     implementation(libs.kotlinx.serialization.protobuf)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.fragment)
