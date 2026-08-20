@@ -17,16 +17,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,12 +43,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mapbox.maps.extension.compose.MapEffect
+import com.mapbox.maps.extension.compose.MapboxMap
+import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
+import com.mapbox.maps.plugin.PuckBearing
+import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
+import com.mapbox.maps.plugin.locationcomponent.location
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.AlertType
+import com.p56.safereach.LatLong
 import com.p56.safereach.MeshMeta
 import com.p56.safereach.Severity
+import com.p56.safereach.Shape
 import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
@@ -100,28 +112,13 @@ fun AlertDebugCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Active Alert",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Start
-                )
-                Button(
-                    onClick = {
-                        AlertStateRepository.clear()
-                    }
-                ) {
-                    Text("Delete")
-                }
-            }
-
+            Text(
+                text = "Active Alert",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start
+            )
             Spacer(modifier = Modifier.height(8.dp))
-
             val alert = msg.packet.data
             Text(text = alert.title, style = MaterialTheme.typography.titleMedium)
             Text(text = alert.description)
@@ -130,6 +127,23 @@ fun AlertDebugCard(
                 text = "Type: ${alert.type.name}, Severity: ${alert.severity.name}",
                 style = MaterialTheme.typography.bodySmall
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Location", style = MaterialTheme.typography.labelMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            when (val shape = alert.shape) {
+                is Shape.Circle -> {
+                    Text(
+                        text = "Circle: Radius: ${shape.radius} meters",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                is Shape.Polygon -> {
+                    Text(
+                        text = "Polygon: ${shape.points.size} points",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(4.dp))
             val formattedAlertTime = remember(msg) {
                 java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
@@ -177,7 +191,19 @@ fun AlertDebugCard(
                 text = "Hop Count: ${msg.packet.hopCount}",
                 style = MaterialTheme.typography.bodySmall
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                onClick = {
+                    AlertStateRepository.clear()
+                }
+            ) {
+                Text("Delete")
+            }
         }
     }
 }
@@ -190,8 +216,25 @@ fun SetStatusDebugCard(
     var description by rememberSaveable { mutableStateOf("") }
     var selectedType by rememberSaveable { mutableStateOf(AlertType.EARTHQUAKE) }
     var selectedSeverity by rememberSaveable { mutableStateOf(Severity.MEDIUM) }
+    var lat by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var long by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var radius by rememberSaveable { mutableDoubleStateOf(0.0) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var severityMenuExpanded by remember { mutableStateOf(false) }
+    var openAlertDialog by remember { mutableStateOf(false) }
+    when {
+        openAlertDialog -> {
+            LocationSelectDialog(
+                onDismissRequest = { openAlertDialog = false },
+                onConfirmation = { newLatLong, newRadius ->
+                    openAlertDialog = false
+                    lat = newLatLong.latitude
+                    long = newLatLong.longitude
+                    radius = newRadius
+                },
+            )
+        }
+    }
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -250,12 +293,20 @@ fun SetStatusDebugCard(
             }
             Button(
                 onClick = {
+                    openAlertDialog = true
+                }
+            ){
+                Text("Set Location")
+            }
+            Button(
+                onClick = {
                     val alert = Alert(
                         System.currentTimeMillis(),
                         title.ifBlank { "" },
                         description.ifBlank { "" },
                         selectedType,
-                        selectedSeverity
+                        selectedSeverity,
+                        Shape.Circle(LatLong(lat, long), radius)
                     )
                     onSent(alert)
                     title = ""
@@ -473,6 +524,86 @@ fun CollapsibleTreeNode(
         AnimatedVisibility(visible = isExpanded) {
             Column {
                 content()
+            }
+        }
+    }
+}
+
+@Composable
+fun LocationSelectDialog(
+    onDismissRequest: () -> Unit,
+    onConfirmation: (LatLong, Double) -> Unit,
+) {
+    Dialog(onDismissRequest = { onDismissRequest() }) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                val mapViewportState = rememberMapViewportState()
+                var radius by remember { mutableDoubleStateOf(10.0) }
+                MapboxMap(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .padding(4.dp)
+                        .clip(shape = RoundedCornerShape(24.dp)),
+                    mapViewportState = mapViewportState
+                ){
+                    MapEffect(Unit) { mapView ->
+                        mapView.location.updateSettings {
+                            locationPuck = createDefault2DPuck(withBearing = true)
+                            enabled = true
+                            puckBearing = PuckBearing.COURSE
+                            puckBearingEnabled = true
+                        }
+                        mapViewportState.transitionToFollowPuckState()
+                    }
+                }
+                Text(
+                    text = "Radius: ${radius.toInt()} meters",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(8.dp)
+                )
+                Slider(
+                    value = radius.toFloat(),
+                    onValueChange = { radius = it.toDouble() },
+                    valueRange = 10f..1000f,
+                    modifier = Modifier.padding(8.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    TextButton(
+                        onClick = { onDismissRequest() },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Dismiss")
+                    }
+                    TextButton(
+                        onClick = {
+                            if (mapViewportState.cameraState == null) return@TextButton
+                            onConfirmation(
+                            LatLong(
+                                mapViewportState.cameraState!!.center.latitude(),
+                                mapViewportState.cameraState!!.center.longitude()
+                            ),
+                            radius
+                        ) },
+                        modifier = Modifier.padding(8.dp),
+                    ) {
+                        Text("Confirm")
+                    }
+                }
             }
         }
     }
