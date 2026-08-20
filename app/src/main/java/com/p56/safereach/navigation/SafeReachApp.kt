@@ -54,18 +54,9 @@ fun SafeReachApp() {
                     Column(
                         modifier = Modifier
                             .padding(innerPadding)
-                            .padding(16.dp)
                     ) {
                         HomeScreen(name = "User")
                     }
-
-                AppDestinations.FAVORITES -> Column(
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .padding(16.dp)
-                ) {
-                    Text(text = "Favorites Screen")
-                }
 
                 AppDestinations.PROFILE ->
                     Column(
@@ -106,7 +97,6 @@ enum class AppDestinations(
     val icon: Int,
 ) {
     HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
     PROFILE("Profile", R.drawable.ic_account_box),
     DEBUG("Debug", R.drawable.ic_debug),
 }
