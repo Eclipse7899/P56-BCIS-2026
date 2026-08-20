@@ -1,8 +1,10 @@
 @file:Suppress("MagicNumber")
+@file:OptIn(ExperimentalSerializationApi::class)
 
 package com.p56.safereach
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 
@@ -31,14 +33,36 @@ enum class Severity(val code: Int) {
     }
 }
 
-@OptIn(ExperimentalSerializationApi::class)
+
+@Serializable
+data class LatLong(
+    @ProtoNumber(1) val latitude: Double,
+    @ProtoNumber(2) val longitude: Double
+)
+
+@Serializable
+sealed interface Shape{
+    @Serializable
+    data class Circle(
+        @ProtoNumber(1) val center: LatLong,
+        @ProtoNumber(2) val radius: Double
+    ) : Shape
+
+    @Serializable
+    data class Polygon(
+        @ProtoNumber(1) val points: List<LatLong>
+    ) : Shape
+}
+
+
 @Serializable
 data class Alert(
     @ProtoNumber(1) val timestamp: Long,
     @ProtoNumber(2) val title: String,
     @ProtoNumber(3) val description: String,
     @ProtoNumber(4) val type: AlertType,
-    @ProtoNumber(5) val severity: Severity
+    @ProtoNumber(5) val severity: Severity,
+    @ProtoNumber(6) val shape: Shape
 )
 
 data class MeshMeta<T>(
@@ -49,7 +73,6 @@ data class MeshMeta<T>(
 
 
 @Serializable
-@OptIn(ExperimentalSerializationApi::class)
 data class MeshPacket<T>(
     @ProtoNumber(1) val hopCount: Long,
     @ProtoNumber(2) val data: T

@@ -23,3 +23,11 @@ val StatusInfo = Color(0xFF1976D2)
 val StatusInfoContainer = Color(0xFFE3F2FD)
 val StatusNeutral = Color(0xFF757575)
 val StatusNeutralContainer = Color(0xFFF5F5F5)
+
+val alertShapeFillColorSeverityLow = Color(0x81FFE600)
+val alertShapeFillColorSeverityMedium = Color(0x77F57C00)
+val alertShapeFillColorSeverityHigh = Color(0x72C62828)
+
+val alertShapeBorderColorSeverityLow = Color(0xFFB0A321)
+val alertShapeBorderColorSeverityMedium = Color(0xFFF57C00)
+val alertShapeBorderColorSeverityHigh = Color(0xFFC62828)
