@@ -19,8 +19,6 @@ class BleBeaconScanExecutor(
     val btManager: BluetoothManager,
     val onEvent: (BleScanEvent) -> Unit
 ) {
-    private val mask = ByteArray(1650)
-
     private val settings = ScanSettings.Builder()
         .setLegacy(false)
         .setPhy(BluetoothDevice.PHY_LE_CODED)
@@ -75,7 +73,12 @@ class BleBeaconScanExecutor(
     fun stop(callback: ScanCallback) {
         Log.d(TAG, "Stopping scan")
         val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also { Log.e(TAG, "Bluetooth LE scanner is not available during stop") }
+            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also {
+                Log.e(
+                    TAG,
+                    "Bluetooth LE scanner is not available during stop"
+                )
+            }
         bluetoothLeScanner.stopScan(callback)
         Log.d(TAG, "Scan stopped successfully")
     }

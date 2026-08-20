@@ -76,7 +76,9 @@ fun ForgotPasswordScreen(
         Text(
             text = "Enter your email below to reset password",
             style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -104,7 +106,11 @@ fun ForgotPasswordScreen(
                         .addOnCompleteListener { task ->
                             loading = false
                             if (task.isSuccessful) {
-                                Toast.makeText(context, "Password reset link sent", Toast.LENGTH_LONG)
+                                Toast.makeText(
+                                    context,
+                                    "Password reset link sent",
+                                    Toast.LENGTH_LONG
+                                )
                                     .show()
                                 onBackToSignIn()
                             } else {
