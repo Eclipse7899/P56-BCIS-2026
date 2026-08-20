@@ -87,7 +87,7 @@ class MeshService : Service() {
             for (message in dataChannel) {
                 val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
                 val meta = MeshMeta(
-                    message.timestamp,
+                    message.receivedAt,
                     message.receivedFrom,
                     meshPacket
                 )
@@ -96,7 +96,7 @@ class MeshService : Service() {
                 if (current == null){
                     AlertStateRepository.update(meta)
                 }
-                else if (current.packet.data.timestamp > message.timestamp) {
+                else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
                     AlertStateRepository.update(meta)
                 }
             }
