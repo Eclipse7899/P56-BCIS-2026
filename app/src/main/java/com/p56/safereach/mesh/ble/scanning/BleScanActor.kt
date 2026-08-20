@@ -51,10 +51,7 @@ class BleScanActor(
                     is Message.Event -> {
                         val newState = reduce(_state.value, msg.event)
                         if (newState != _state.value) {
-                            Log.d(
-                                TAG,
-                                "State transition: ${_state.value} -> $newState via external event ${msg.event}"
-                            )
+                            Log.d(TAG, "State transition: ${_state.value} -> $newState via external event ${msg.event}")
                         }
                         _state.value = newState
                     }
@@ -63,10 +60,7 @@ class BleScanActor(
                         val event = execute(msg.intent)
                         val newState = reduce(_state.value, event)
                         if (newState != _state.value) {
-                            Log.d(
-                                TAG,
-                                "State transition: ${_state.value} -> $newState via ${msg.intent} -> $event"
-                            )
+                            Log.d(TAG, "State transition: ${_state.value} -> $newState via ${msg.intent} -> $event")
                         }
                         _state.value = newState
                     }

@@ -95,7 +95,7 @@ fun DebugScreen(
 @Composable
 fun AlertDebugCard(
     msg: MeshMeta<Alert>
-) {
+){
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
