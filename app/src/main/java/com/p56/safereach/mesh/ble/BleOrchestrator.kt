@@ -142,7 +142,7 @@ class BleOrchestrator(
                     }
 
                     is BleAdvState.Advertising -> {
-                        Log.d(TAG, "reconcile(Active): Updating advertiser data")
+                        Log.d(TAG, "reconcile(Active): Updating advertising intent ")
                         advertiser.send(
                             BleAdvIntent.Start(intent.payload)
                         )

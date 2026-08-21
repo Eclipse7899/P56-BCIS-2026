@@ -21,12 +21,10 @@ import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.BleScanActor
-import com.p56.safereach.mesh.ble.scanning.BleScanResult
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
@@ -38,16 +36,12 @@ class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val dataChannel = Channel<BleScanResult>(Channel.UNLIMITED)
-
     override fun onCreate() {
         super.onCreate()
         MeshStatusRepository.updateServiceRunning(true)
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val advActor = BleAdvActor(serviceScope, btManager)
-        val scanActor = BleScanActor(serviceScope, btManager, onScan = {
-            dataChannel.trySend(it)
-        })
+        val scanActor = BleScanActor(serviceScope, btManager, this)
         orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
         observeAlertStateRepository()
         observeIncomingData()
@@ -84,7 +78,7 @@ class MeshService : Service() {
 
     private fun observeIncomingData() {
         serviceScope.launch {
-            for (message in dataChannel) {
+            for (message in BleResultQueue.channel) {
                 try{
                     val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
                     val meta = MeshMeta(
