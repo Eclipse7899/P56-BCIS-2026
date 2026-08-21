@@ -12,6 +12,7 @@ import android.bluetooth.le.AdvertisingSetCallback.ADVERTISE_FAILED_FEATURE_UNSU
 import android.bluetooth.le.AdvertisingSetCallback.ADVERTISE_FAILED_INTERNAL_ERROR
 import android.bluetooth.le.AdvertisingSetCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS
 import android.bluetooth.le.AdvertisingSetParameters
+import android.bluetooth.le.AdvertisingSetParameters.INTERVAL_HIGH
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.os.ParcelUuid
 import android.util.Log
@@ -46,8 +47,8 @@ class BleBeaconAdvExecutor(
         .setLegacyMode(false)
         .setPrimaryPhy(BluetoothDevice.PHY_LE_CODED)
         .setSecondaryPhy(BluetoothDevice.PHY_LE_1M)
-        .setInterval(AdvertisingSetParameters.INTERVAL_HIGH)
-        .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_MEDIUM)
+        .setInterval(INTERVAL_HIGH)
+        .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
         .build()
 
     fun buildAdvertiseData(payload: ByteArray): AdvertiseData {
@@ -203,7 +204,7 @@ class BleBeaconAdvExecutor(
         return BleAdvEvent.Started(set, data)
     }
 
-    @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun stop() {
         Log.d(TAG, "stop")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
@@ -226,7 +227,7 @@ class BleBeaconAdvExecutor(
         }
     }
 
-    @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun update(data: ByteArray, set: AdvertisingSet) {
         Log.d(TAG, "update: data size=${data.size}")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
@@ -249,7 +250,7 @@ class BleBeaconAdvExecutor(
         }
     }
 
-    @RequiresPermission(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private suspend fun <T> awaitOperation(
         advertiser: BluetoothLeAdvertiser,
         operation: (Continuation<T>) -> OperationStatus,

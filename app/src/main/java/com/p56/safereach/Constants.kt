@@ -10,5 +10,7 @@ object Constants {
 
     const val BLE_ADVERTISING_TIMEOUT: Long = 2000
 
+    const val BLE_SCAN_INTENT_ACTION = "com.p56.safereach.BLE_SCAN_RESULT"
+
     const val APP_DISPLAY_NAME = "SafeReach"
 }
