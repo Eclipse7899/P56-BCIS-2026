@@ -17,7 +17,9 @@ import com.p56.safereach.auth.MainScreen
 import com.p56.safereach.mesh.MeshService
 import com.p56.safereach.mesh.ble.BlePermissions
 import com.p56.safereach.ui.theme.SafeReachTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val requestBlePermissionsLauncher = registerForActivityResult(

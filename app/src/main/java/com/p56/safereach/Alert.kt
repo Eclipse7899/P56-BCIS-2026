@@ -67,7 +67,8 @@ data class Alert(
 data class MeshMeta<T>(
     val receivedAt: Long,
     val receivedFrom: String?,
-    val packet: MeshPacket<T>
+    val hopCount: Long,
+    val data: T
 )
 
 
@@ -75,4 +76,10 @@ data class MeshMeta<T>(
 data class MeshPacket<T>(
     @ProtoNumber(1) val hopCount: Long,
     @ProtoNumber(2) val data: T
+)
+
+@Serializable
+data class SignedMessage(
+    @ProtoNumber(1) val data: ByteArray,
+    @ProtoNumber(2) val signature: ByteArray
 )

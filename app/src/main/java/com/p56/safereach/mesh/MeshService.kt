@@ -25,6 +25,7 @@ import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.BleScanActor
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.verification.SigningManager
+import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,9 +35,9 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
-import java.security.PublicKey
 
 @OptIn(ExperimentalSerializationApi::class)
+@AndroidEntryPoint
 class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
     private var bleStateReceiver: BleStateReceiver? = null
@@ -96,10 +97,13 @@ class MeshService : Service() {
 
     private fun observeAlertStateRepository() {
         serviceScope.launch {
-            AlertStateRepository.alert.collect { meshMeta ->
-                if (meshMeta != null) {
-                    val newPacket = meshMeta.packet.copy(hopCount = meshMeta.packet.hopCount + 1)
-                    val payloadBytes: ByteArray = ProtoBuf.encodeToByteArray(newPacket)
+            AlertStateRepository.message.collect { message ->
+                if (message != null) {
+                    val packet = MeshPacket(
+                        hopCount = message.hopCount + 1,
+                        data = message.data
+                    )
+                    val payloadBytes: ByteArray = ProtoBuf.encodeToByteArray(packet)
                     orchestrator.send(BleIntent.Active(payloadBytes))
                 } else {
                     orchestrator.send(BleIntent.Passive)
@@ -173,6 +177,13 @@ class MeshService : Service() {
                         updateNotification(
                             "$APP_DISPLAY_NAME is running",
                             "Scanning in the background"
+                        )
+                    }
+
+                    BleState.Disabled -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is stopped",
+                            "Bluetooth has been disabled. Mesh stopped"
                         )
                     }
                 }

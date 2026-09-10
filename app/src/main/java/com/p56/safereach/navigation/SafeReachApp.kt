@@ -22,19 +22,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.p56.safereach.AlertStateRepository
-import com.p56.safereach.MeshMeta
-import com.p56.safereach.MeshPacket
 import com.p56.safereach.R
 import com.p56.safereach.battery.BatteryOptimizationBanner
 import com.p56.safereach.battery.BatteryOptimizationHelper
 import com.p56.safereach.bluetooth.BluetoothDisabledBanner
 import com.p56.safereach.bluetooth.BluetoothHelper
-import com.p56.safereach.debug.DebugScreen
+import com.p56.safereach.debug.DebugRoute
+import com.p56.safereach.debug.DebugViewModel
 import com.p56.safereach.home.HomeScreen
 import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.fsm.BleState
@@ -48,11 +47,11 @@ fun SafeReachApp() {
     var isBatteryOptimizationOn by remember {
         mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationEnabled(context))
     }
-
-    val state by MeshStatusRepository.orchestratorState
-        .collectAsStateWithLifecycle()
-
-    val isBluetoothEnabled = state != BleState.Disabled
+    val state = MeshStatusRepository.orchestratorState.collectAsStateWithLifecycle()
+    val isBluetoothEnabled = when (state.value) {
+        BleState.Disabled -> false
+        else -> true
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -121,20 +120,8 @@ fun SafeReachApp() {
                     AppDestinations.HOME -> HomeScreen()
                     AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
-                        DebugScreen(
-                            onUpdateAlert = { alert ->
-                                AlertStateRepository.update(
-                                    MeshMeta(
-                                        receivedAt = System.currentTimeMillis(),
-                                        receivedFrom = "Debug",
-                                        packet = MeshPacket(
-                                            hopCount = 0,
-                                            data = alert
-                                        )
-                                    )
-                                )
-                            }
-                        )
+                        val vm = hiltViewModel<DebugViewModel>()
+                        DebugRoute(viewModel = vm)
                     }
                 }
             }
