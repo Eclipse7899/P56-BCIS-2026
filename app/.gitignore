@@ -1,1 +1,4 @@
 /build
+
+/debug/res/raw/public_key.pem
+/debug/res/raw/signing_key.pem

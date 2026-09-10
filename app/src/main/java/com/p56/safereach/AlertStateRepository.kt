@@ -5,14 +5,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object AlertStateRepository {
-    private val messageState = MutableStateFlow<MeshMeta<Alert>?>(null)
-    val alert: StateFlow<MeshMeta<Alert>?> = messageState.asStateFlow()
+    private val alertState = MutableStateFlow<Alert?>(null)
 
-    fun update(value: MeshMeta<Alert>) {
+    private val messageState = MutableStateFlow<MeshMeta<SignedMessage>?>(null)
+
+    val alert: StateFlow<Alert?> = alertState.asStateFlow()
+
+    val message: StateFlow<MeshMeta<SignedMessage>?> = messageState.asStateFlow()
+
+    fun updateAlert(value: Alert) {
+        alertState.value = value
+    }
+
+    fun updateMessage(value: MeshMeta<SignedMessage>) {
         messageState.value = value
     }
 
-    fun clear() {
+    fun clearAlert() {
+        alertState.value = null
+    }
+
+    fun clearMessage() {
         messageState.value = null
     }
 }
