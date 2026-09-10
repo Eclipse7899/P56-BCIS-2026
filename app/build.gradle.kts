@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.hilt)
     implementation(libs.hilt.compose)
+    implementation(libs.bouncycastle)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

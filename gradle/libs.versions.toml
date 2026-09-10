@@ -21,6 +21,7 @@ playServicesLocation = "21.4.0"
 hilt = "2.60.1"
 hilt-compose = "1.4.0"
 ksp = "2.3.10"
+bouncyCastle = "1.85.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,7 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 hilt-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-compose" }
+bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncyCastle" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
