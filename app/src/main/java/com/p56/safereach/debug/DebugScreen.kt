@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
@@ -52,13 +53,12 @@ import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.p56.safereach.Alert
-import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.AlertType
 import com.p56.safereach.LatLong
 import com.p56.safereach.MeshMeta
 import com.p56.safereach.Severity
 import com.p56.safereach.Shape
-import com.p56.safereach.mesh.MeshStatusRepository
+import com.p56.safereach.SignedMessage
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
@@ -67,16 +67,26 @@ import com.p56.safereach.ui.theme.StatusInfo
 import com.p56.safereach.ui.theme.StatusNeutral
 import com.p56.safereach.ui.theme.StatusSuccess
 
+
+@Composable
+fun DebugRoute(
+    viewModel: DebugViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    DebugScreen(
+        uiState = uiState,
+        clearAlert = viewModel::clearAlert,
+        updateAlert = viewModel::updateAlert,
+    )
+}
+
 @Composable
 fun DebugScreen(
-    onUpdateAlert: (Alert) -> Unit,
+    uiState: DebugUiState,
+    clearAlert: () -> Unit,
+    updateAlert: (Alert) -> Unit,
 ) {
-    val msg by AlertStateRepository.alert.collectAsStateWithLifecycle()
-    val isMeshRunning by MeshStatusRepository.isServiceRunning.collectAsStateWithLifecycle()
-    val orchestratorState by MeshStatusRepository.orchestratorState.collectAsStateWithLifecycle()
-    val advertiserState by MeshStatusRepository.advertiserState.collectAsStateWithLifecycle()
-    val scannerState by MeshStatusRepository.scannerState.collectAsStateWithLifecycle()
-
     val scrollState = rememberScrollState()
 
     Column(
@@ -88,17 +98,21 @@ fun DebugScreen(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (msg != null) {
-                AlertDebugCard(msg = msg!!)
+            if (uiState.msg != null && uiState.alert != null) {
+                AlertDebugCard(
+                    msg = uiState.msg,
+                    alert = uiState.alert,
+                    onDelete = clearAlert
+                )
             }
-            SetStatusDebugCard {
-                onUpdateAlert(it)
+            SetStatusDebugCard { alert ->
+                updateAlert(alert)
             }
             MeshStatusCollapsibleCard(
-                isMeshRunning = isMeshRunning,
-                orchestratorState = orchestratorState,
-                advertiserState = advertiserState,
-                scannerState = scannerState
+                isMeshRunning = uiState.isMeshRunning,
+                orchestratorState = uiState.orchestratorState,
+                advertiserState = uiState.advertiserState,
+                scannerState = uiState.scannerState,
             )
         }
     }
@@ -106,7 +120,9 @@ fun DebugScreen(
 
 @Composable
 fun AlertDebugCard(
-    msg: MeshMeta<Alert>
+    msg: MeshMeta<SignedMessage>,
+    alert: Alert,
+    onDelete: () -> Unit = {},
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -119,7 +135,6 @@ fun AlertDebugCard(
                 textAlign = TextAlign.Start
             )
             Spacer(modifier = Modifier.height(8.dp))
-            val alert = msg.packet.data
             Text(text = alert.title, style = MaterialTheme.typography.titleMedium)
             Text(text = alert.description)
             Spacer(modifier = Modifier.height(6.dp))
@@ -189,7 +204,7 @@ fun AlertDebugCard(
             Text(text = "Packet", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Hop Count: ${msg.packet.hopCount}",
+                text = "Hop Count: ${msg.hopCount}",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -199,9 +214,7 @@ fun AlertDebugCard(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.error
                 ),
-                onClick = {
-                    AlertStateRepository.clear()
-                }
+                onClick = onDelete
             ) {
                 Text("Delete")
             }
@@ -628,5 +641,16 @@ fun LocationSelectDialog(
 @Composable
 @Preview(showBackground = true)
 fun DebugScreenPreview() {
-    DebugScreen(onUpdateAlert = {})
+    DebugScreen(
+        DebugUiState(
+            msg = null,
+            alert = null,
+            isMeshRunning = true,
+            orchestratorState = BleState.Active(ByteArray(10)),
+            advertiserState = BleAdvState.Idle,
+            scannerState = BleScanState.Scanning
+        ),
+        clearAlert = {},
+        updateAlert = {}
+    )
 }

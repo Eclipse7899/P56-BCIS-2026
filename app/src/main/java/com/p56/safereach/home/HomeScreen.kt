@@ -75,7 +75,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    val msg by AlertStateRepository.alert.collectAsStateWithLifecycle()
+    val alert by AlertStateRepository.alert.collectAsStateWithLifecycle()
     Column(modifier = modifier) {
         MapboxMap(
             Modifier
@@ -93,28 +93,28 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 }
                 mapViewportState.transitionToFollowPuckState()
             }
-            when (val msg = msg) {
+            when (val alert = alert) {
                 null -> {}
                 else -> {
-                    when (msg.packet.data.shape) {
+                    when (alert.shape) {
                         is Shape.Circle -> {
                             val point = Point.fromLngLat(
-                                msg.packet.data.shape.center.longitude,
-                                msg.packet.data.shape.center.latitude
+                                alert.shape.center.longitude,
+                                alert.shape.center.latitude
                             )
-                            val color = when (msg.packet.data.severity) {
+                            val color = when (alert.severity) {
                                 Severity.LOW -> alertShapeFillColorSeverityLow
                                 Severity.MEDIUM -> alertShapeFillColorSeverityMedium
                                 Severity.HIGH -> alertShapeFillColorSeverityHigh
                             }
-                            val borderColor = when (msg.packet.data.severity) {
+                            val borderColor = when (alert.severity) {
                                 Severity.LOW -> alertShapeBorderColorSeverityLow
                                 Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
                                 Severity.HIGH -> alertShapeBorderColorSeverityHigh
                             }
                             val polygonCircle = TurfTransformation.circle(
                                 point,
-                                msg.packet.data.shape.radius,
+                                alert.shape.radius,
                                 64,
                                 TurfConstants.UNIT_METERS
                             )
@@ -129,7 +129,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                                 fillOutlineColor = ColorValue(borderColor)
                             }
                         }
-
                         is Shape.Polygon -> TODO()
                     }
                 }
