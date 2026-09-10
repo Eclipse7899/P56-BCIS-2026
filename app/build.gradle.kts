@@ -1,3 +1,10 @@
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter
+import java.io.FileWriter
+import java.security.KeyPairGenerator
+import java.security.Security
+import java.util.Base64
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -40,6 +47,75 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+}
+
+fun writePem(label: String, derBytes: ByteArray, file: File) {
+    val base64 = Base64.getMimeEncoder(64, "\n".toByteArray())
+        .encodeToString(derBytes)
+
+    val pem = "-----BEGIN $label-----\n$base64\n-----END $label-----\n"
+    file.writeText(pem)
+}
+
+tasks.register("generateSigningKeys") {
+    group = "security"
+    description = "Generates an Ed25519 signing key pair for debug builds"
+
+    val privateKeyFile = file("src/debug/res/raw/signing_key.pem")
+    val publicKeyFile = file("src/main/res/raw/public_key.pem")
+
+    outputs.files(privateKeyFile, publicKeyFile)
+
+    doLast {
+        if (privateKeyFile.exists() || publicKeyFile.exists()) {
+            throw GradleException(
+                """
+                Signing keys already exist.
+
+                Private key: ${privateKeyFile.path}
+                Public key:  ${publicKeyFile.path}
+
+                Delete them manually if you really want to regenerate them.
+                """.trimIndent()
+            )
+        }
+
+        if (Security.getProvider("BC") == null) {
+            Security.addProvider(BouncyCastleProvider())
+        }
+
+        println("Generating Ed25519 key pair...")
+
+        val kpg = KeyPairGenerator.getInstance("Ed25519", "BC")
+        val keyPair = kpg.generateKeyPair()
+
+        val privateKey = keyPair.private
+        val publicKey = keyPair.public
+
+        FileWriter(privateKeyFile).use { writer ->
+            JcaPEMWriter(writer).use { pemWriter ->
+                pemWriter.writeObject(privateKey)
+            }
+        }
+
+        FileWriter(publicKeyFile).use { writer ->
+            JcaPEMWriter(writer).use { pemWriter ->
+                pemWriter.writeObject(publicKey)
+            }
+        }
+
+        println()
+        println("Ed25519 key pair generated successfully.")
+        println()
+        println("Private key:")
+        println("  ${privateKeyFile.path}")
+        println()
+        println("Public key:")
+        println("  ${publicKeyFile.path}")
+        println()
+        println("IMPORTANT: Do NOT commit the private key.")
     }
 }
 

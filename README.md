@@ -1,65 +1,82 @@
 # SafeReach
 
-A disaster management Android application for the AUT BCIS 2026 project, designed to help users stay connected and safe during emergency situations.
+SafeReach is an Android disaster-management app for the AUT BCIS 2026 project. It focuses on emergency alerts, local mesh communication, and a Compose-based user interface.
 
 **Package Name:** `com.p56.safereach`
 
-## Description
-
-SafeReach is built with modern Android technologies including Jetpack Compose, Material Design 3, and Firebase Cloud Messaging to provide real-time emergency alerts and user connectivity during disasters.
-
 ## Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture, component overview, and dependencies
-- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development standards, testing procedures, and deployment guidelines
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Current architecture, data flow, and dependency layout
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Development workflow, testing, and contribution standards
 
 ## Quick Start
 
 ### Prerequisites
-- Android Studio Jellyfish or newer
-- JDK 11+
-- Gradle 9.2.1+
-- Firebase project configuration
 
-### Building the Project
+- Android Studio with the Android SDK installed
+- JDK 17
+- Android Gradle Plugin / Gradle wrapper from the repo
+- Firebase configuration for the app
+- Ed25519 key pair generated in the local app resources if required for signing verification
+
+### Setup
 
 ```bash
-# Build debug APK
+# Clone
+git clone https://github.com/Eclipse7899/P56-BCIS-2026.git
+cd P56-BCIS-2026
+
+# Generate local Ed25519 signing keys if they are not already present
+./gradlew generateSigningKeys
+
+# Sync and build the project
 ./gradlew assembleDebug
-
-# Build release APK
-./gradlew assembleRelease
-
-# Run tests
-./gradlew test
-
-# Run linting
-./gradlew ktlint
 ```
 
-## Project Details
+### Common build commands
+
+```bash
+# Debug build
+./gradlew assembleDebug
+
+# Release build
+./gradlew assembleRelease
+
+# Unit tests
+./gradlew test
+
+# Instrumented tests
+./gradlew connectedAndroidTest
+```
+
+## Current project configuration
 
 - **Minimum SDK:** Android 10 (API 29)
 - **Target SDK:** Android 15 (API 36)
+- **Compile SDK:** Android 15 (API 37 via AGP release config)
 - **Language:** Kotlin
-- **UI Framework:** Jetpack Compose
-- **Theme:** Material Design 3
+- **UI Framework:** Jetpack Compose + Material 3
+- **Architecture:** Compose UI with ViewModels, repositories, and Hilt
+- **Realtime communication:** Firebase Cloud Messaging and BLE mesh service
+- **Mapping:** Mapbox SDK + Compose map extension
 
-## Development Workflow
+## Current architecture summary
 
-1. Create a feature branch: `git checkout -b feature/feature-name`
-2. Follow coding standards from [DEVELOPMENT.md](./DEVELOPMENT.md)
-3. Write tests for your changes
-4. Format code: `./gradlew ktlintFormat`
-5. Open a pull request for review
-6. Merge after approval and CI/CD passes
+The app is built around a Compose UI layer, state repositories, and background services:
 
-## Version Control
+- `MainActivity` starts the app and ensures the BLE mesh service is running.
+- `SafeReachApp` hosts the top-level navigation and screen switching.
+- `HomeScreen`, `ProfileScreen`, and `DebugScreen` render the main UI.
+- `DebugViewModel` owns debug screen state and exposes the current mesh/alert state.
+- `AlertStateRepository` stores the currently active alert and associated metadata.
+- `MeshStatusRepository` tracks BLE service and subsystem states.
+- `MeshService` receives and broadcasts mesh messages and updates repository state.
+- `FirebaseAlertService` decodes incoming Firebase alerts and stores them in the same alert state flow.
 
-- **Main Branch** - Production code (PR required)
-- **Development Branch** - Sprint features (PR required)
-- **Feature/\*** - Feature development
-- **Fix/\*** - Bug fixes
+## Contributing
 
-See [DEVELOPMENT.md](./DEVELOPMENT.md#version-control--git-workflow) for detailed workflow.
+1. Create a feature branch.
+2. Follow the guidance in [DEVELOPMENT.md](./DEVELOPMENT.md).
+3. Update docs when behavior or architecture changes.
+4. Validate with the relevant Gradle task before opening a PR.
 
