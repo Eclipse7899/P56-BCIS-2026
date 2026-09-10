@@ -6,14 +6,21 @@ import com.p56.safereach.SignedMessage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.Security
 
 
 @Singleton
-class SigningManager @Inject constructor(
-    @ApplicationContext context: Context
-){
+class SigningManager {
+    private val context: Context
+
+    @Inject
+    constructor(@ApplicationContext context: Context){
+        this.context = context
+        setupCrypto()
+    }
 
     private val publicKey: PublicKey by lazy {
         context.resources

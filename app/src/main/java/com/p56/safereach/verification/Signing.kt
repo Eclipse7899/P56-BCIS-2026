@@ -1,19 +1,29 @@
 package com.p56.safereach.verification
 
 import com.p56.safereach.SignedMessage
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.Security
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import kotlin.io.encoding.Base64
 
+private const val BC = "BC"
+private const val ED25519 = "Ed25519"
+
+fun setupCrypto(){
+    Security.removeProvider(BC)
+    Security.insertProviderAt(BouncyCastleProvider(), 1)
+}
+
 fun verify(
     signed: SignedMessage,
     publicKey: PublicKey
 ): Boolean {
-    val verifier = Signature.getInstance("Ed25519")
+    val verifier = Signature.getInstance(ED25519, BC)
     verifier.initVerify(publicKey)
     verifier.update(signed.data)
 
@@ -21,7 +31,7 @@ fun verify(
 }
 
 fun sign(data: ByteArray, privateKey: PrivateKey): SignedMessage {
-    val signer = Signature.getInstance("Ed25519")
+    val signer = Signature.getInstance(ED25519, BC)
     signer.initSign(privateKey)
     signer.update(data)
 
@@ -40,7 +50,7 @@ fun String.toEd25519PublicKey(): PublicKey {
     val bytes = Base64.decode(base64)
 
     return KeyFactory
-        .getInstance("Ed25519")
+        .getInstance(ED25519, BC)
         .generatePublic(X509EncodedKeySpec(bytes))
 }
 
@@ -55,6 +65,6 @@ fun String.toEd25519PrivateKey(): PrivateKey {
     val keySpec = PKCS8EncodedKeySpec(keyBytes)
 
     return KeyFactory
-        .getInstance("Ed25519")
+        .getInstance(ED25519, BC)
         .generatePrivate(keySpec)
 }
