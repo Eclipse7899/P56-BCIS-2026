@@ -105,7 +105,7 @@ class MeshService : Service() {
     private fun observeIncomingData() {
         serviceScope.launch {
             for (message in BleResultQueue.channel) {
-                try{
+                try {
                     val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
                     val meta = MeshMeta(
                         message.receivedAt,
@@ -119,8 +119,7 @@ class MeshService : Service() {
                     } else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
                         AlertStateRepository.update(meta)
                     }
-                }
-                catch (e: Exception){
+                } catch (e: Exception) {
                     Log.w(TAG, "Failed to decode incoming mesh packet", e)
                     continue
                 }

@@ -137,6 +137,7 @@ fun AlertDebugCard(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+
                 is Shape.Polygon -> {
                     Text(
                         text = "Polygon: ${shape.points.size} points",
@@ -295,7 +296,7 @@ fun SetStatusDebugCard(
                 onClick = {
                     openAlertDialog = true
                 }
-            ){
+            ) {
                 Text("Set Location")
             }
             Button(
@@ -309,16 +310,18 @@ fun SetStatusDebugCard(
                         Shape.Circle(
                             LatLong(
                                 lat ?: 0.0,
-                                long ?: 0.0),
-                            radius ?: 0.0)
+                                long ?: 0.0
+                            ),
+                            radius ?: 0.0
+                        )
                     )
                     onSent(alert)
                 },
                 enabled =
                     title.isNotBlank() &&
-                    lat != null &&
-                    long != null &&
-                    radius != null
+                            lat != null &&
+                            long != null &&
+                            radius != null
             ) {
                 Text("Send Over Mesh")
             }
@@ -568,7 +571,7 @@ fun LocationSelectDialog(
                         .padding(4.dp)
                         .clip(shape = RoundedCornerShape(24.dp)),
                     mapViewportState = mapViewportState
-                ){
+                ) {
                     MapEffect(Unit) { mapView ->
                         mapView.location.updateSettings {
                             locationPuck = createDefault2DPuck(withBearing = true)
@@ -605,12 +608,13 @@ fun LocationSelectDialog(
                         onClick = {
                             if (mapViewportState.cameraState == null) return@TextButton
                             onConfirmation(
-                            LatLong(
-                                mapViewportState.cameraState!!.center.latitude(),
-                                mapViewportState.cameraState!!.center.longitude()
-                            ),
-                            radius
-                        ) },
+                                LatLong(
+                                    mapViewportState.cameraState!!.center.latitude(),
+                                    mapViewportState.cameraState!!.center.longitude()
+                                ),
+                                radius
+                            )
+                        },
                         modifier = Modifier.padding(8.dp),
                     ) {
                         Text("Confirm")
