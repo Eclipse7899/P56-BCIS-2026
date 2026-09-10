@@ -19,6 +19,7 @@ mapbox-turf = "7.10.1"
 datastore-preferences = "1.2.0"
 playServicesLocation = "21.4.0"
 hilt = "2.60.1"
+hilt-compose = "1.4.0"
 ksp = "2.3.10"
 
 [libraries]
@@ -49,7 +50,7 @@ kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotl
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
-
+hilt-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hilt-compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
