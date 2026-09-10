@@ -83,7 +83,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 .padding(4.dp)
                 .clip(shape = RoundedCornerShape(24.dp)),
             mapViewportState = mapViewportState,
-        ){
+        ) {
             MapEffect(Unit) { mapView ->
                 mapView.location.updateSettings {
                     locationPuck = createDefault2DPuck(withBearing = true)
@@ -96,7 +96,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             when (val msg = msg) {
                 null -> {}
                 else -> {
-                    when(msg.packet.data.shape){
+                    when (msg.packet.data.shape) {
                         is Shape.Circle -> {
                             val point = Point.fromLngLat(
                                 msg.packet.data.shape.center.longitude,
@@ -129,6 +129,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                                 fillOutlineColor = ColorValue(borderColor)
                             }
                         }
+
                         is Shape.Polygon -> TODO()
                     }
                 }

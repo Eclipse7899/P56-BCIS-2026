@@ -5,4 +5,5 @@ sealed interface BleState {
     data object Passive : BleState
     data class Active(val payload: ByteArray) : BleState
     data object Failed : BleState
+    data object Disabled : BleState
 }

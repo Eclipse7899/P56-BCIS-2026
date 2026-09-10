@@ -1,9 +1,9 @@
 package com.p56.safereach.home
 
 import android.content.Context
+import androidx.core.content.edit
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
-import androidx.core.content.edit
 
 object MapPreferences {
     private const val PREFS_NAME = "MapPrefs"

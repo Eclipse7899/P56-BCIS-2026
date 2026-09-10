@@ -7,6 +7,7 @@ import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvEvent
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvIntent
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Advertising
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Disabled
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Failed
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Idle
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 private sealed interface Message {
     data class Intent(val intent: BleAdvIntent) : Message
     data class Event(val event: BleAdvEvent) : Message
+    data class BluetoothState(val enabled: Boolean) : Message
 }
 
 private const val TAG = "BleAdvActor"
@@ -45,11 +47,30 @@ class BleAdvActor(
         messages.trySend(Message.Intent(intent))
     }
 
+    fun onBluetoothStateChanged(enabled: Boolean) {
+        messages.trySend(Message.BluetoothState(enabled))
+    }
+
     init {
         scope.launch {
             for (msg in messages) {
                 Log.d(TAG, "Received message: $msg")
                 when (msg) {
+                    is Message.BluetoothState -> {
+                        val newState = if (msg.enabled) {
+                            if (_state.value is Disabled) Idle else _state.value
+                        } else {
+                            Disabled
+                        }
+                        if (newState != _state.value) {
+                            Log.d(
+                                TAG,
+                                "State transition: ${_state.value} -> $newState via bluetooth enabled=${msg.enabled}"
+                            )
+                        }
+                        _state.value = newState
+                    }
+
                     is Message.Intent -> {
                         val event = execute(msg.intent)
                         val newState = reduce(_state.value, event)
@@ -98,6 +119,15 @@ class BleAdvActor(
             }
 
             is Failed -> {
+                when (event) {
+                    is BleAdvEvent.Started -> Advertising(event.set, event.data)
+                    is BleAdvEvent.Failed -> Failed(event.error)
+                    is BleAdvEvent.Stopped -> Idle
+                    BleAdvEvent.NoOp -> state
+                }
+            }
+
+            is Disabled -> {
                 when (event) {
                     is BleAdvEvent.Started -> Advertising(event.set, event.data)
                     is BleAdvEvent.Failed -> Failed(event.error)

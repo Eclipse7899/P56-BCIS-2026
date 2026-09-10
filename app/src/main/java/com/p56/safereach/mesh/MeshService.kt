@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
@@ -38,6 +39,7 @@ import java.security.PublicKey
 @OptIn(ExperimentalSerializationApi::class)
 class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
+    private var bleStateReceiver: BleStateReceiver? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Inject
     lateinit var signingManager: SigningManager
@@ -49,10 +51,34 @@ class MeshService : Service() {
         val advActor = BleAdvActor(serviceScope, btManager)
         val scanActor = BleScanActor(serviceScope, btManager, this)
         orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
+        observeBluetoothState(btManager, advActor, scanActor)
         observeAlertStateRepository()
         observeIncomingData()
         observeOrchestratorState()
         observeSubsystemStates(advActor, scanActor)
+    }
+
+    private fun observeBluetoothState(
+        btManager: BluetoothManager,
+        advActor: BleAdvActor,
+        scanActor: BleScanActor
+    ) {
+        val receiver = BleStateReceiver { enabled ->
+            advActor.onBluetoothStateChanged(enabled)
+            scanActor.onBluetoothStateChanged(enabled)
+        }
+
+        val isBluetoothEnabled = btManager.adapter?.isEnabled == true
+        advActor.onBluetoothStateChanged(isBluetoothEnabled)
+        scanActor.onBluetoothStateChanged(isBluetoothEnabled)
+
+        ContextCompat.registerReceiver(
+            this,
+            receiver,
+            BleStateReceiver.filter(),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        bleStateReceiver = receiver
     }
 
     private fun observeSubsystemStates(advActor: BleAdvActor, scanActor: BleScanActor) {
@@ -70,12 +96,9 @@ class MeshService : Service() {
 
     private fun observeAlertStateRepository() {
         serviceScope.launch {
-            AlertStateRepository.message.collect { msg ->
-                if (msg != null) {
-                    val newPacket = MeshPacket(
-                        data = msg.data,
-                        hopCount = msg.hopCount + 1
-                    )
+            AlertStateRepository.alert.collect { meshMeta ->
+                if (meshMeta != null) {
+                    val newPacket = meshMeta.packet.copy(hopCount = meshMeta.packet.hopCount + 1)
                     val payloadBytes: ByteArray = ProtoBuf.encodeToByteArray(newPacket)
                     orchestrator.send(BleIntent.Active(payloadBytes))
                 } else {

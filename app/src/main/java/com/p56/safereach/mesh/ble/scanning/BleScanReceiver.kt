@@ -27,7 +27,8 @@ class BleScanReceiver : BroadcastReceiver() {
                 intent.getParcelableArrayListExtra(BluetoothLeScanner.EXTRA_LIST_SCAN_RESULT)
             }
         for (result in results.orEmpty()) {
-            when (val data = result.scanRecord?.serviceData?.get(ParcelUuid(Constants.BLE_SERVICE_UUID))) {
+            when (val data =
+                result.scanRecord?.serviceData?.get(ParcelUuid(Constants.BLE_SERVICE_UUID))) {
                 null -> continue
                 else -> {
                     val bleResult = BleScanResult(
