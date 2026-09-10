@@ -362,12 +362,14 @@ fun MeshStatusCollapsibleCard(
                     BleState.Passive -> "Passive"
                     BleState.Off -> "Off"
                     BleState.Failed -> "Failed"
+                    BleState.Disabled -> "Disabled"
                 }
                 val orchStatusColor = when (orchestratorState) {
                     is BleState.Active -> StatusSuccess
                     BleState.Passive -> StatusInfo
                     BleState.Off -> StatusNeutral
                     BleState.Failed -> StatusError
+                    BleState.Disabled -> StatusError
                 }
 
                 CollapsibleTreeNode(
@@ -389,11 +391,13 @@ fun MeshStatusCollapsibleCard(
                     val advStatusText = when (advertiserState) {
                         is BleAdvState.Advertising -> "Advertising"
                         BleAdvState.Idle -> "Idle"
+                        BleAdvState.Disabled -> "Disabled"
                         is BleAdvState.Failed -> "Failed (${advertiserState.error})"
                     }
                     val advStatusColor = when (advertiserState) {
                         is BleAdvState.Advertising -> StatusSuccess
                         BleAdvState.Idle -> StatusNeutral
+                        BleAdvState.Disabled -> StatusError
                         is BleAdvState.Failed -> StatusError
                     }
 
@@ -434,11 +438,13 @@ fun MeshStatusCollapsibleCard(
                     val scanStatusText = when (scannerState) {
                         is BleScanState.Scanning -> "Scanning"
                         BleScanState.Idle -> "Idle"
+                        BleScanState.Disabled -> "Disabled"
                         BleScanState.Failed -> "Failed"
                     }
                     val scanStatusColor = when (scannerState) {
                         is BleScanState.Scanning -> StatusSuccess
                         BleScanState.Idle -> StatusNeutral
+                        BleScanState.Disabled -> StatusError
                         BleScanState.Failed -> StatusError
                     }
 

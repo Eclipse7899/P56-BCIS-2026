@@ -1,5 +1,7 @@
 package com.p56.safereach.navigation
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,17 +21,23 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.MeshMeta
 import com.p56.safereach.MeshPacket
 import com.p56.safereach.R
 import com.p56.safereach.battery.BatteryOptimizationBanner
 import com.p56.safereach.battery.BatteryOptimizationHelper
+import com.p56.safereach.bluetooth.BluetoothDisabledBanner
+import com.p56.safereach.bluetooth.BluetoothHelper
 import com.p56.safereach.debug.DebugScreen
 import com.p56.safereach.home.HomeScreen
+import com.p56.safereach.mesh.MeshStatusRepository
+import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.profile.ProfileScreen
 
 @PreviewScreenSizes
@@ -40,6 +48,11 @@ fun SafeReachApp() {
     var isBatteryOptimizationOn by remember {
         mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationEnabled(context))
     }
+
+    val state by MeshStatusRepository.orchestratorState
+        .collectAsStateWithLifecycle()
+
+    val isBluetoothEnabled = state != BleState.Disabled
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -86,6 +99,21 @@ fun SafeReachApp() {
                         modifier = Modifier.padding(8.dp),
                         onDisableClick = {
                             BatteryOptimizationHelper.openBatteryOptimizationSettings(context)
+                        }
+                    )
+                }
+                if (!isBluetoothEnabled) {
+                    BluetoothDisabledBanner(
+                        modifier = Modifier.padding(8.dp),
+                        onEnableClick = {
+                            if (ActivityCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.BLUETOOTH_CONNECT
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                return@BluetoothDisabledBanner
+                            }
+                            BluetoothHelper.requestEnableBluetooth(context)
                         }
                     )
                 }
