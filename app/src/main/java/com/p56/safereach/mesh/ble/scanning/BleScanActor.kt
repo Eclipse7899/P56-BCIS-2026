@@ -7,6 +7,7 @@ import android.util.Log
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanEvent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Disabled
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Failed
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Idle
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Scanning
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 private sealed interface Message {
     data class Intent(val intent: BleScanIntent) : Message
     data class Event(val event: BleScanEvent) : Message
+    data class BluetoothState(val enabled: Boolean) : Message
 }
 
 private const val TAG = "BleScanActor"
@@ -47,6 +49,25 @@ class BleScanActor(
             for (msg in messages) {
                 Log.d(TAG, "Received message: $msg")
                 when (msg) {
+                    is Message.BluetoothState -> {
+                        val newState = if (msg.enabled) {
+                            if (_state.value is Disabled) {
+                                Idle
+                            } else {
+                                _state.value
+                            }
+                        } else {
+                            Disabled
+                        }
+                        if (newState != _state.value) {
+                            Log.d(
+                                TAG,
+                                "State transition: ${_state.value} -> $newState via bluetooth enabled=${msg.enabled}"
+                            )
+                        }
+                        _state.value = newState
+                    }
+
                     is Message.Event -> {
                         val newState = reduce(_state.value, msg.event)
                         if (newState != _state.value) {
@@ -123,5 +144,9 @@ class BleScanActor(
 
     fun send(intent: BleScanIntent) {
         messages.trySend(Message.Intent(intent))
+    }
+
+    fun onBluetoothStateChanged(enabled: Boolean) {
+        messages.trySend(Message.BluetoothState(enabled))
     }
 }
