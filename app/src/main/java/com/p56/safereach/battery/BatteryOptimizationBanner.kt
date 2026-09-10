@@ -65,7 +65,7 @@ fun BatteryOptimizationBanner(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-            Button (
+            Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onDisableClick,
                 colors = ButtonDefaults.textButtonColors(

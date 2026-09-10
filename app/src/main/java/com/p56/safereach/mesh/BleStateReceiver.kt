@@ -6,18 +6,17 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 
-class BleStateReceiver : BroadcastReceiver() {
+class BleStateReceiver(
+    private val onBluetoothEnabledChanged: (Boolean) -> Unit
+) : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ACTION) {
             val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
             when (state) {
-                BluetoothAdapter.STATE_TURNING_OFF, BluetoothAdapter.STATE_OFF -> {
-
-                }
-
-                BluetoothAdapter.STATE_TURNING_ON, BluetoothAdapter.STATE_ON -> {
-
-                }
+                BluetoothAdapter.STATE_ON -> onBluetoothEnabledChanged(true)
+                BluetoothAdapter.STATE_TURNING_OFF,
+                BluetoothAdapter.STATE_OFF,
+                BluetoothAdapter.STATE_TURNING_ON -> onBluetoothEnabledChanged(false)
             }
         }
     }

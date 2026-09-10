@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
@@ -34,6 +35,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 @OptIn(ExperimentalSerializationApi::class)
 class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
+    private var bleStateReceiver: BleStateReceiver? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -43,10 +45,34 @@ class MeshService : Service() {
         val advActor = BleAdvActor(serviceScope, btManager)
         val scanActor = BleScanActor(serviceScope, btManager, this)
         orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
+        observeBluetoothState(btManager, advActor, scanActor)
         observeAlertStateRepository()
         observeIncomingData()
         observeOrchestratorState()
         observeSubsystemStates(advActor, scanActor)
+    }
+
+    private fun observeBluetoothState(
+        btManager: BluetoothManager,
+        advActor: BleAdvActor,
+        scanActor: BleScanActor
+    ) {
+        val receiver = BleStateReceiver { enabled ->
+            advActor.onBluetoothStateChanged(enabled)
+            scanActor.onBluetoothStateChanged(enabled)
+        }
+
+        val isBluetoothEnabled = btManager.adapter?.isEnabled == true
+        advActor.onBluetoothStateChanged(isBluetoothEnabled)
+        scanActor.onBluetoothStateChanged(isBluetoothEnabled)
+
+        ContextCompat.registerReceiver(
+            this,
+            receiver,
+            BleStateReceiver.filter(),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        bleStateReceiver = receiver
     }
 
     private fun observeSubsystemStates(advActor: BleAdvActor, scanActor: BleScanActor) {
@@ -79,7 +105,7 @@ class MeshService : Service() {
     private fun observeIncomingData() {
         serviceScope.launch {
             for (message in BleResultQueue.channel) {
-                try{
+                try {
                     val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
                     val meta = MeshMeta(
                         message.receivedAt,
@@ -93,8 +119,7 @@ class MeshService : Service() {
                     } else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
                         AlertStateRepository.update(meta)
                     }
-                }
-                catch (e: Exception){
+                } catch (e: Exception) {
                     Log.w(TAG, "Failed to decode incoming mesh packet", e)
                     continue
                 }
@@ -134,6 +159,13 @@ class MeshService : Service() {
                             "Scanning in the background"
                         )
                     }
+
+                    BleState.Disabled -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is paused",
+                            "Bluetooth is disabled. Please enable it to continue receiving alerts"
+                        )
+                    }
                 }
             }
         }
@@ -148,6 +180,10 @@ class MeshService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        bleStateReceiver?.let {
+            unregisterReceiver(it)
+            bleStateReceiver = null
+        }
         MeshStatusRepository.updateServiceRunning(false)
         MeshStatusRepository.updateOrchestratorState(BleState.Off)
         MeshStatusRepository.updateAdvertiserState(BleAdvState.Idle)

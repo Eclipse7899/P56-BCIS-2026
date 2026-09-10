@@ -7,6 +7,7 @@ import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.fsm.BleState.Active
+import com.p56.safereach.mesh.ble.fsm.BleState.Disabled
 import com.p56.safereach.mesh.ble.fsm.BleState.Failed
 import com.p56.safereach.mesh.ble.fsm.BleState.Off
 import com.p56.safereach.mesh.ble.fsm.BleState.Passive
@@ -27,7 +28,7 @@ private const val TAG = "BleOrchestrator"
 private data class Snapshot(
     val desired: BleIntent,
     val scan: BleScanState,
-    val adv: BleAdvState
+    val adv: BleAdvState,
 )
 
 class BleOrchestrator(
@@ -82,9 +83,12 @@ class BleOrchestrator(
 
     private fun derive(
         scanState: BleScanState,
-        advState: BleAdvState
+        advState: BleAdvState,
     ): BleState {
         return when {
+            scanState is BleScanState.Disabled || advState is BleAdvState.Disabled ->
+                Disabled
+
             scanState is BleScanState.Idle && advState is BleAdvState.Idle ->
                 Off
 
@@ -103,7 +107,11 @@ class BleOrchestrator(
         }
     }
 
-    private fun reconcile(intent: BleIntent, scanState: BleScanState, advState: BleAdvState) {
+    private fun reconcile(
+        intent: BleIntent,
+        scanState: BleScanState,
+        advState: BleAdvState,
+    ) {
         when (intent) {
             BleIntent.Off -> {
                 if (scanState is BleScanState.Scanning) {
@@ -146,6 +154,10 @@ class BleOrchestrator(
                         advertiser.send(
                             BleAdvIntent.Start(intent.payload)
                         )
+                    }
+
+                    BleAdvState.Disabled -> {
+                        Log.d(TAG, "reconcile(Active): Advertiser is in Disabled state")
                     }
 
                     is BleAdvState.Failed -> {

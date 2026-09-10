@@ -4,7 +4,6 @@
 package com.p56.safereach
 
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 
@@ -41,7 +40,7 @@ data class LatLong(
 )
 
 @Serializable
-sealed interface Shape{
+sealed interface Shape {
     @Serializable
     data class Circle(
         @ProtoNumber(1) val center: LatLong,

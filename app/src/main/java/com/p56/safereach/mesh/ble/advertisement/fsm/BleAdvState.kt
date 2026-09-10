@@ -6,6 +6,7 @@ import com.p56.safereach.mesh.ble.advertisement.BleAdvFail
 sealed interface BleAdvState {
 
     data object Idle : BleAdvState
+    data object Disabled : BleAdvState
 
     data class Advertising(
         val advertisingSet: AdvertisingSet,
