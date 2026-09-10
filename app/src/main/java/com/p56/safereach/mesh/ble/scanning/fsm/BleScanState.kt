@@ -4,6 +4,6 @@ import android.bluetooth.le.ScanCallback
 
 sealed interface BleScanState {
     data object Idle : BleScanState
-    data class Scanning(val callback: ScanCallback) : BleScanState
+    data object Scanning : BleScanState
     data object Failed : BleScanState
 }

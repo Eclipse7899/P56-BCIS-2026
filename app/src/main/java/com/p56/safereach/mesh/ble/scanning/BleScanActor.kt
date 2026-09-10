@@ -2,6 +2,7 @@ package com.p56.safereach.mesh.ble.scanning
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.util.Log
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanEvent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
@@ -27,7 +28,7 @@ private const val TAG = "BleScanActor"
 class BleScanActor(
     scope: CoroutineScope,
     manager: BluetoothManager,
-    private val onScan: (BleScanResult) -> Unit
+    context: Context,
 ) {
 
     private val _state = MutableStateFlow<BleScanState>(Idle)
@@ -38,9 +39,7 @@ class BleScanActor(
 
     private val executor = BleBeaconScanExecutor(
         btManager = manager,
-        onEvent = { event ->
-            messages.trySend(Message.Event(event))
-        }
+        context = context
     )
 
     init {
@@ -78,13 +77,10 @@ class BleScanActor(
     fun reduce(state: BleScanState, event: BleScanEvent): BleScanState {
         return when (event) {
             BleScanEvent.Failed -> Failed
-            is BleScanEvent.Started -> Scanning(event.callback)
+            is BleScanEvent.Started -> Scanning
             BleScanEvent.Stopped -> Idle
             BleScanEvent.NoOp -> state
-            is BleScanEvent.Scanned -> {
-                onScan(event.result)
-                state
-            }
+            is BleScanEvent.Scanned -> state
         }
     }
 
@@ -94,8 +90,8 @@ class BleScanActor(
                 when (val state = _state.value) {
                     Idle -> {
                         try {
-                            val cb = executor.scan()
-                            BleScanEvent.Started(cb)
+                            executor.scan()
+                            BleScanEvent.Started
                         } catch (_: SecurityException) {
                             BleScanEvent.Failed
                         }
@@ -111,7 +107,7 @@ class BleScanActor(
                 when (val state = _state.value) {
                     is Scanning -> {
                         try {
-                            executor.stop(state.callback)
+                            executor.stop()
                             BleScanEvent.Stopped
                         } catch (_: SecurityException) {
                             BleScanEvent.Failed

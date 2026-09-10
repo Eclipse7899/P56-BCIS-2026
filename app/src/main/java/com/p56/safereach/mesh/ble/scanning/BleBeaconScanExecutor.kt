@@ -1,78 +1,66 @@
 package com.p56.safereach.mesh.ble.scanning
 
 import android.Manifest
-import android.bluetooth.BluetoothDevice
+import android.app.PendingIntent
 import android.bluetooth.BluetoothManager
-import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
-import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.Context
+import android.content.Intent
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanEvent
 
 private const val TAG = "BleBeaconScanExecutor"
 
+private const val REQUEST_CODE_BLE_SCAN = 100
+
 class BleBeaconScanExecutor(
     val btManager: BluetoothManager,
-    val onEvent: (BleScanEvent) -> Unit
+    val context: Context
 ) {
-    private val mask = ByteArray(1650)
-
     private val settings = ScanSettings.Builder()
         .setLegacy(false)
-        .setPhy(BluetoothDevice.PHY_LE_CODED)
+        .setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
+        .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
         .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+        .setReportDelay(0)
         .build()
 
     private val filter = ScanFilter.Builder()
         .setServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID))
         .build()
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
-    fun scan(): ScanCallback {
-        val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.")
-        Log.d(TAG, "Starting scan")
-        val scanCallback = object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult) {
-                Log.v(TAG, "Scan result received from ${result.device.address}")
-                result.scanRecord
-                    ?.serviceData?.get(
-                        ParcelUuid(Constants.BLE_SERVICE_UUID)
-                    )
-                    ?.let {
-                        Log.v(TAG, "Relevant service data found for ${result.device.address}")
-                        onEvent(
-                            BleScanEvent.Scanned(
-                                BleScanResult(
-                                    System.currentTimeMillis(),
-                                    result.device.address,
-                                    it
-                                )
-                            )
-                        )
-                    }
-            }
-
-            override fun onScanFailed(errorCode: Int) {
-                Log.e(TAG, "Scan failed with error code: $errorCode")
-                onEvent(BleScanEvent.Failed)
-            }
+    fun buildPendingIntent(): PendingIntent {
+        val intent = Intent(context, BleScanReceiver::class.java).apply {
+            action = Constants.BLE_SCAN_INTENT_ACTION
         }
-        bluetoothLeScanner.startScan(
-            listOf(filter),
-            settings,
-            scanCallback
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            REQUEST_CODE_BLE_SCAN,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )
-        Log.d(TAG, "Scan started successfully")
-        return scanCallback
+        return pendingIntent
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
-    fun stop(callback: ScanCallback) {
+    fun scan() {
+        val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
+            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.")
+        Log.d(TAG, "Starting scan")
+        val intent = buildPendingIntent()
+        bluetoothLeScanner.startScan(
+            listOf(filter),
+            settings,
+            intent
+        )
+        Log.d(TAG, "Scan started successfully")
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    fun stop() {
         Log.d(TAG, "Stopping scan")
         val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
             ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also {
@@ -81,7 +69,8 @@ class BleBeaconScanExecutor(
                     "Bluetooth LE scanner is not available during stop"
                 )
             }
-        bluetoothLeScanner.stopScan(callback)
+        val intent = buildPendingIntent()
+        bluetoothLeScanner.stopScan(intent)
         Log.d(TAG, "Scan stopped successfully")
     }
 }

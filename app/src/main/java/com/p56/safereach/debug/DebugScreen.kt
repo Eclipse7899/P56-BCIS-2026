@@ -313,13 +313,6 @@ fun SetStatusDebugCard(
                             radius ?: 0.0)
                     )
                     onSent(alert)
-                    title = ""
-                    description = ""
-                    selectedType = AlertType.EARTHQUAKE
-                    selectedSeverity = Severity.MEDIUM
-                    lat = null
-                    long = null
-                    radius = null
                 },
                 enabled =
                     title.isNotBlank() &&

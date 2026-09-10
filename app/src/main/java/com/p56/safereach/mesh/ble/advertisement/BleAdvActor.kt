@@ -112,7 +112,7 @@ class BleAdvActor(
         return when (intent) {
             is BleAdvIntent.Start ->
                 when (val state = _state.value) {
-                    is Advertising -> {
+                    is Advertising if shouldUpdate(state, intent) -> {
                         try {
                             executor.update(intent.payload, state.advertisingSet)
                             BleAdvEvent.Started(state.advertisingSet, intent.payload)
@@ -133,7 +133,7 @@ class BleAdvActor(
                 }
 
             is BleAdvIntent.Stop -> {
-                when (val state = _state.value) {
+                when (_state.value) {
                     is Advertising -> {
                         try {
                             executor.stop()
@@ -148,4 +148,9 @@ class BleAdvActor(
             }
         }
     }
+
+    private fun shouldUpdate(
+        state: Advertising,
+        intent: BleAdvIntent.Start
+    ): Boolean = !state.data.contentEquals(intent.payload)
 }
