@@ -1,6 +1,7 @@
 package com.p56.safereach.verification
 
 import android.content.Context
+import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
 import com.p56.safereach.SignedMessage
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,7 +18,7 @@ class SigningManager {
     private val context: Context
 
     @Inject
-    constructor(@ApplicationContext context: Context){
+    constructor(@ApplicationContext context: Context) {
         this.context = context
         setupCrypto()
     }
@@ -30,12 +31,26 @@ class SigningManager {
             .toEd25519PublicKey()
     }
 
-    private val privateKey: PrivateKey by lazy {
-        context.resources
-            .openRawResource(R.raw.signing_key)
-            .bufferedReader()
-            .use { it.readText() }
-            .toEd25519PrivateKey()
+    private val privateKey: PrivateKey? by lazy {
+        if (!BuildConfig.DEBUG) {
+            null
+        } else {
+            val resourceId = context.resources.getIdentifier(
+                "signing_key",
+                "raw",
+                context.packageName
+            )
+
+            require(resourceId != 0) {
+                "Debug signing key not found"
+            }
+
+            context.resources
+                .openRawResource(resourceId)
+                .bufferedReader()
+                .use { it.readText() }
+                .toEd25519PrivateKey()
+        }
     }
 
     fun verify(
@@ -46,8 +61,13 @@ class SigningManager {
 
     fun sign(
         data: ByteArray
-    ): SignedMessage = sign(
-        data = data,
-        privateKey = privateKey
-    )
+    ): SignedMessage {
+        if (privateKey == null){
+            throw IllegalStateException("Signing is not available in release builds")
+        }
+        return sign(
+            data = data,
+            privateKey = privateKey!!
+        )
+    }
 }

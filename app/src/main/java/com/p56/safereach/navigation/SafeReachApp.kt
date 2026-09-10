@@ -38,6 +38,7 @@ import com.p56.safereach.home.HomeScreen
 import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.profile.ProfileScreen
+import com.p56.safereach.BuildConfig
 
 @PreviewScreenSizes
 @Composable
@@ -71,6 +72,9 @@ fun SafeReachApp() {
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
+                if (!BuildConfig.DEBUG && it == AppDestinations.DEBUG) {
+                    return@forEach
+                }
                 item(
                     icon = {
                         Icon(
