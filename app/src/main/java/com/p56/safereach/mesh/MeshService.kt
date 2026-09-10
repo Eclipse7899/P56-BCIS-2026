@@ -15,6 +15,7 @@ import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.MeshMeta
 import com.p56.safereach.MeshPacket
 import com.p56.safereach.R
+import com.p56.safereach.SignedMessage
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
@@ -22,6 +23,8 @@ import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.BleScanActor
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import com.p56.safereach.verification.SigningManager
+import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,11 +33,14 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
+import java.security.PublicKey
 
 @OptIn(ExperimentalSerializationApi::class)
 class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    @Inject
+    lateinit var signingManager: SigningManager
 
     override fun onCreate() {
         super.onCreate()
@@ -64,9 +70,12 @@ class MeshService : Service() {
 
     private fun observeAlertStateRepository() {
         serviceScope.launch {
-            AlertStateRepository.alert.collect { meshMeta ->
-                if (meshMeta != null) {
-                    val newPacket = meshMeta.packet.copy(hopCount = meshMeta.packet.hopCount + 1)
+            AlertStateRepository.message.collect { msg ->
+                if (msg != null) {
+                    val newPacket = MeshPacket(
+                        data = msg.data,
+                        hopCount = msg.hopCount + 1
+                    )
                     val payloadBytes: ByteArray = ProtoBuf.encodeToByteArray(newPacket)
                     orchestrator.send(BleIntent.Active(payloadBytes))
                 } else {
@@ -80,18 +89,27 @@ class MeshService : Service() {
         serviceScope.launch {
             for (message in BleResultQueue.channel) {
                 try{
-                    val meshPacket = ProtoBuf.decodeFromByteArray<MeshPacket<Alert>>(message.data)
+                    val signedMsg = ProtoBuf.decodeFromByteArray<MeshPacket<SignedMessage>>(message.data)
+                    if (!signingManager.verify(signedMsg.data))
+                    {
+                        Log.w(TAG, "Failed to verify incoming mesh packet")
+                        continue
+                    }
+
+                    val alert = ProtoBuf.decodeFromByteArray<Alert>(signedMsg.data.data)
                     val meta = MeshMeta(
                         message.receivedAt,
                         message.receivedFrom,
-                        meshPacket
+                        signedMsg.hopCount,
+                        signedMsg.data
                     )
-
+                    Log.d(TAG, "Received mesh packet: $meta")
                     val current = AlertStateRepository.alert.value
-                    if (current == null) {
-                        AlertStateRepository.update(meta)
-                    } else if (current.packet.data.timestamp < meta.packet.data.timestamp) {
-                        AlertStateRepository.update(meta)
+                    if (current == null || current.timestamp < alert.timestamp) {
+                        AlertStateRepository.updateAlert(alert)
+                        AlertStateRepository.updateMessage(meta)
+                        Log.d(TAG, "Updated alert state: $alert")
+                        Log.d(TAG, "Updated message state: $meta")
                     }
                 }
                 catch (e: Exception){
