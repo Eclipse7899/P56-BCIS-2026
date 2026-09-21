@@ -18,9 +18,9 @@ jobs:
           cache: gradle
 
       - name: Add public key file
-        with:
-          public_key: ${{ secrets.PublicKey }}
-        run: cat > app/src/main/res/raw/public_key.pem <<EOF
+        env:
+          SECRET_KEY: ${{ secrets.PublicKey }}
+        run: echo "$SECRET_KEY" > app/src/main/res/raw/public_key.pem <<EOF
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
