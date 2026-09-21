@@ -55,7 +55,10 @@ class DebugViewModel @Inject constructor(
     )
 
     fun updateAlert(alert: Alert) {
-        AlertStateRepository.updateAlert(alert)
+        if (!AlertStateRepository.updateAlert(alert)) {
+            return
+        }
+
         val signed = signingManager.sign(alert.toByteArray())
         AlertStateRepository.updateMessage(
             MeshMeta(
