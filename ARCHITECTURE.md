@@ -1,257 +1,311 @@
-# SafeReach - Architecture & Dependencies
+# SafeReach architecture
 
-## Project Overview
+This document describes the architecture that is implemented in this repository, with
+special attention to the local mesh. It is written as a map for developers and AI agents:
+start with the diagrams, then use the file map and invariants when changing code.
 
-**SafeReach** is a disaster management Android application developed for the AUT BCIS 2026 project. The app is designed to help users stay connected and safe during emergency situations.
+## System scope
 
-- **Package Name:** `com.p56.safereach`
-- **Minimum SDK:** 29
-- **Target SDK:** 36
-- **Compile SDK:** 36
-- **Language:** Kotlin with Jetpack Compose
+SafeReach is an Android application for receiving and displaying disaster alerts. It has
+two alert ingress paths:
 
----
+* **Firebase Cloud Messaging (FCM):** an Internet-connected fallback or origin path.
+* **Bluetooth Low Energy (BLE):** the local, store-and-forward mesh path between nearby
+  Android devices.
 
-## Architecture Overview
+The application is Kotlin/Compose, uses Hilt for injection, and supports Android API 29+.
+The mesh is currently **BLE-only in production code**. `mesh/wifi/WifiCoordinator.kt` is
+an empty placeholder; no Wi-Fi transport, routing protocol, or Wi-Fi failover is
+implemented.
 
-### Architectural Pattern: Composable-Based UI Architecture
+## Runtime topology
 
-SafeReach follows a **modern Android architecture** based on **Jetpack Compose** and **Material Design 3**, emphasizing declarative UI and state management.
-
-```
-┌─────────────────────────────────────────────┐
-│         Application Layer                    │
-│         (MainActivity)                       │
-├─────────────────────────────────────────────┤
-│         UI Layer                             │
-│         (Jetpack Compose)                    │
-│         - SafeReachApp                       │
-│         - Navigation Suite Scaffold          │
-│         - Composable Functions               │
-├─────────────────────────────────────────────┤
-│         Theme Layer                          │
-│         (Material Design 3)                  │
-│         - SafeReachTheme                     │
-│         - Color Schemes                      │
-│         - Typography                         │
-├─────────────────────────────────────────────┤
-│         Backend Integration                  │
-│         (Firebase)                           │
-│         - Cloud Messaging                    │
-│         - Real-time Notifications            │
-└─────────────────────────────────────────────┘
-```
-
-### Navigation Structure
-
-The app uses `AppDestinations` enum to manage navigation:
-
-```kotlin
-enum class AppDestinations(
-    val label: String,
-    val icon: Int,
-) {
-    HOME("Home", R.drawable.ic_home),
-    FAVORITES("Favorites", R.drawable.ic_favorite),
-    PROFILE("Profile", R.drawable.ic_account_box),
-}
+```text
+                             Internet
+                                |
+                         Firebase Cloud Messaging
+                                |
+                    FirebaseAlertService (Android service)
+                                |
+                                v
+                   AlertStateRepository (StateFlow)
+                                |
+              +-----------------+-----------------+
+              |                                   |
+              v                                   v
+       Compose UI / Mapbox                 MeshService (foreground)
+                                                  |
+                                          BleOrchestrator
+                                   +--------------+--------------+
+                                   |                             |
+                            BleScanController             BleAdvController
+                                   |                             |
+                           BleBeaconScanAdapter          BleBeaconAdvAdapter
+                                   |                             |
+                  Android BLE scan PendingIntent       Android BLE advertising set
+                                   |                             |
+                        BleScanReceiver       <---- BLE service-data broadcast ---->
+                                   |
+                            BleResultQueue
+                                   |
+                            MeshService
 ```
 
-## Dependencies
+Every device runs the same software. A device with a current alert scans and advertises
+at the same time; a device without an alert scans only. There is no central mesh server,
+peer connection, socket, GATT session, or explicit route table.
 
-### Dependency Management
+## Application layers
 
-The project uses **Gradle Version Catalog** (`gradle/libs.versions.toml`) for centralized dependency management, improving maintainability and consistency.
-
-### Core Dependencies
-
-#### **Android Framework**
-- **AGP** (Android Gradle Plugin): `9.2.1`
-- **Java Version Compatibility:** `11`
-- **Kotlin Compiler:** `2.3.21`
-
-#### **Jetpack Libraries**
-| Library | Version | Purpose |
-|---------|---------|---------|
-| `androidx.core:core-ktx` | `1.18.0` | Kotlin extensions for Android core functionality |
-| `androidx.lifecycle:lifecycle-runtime-ktx` | `2.10.0` | Lifecycle-aware components |
-| `androidx.activity:activity-compose` | `1.13.0` | Compose integration for activities |
-
-#### **Jetpack Compose UI Framework**
-- **Compose BOM** (Bill of Materials): `2026.05.01`
-- **Material Components:**
-  - `androidx.compose.material3:material3` - Material Design 3 components
-  - `androidx.compose.material3:material3-adaptive-navigation-suite` - Adaptive navigation
-  
-- **Core UI Components:**
-  - `androidx.compose.ui:ui` - Core UI primitives
-  - `androidx.compose.ui:ui-graphics` - Graphics utilities
-  - `androidx.compose.ui:ui-tooling` - Development tools
-  - `androidx.compose.ui:ui-tooling-preview` - Preview functionality
-
-#### **Firebase Integration**
-- **Firebase BOM**: `34.13.0`
-- **Firebase Cloud Messaging**: `25.0.2`
-  - Push notifications for emergency alerts
-  - Real-time user communication during disasters
-
-### Testing Dependencies
-
-| Library | Version | Purpose |
-|---------|---------|---------|
-| `junit:junit` | `4.13.2` | Unit testing framework |
-| `androidx.test.ext:junit` | `1.3.0` | Android JUnit extensions |
-| `androidx.test.espresso:espresso-core` | `3.7.0` | UI testing framework |
-| `androidx.compose.ui:ui-test-junit4` | (via BOM) | Compose UI testing |
-
-### Debug Dependencies
-
-- `androidx.compose.ui:ui-test-manifest` - Test manifest for UI tests
-- `androidx.compose.ui:ui-tooling` - Debugging tools (only in debug builds)
-
----
-
-## Build Configuration
-
-### Gradle Build Files
-
-#### Root `build.gradle.kts`
-Configures project-wide settings and plugins.
-
-#### App `build.gradle.kts`
-```kotlin
-// Application ID
-applicationId = "com.p56.safereach"
-
-// API Levels
-minSdk = 29          // Supports Android 10+
-targetSdk = 36       // Targets Android 15
-compileSdk = 36      // Compiles against Android 15
-
-// Features
-buildFeatures {
-    compose = true   // Enables Jetpack Compose
-}
-
-// Compile Options
-compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
+```text
+Android entry points
+  App, MainActivity, FirebaseAlertService, MeshService, BleScanReceiver
+        |
+Domain and wire models
+  Alert, Shape, MeshPacket<T>, SignedMessage, MeshMeta<T>
+        |
+State boundary
+  AlertStateRepository, MeshStatusRepository
+        |
+Transport coordination
+  BleOrchestrator
+        |
+Transport state machines and Android executors
+  BleScanController -> BleBeaconScanAdapter
+  BleAdvController  -> BleBeaconAdvAdapter
+        |
+Android Bluetooth LE APIs
 ```
 
-### Build Variants
+The Compose UI does not call Bluetooth APIs directly. It observes repositories through
+`DebugViewModel` and `SafeReachApp`. `MainActivity` is responsible for requesting runtime
+permissions and starting `MeshService`; the service owns the mesh for its lifetime.
 
-- **Debug Build** - Full debugging capabilities
-- **Release Build** - Optimized with ProGuard (enabled if minification needed)
+## Mesh lifecycle
 
-## Key Features & Capabilities
+1. `MainActivity.onCreate` calls `ensureBleServiceRunning`.
+2. `BlePermissions` determines the API-specific Bluetooth, location, and notification
+   permissions. If they are granted, the activity starts `MeshService` as a foreground
+   service; otherwise it requests them.
+3. `MeshService.onCreate` creates one `BleAdvController`, one `BleScanController`, and one
+   `BleOrchestrator` on a supervisor-backed background scope.
+4. The service registers `BleStateReceiver`, seeds both actors with the current Bluetooth
+   enabled state, and starts collecting their state flows.
+5. `onStartCommand` requests `BleIntent.Passive` and calls `startForeground`. The service
+   returns `START_STICKY`, so Android may recreate it after process pressure.
+6. The service observes `AlertStateRepository.message`:
+   * `null` means passive mode: scan, do not advertise.
+   * a signed message means active mode: scan and advertise the encoded packet.
+7. `onDestroy` marks repository state as stopped and requests `BleIntent.Off`.
 
-### 1. **Adaptive Navigation**
-- Uses Material Design 3's `NavigationSuiteScaffold`
-- Automatically adapts UI based on screen size and device orientation
-- Supports seamless navigation between three main screens
+The manifest declares `MeshService` as a non-exported foreground service of type
+`connectedDevice`. The ongoing low-importance notification communicates whether the mesh
+is active, passive, disabled, or failed.
 
-### 2. **Theme System**
-- Material Design 3 theming with dynamic colors (Android 12+)
-- Support for dark and light modes
-- System-aware theme detection
+## Orchestrator and state machines
 
-### 3. **Real-time Communications**
-- Firebase Cloud Messaging integration for push notifications
-- Enables sending emergency alerts to users
+`BleOrchestrator` is a desired-state reconciler. It does not perform Bluetooth I/O. It
+combines the desired `BleIntent` with the scanner and advertiser states, derives a public
+`BleState`, and sends only the commands needed to converge the actors.
 
-### 4. **Modern UI Toolkit**
-- Fully built with Jetpack Compose for declarative UI
-- Preview capabilities for development
-- Edge-to-edge display support
+```text
+BleIntent.Off
+  scanner Scanning -> Stop
+  advertiser Advertising -> Stop
+  resulting state: Off when both are Idle
 
----
+BleIntent.Passive
+  scanner Idle -> Start
+  advertiser Advertising -> Stop
+  resulting state: Passive when scanner is Scanning and advertiser is Idle
 
-## Development Workflow
-
-### Build Commands
-
-```bash
-# Build debug APK
-./gradlew assembleDebug
-
-# Build release APK
-./gradlew assembleRelease
-
-# Run tests
-./gradlew test
-
-# Run instrumented tests
-./gradlew connectedAndroidTest
-
-# Clean build
-./gradlew clean build
+BleIntent.Active(payload)
+  scanner Idle -> Start
+  advertiser Idle -> Start(payload)
+  advertiser Advertising + changed payload -> update(payload)
+  resulting state: Active(payload) when both are running
 ```
 
-### Development Tools
-- Android Studio (Recommended)
-- Kotlin 2.3.21 compiler
-- Gradle 9.2.1
-- JDK 11+
+Any disabled child produces `BleState.Disabled`; any failed child produces
+`BleState.Failed`. A Bluetooth state broadcast moves both actors to `Disabled` when
+Bluetooth is off and allows them to return to `Idle` when it is on. Actor commands and
+callbacks are serialized through coroutine channels. Advertising operations are additionally
+serialized with a `Mutex` and bounded by `BLE_ADVERTISING_TIMEOUT` (2 seconds).
 
----
+### Scan path
 
-## Dependencies Update Information
+`BleBeaconScanAdapter` starts a filtered BLE scan using:
 
-All dependencies are specified in `gradle/libs.versions.toml` for easier maintenance and updates. To update a dependency:
+* the SafeReach service UUID
+  `d5013063-3e8b-44f9-b051-040d01d97ac4`;
+* non-legacy scanning on all supported LE PHYs;
+* balanced scan mode and aggressive matching;
+* a `PendingIntent` delivered to `BleScanReceiver`.
 
-1. Update the version in `libs.versions.toml`
-2. Rebuild the project
-3. The changes will automatically apply across all modules
+`BleScanReceiver` extracts service data for the SafeReach UUID, records the current time
+and Bluetooth device address, and puts a `BleScanResult` on the process-wide
+`BleResultQueue`. The scanner actor does not process packet contents; `MeshService` is
+the consumer and validation boundary.
 
-### Latest Versions (as of May 2026)
-- **Compose BOM:** 2026.05.01 (Latest)
-- **Firebase:** 34.13.0 (Stable)
-- **Android Gradle Plugin:** 9.2.1 (Latest)
-- **Kotlin:** 2.3.21 (Latest)
+### Advertisement path
 
----
+`BleBeaconAdvAdapter` uses a non-connectable extended advertising set. It advertises the
+same SafeReach service UUID and places the payload in service data. The primary PHY is
+coded LE, the secondary PHY is LE 1M, the interval is high, and transmit power is high.
+The device name and transmit power are not included.
 
-## Development Standards & Procedures
+Advertising is payload-replaceable: when an alert changes, the existing advertising set is
+updated instead of starting another set. Payload-size and platform capability failures are
+reported through `BleAdvFail` and become an orchestrator failure state.
 
-For comprehensive information on development practices, testing strategies, and deployment procedures, refer to **[DEVELOPMENT.md](./DEVELOPMENT.md)**.
+## Wire format and forwarding
 
-This document covers:
-- **Code Style Guide** - Naming conventions for Kotlin & TypeScript (PascalCase, camelCase, UPPERCASE)
-- **Code Quality Guidelines** - Single responsibility, meaningful naming, DRY principle, pure functions
-- **Security Requirements** - Input verification, environment variable usage, secret management
-- **Version Control** - Git workflow, commit standards, branching strategy (main/development/feature/fix)
-- **Testing Strategy** - Unit tests, integration tests, E2E tests, linting with KLint/Prettier
-- **CI/CD Pipeline** - Automated testing and validation with GitHub Actions
-- **Definition of Done** - Complete checklist for feature completion
+The BLE service-data bytes have this logical structure:
 
----
+```text
+MeshPacket<SignedMessage>
+  hopCount: Long
+  data: SignedMessage
+    data: ByteArray       // ProtoBuf-encoded Alert
+    signature: ByteArray  // Ed25519 signature over data
+```
 
-## Future Development Considerations
+`Alert` contains a timestamp, title, description, type, severity, and geographic shape
+(circle or polygon). `MeshMeta` is local metadata and is not transmitted; it records when
+the device received the packet, the source Bluetooth address, the hop count, and the
+signed payload.
 
-1. **State Management:** Consider implementing MVVM or MVI patterns with ViewModel
-2. **Data Persistence:** Add Room database for local data storage
-3. **Networking:** Implement Retrofit for API communication
-4. **Dependency Injection:** Consider Hilt for dependency management
-5. **Feature Modules:** Modularize code into feature-specific modules
-6. **Navigation Architecture:** Implement Navigation Compose for type-safe routing
+### Outgoing alert
 
----
+The debug flow currently creates an alert by:
 
-## Contributing Guidelines
+1. ProtoBuf-encoding `Alert`;
+2. signing those bytes with `SigningManager`;
+3. storing `MeshMeta(hopCount = 0, receivedFrom = null, ...)` in
+   `AlertStateRepository`;
+4. causing `MeshService` to encode `MeshPacket(hopCount = 1, data = signedMessage)`;
+5. sending those bytes to `BleOrchestrator` as `BleIntent.Active`.
 
-When adding new dependencies:
-1. Add version to `gradle/libs.versions.toml`
-2. Add library reference in the same file
-3. Use aliases in `build.gradle.kts`
-4. Keep dependencies up to date and regularly scan for security vulnerabilities
+FCM also stores a received signed message with hop count 0, so it enters the same
+repository-to-advertisement path.
 
----
+### Incoming and forwarding path
 
-## License & References
+```text
+BLE advertisement
+  -> BleScanReceiver
+  -> BleResultQueue
+  -> MeshService
+  -> ProtoBuf decode MeshPacket<SignedMessage>
+  -> Ed25519 verification of SignedMessage.data
+  -> ProtoBuf decode Alert
+  -> compare Alert.timestamp with current alert
+  -> update AlertStateRepository if newer
+  -> repository observer increments hopCount and re-advertises
+```
 
-- [Jetpack Compose Documentation](https://developer.android.com/develop/ui/compose)
-- [Material Design 3](https://m3.material.io/)
-- [Firebase Documentation](https://firebase.google.com/docs)#
-- [Android Gradle Plugin Guide](https://developer.android.com/build/releases/gradle-plugin)
+Invalid or unverifiable BLE packets are logged and discarded. A received alert replaces
+the current alert only when its timestamp is newer; older packets do not trigger a new
+advertisement. Because the repository stores only one current alert and one message,
+this is a latest-alert relay rather than a queue of independent messages.
+
+## Security and trust boundaries
+
+`SigningManager` loads a bundled public Ed25519 key from `res/raw/public_key.pem`.
+Debug builds may also load a locally generated private key from debug resources; release
+builds deliberately cannot sign. The Gradle `generateSigningKeys` task creates the pair
+and warns that the private key must not be committed.
+
+For BLE ingress, the trust boundary is `MeshService`: it verifies the signature before
+decoding and applying the alert. Bluetooth addresses are metadata only and are not an
+identity or authentication mechanism. BLE transport is broadcast and non-connectable;
+confidentiality and sender identity are not provided by the transport itself.
+
+The current FCM handler decodes the `SignedMessage` and alert and writes them to the
+repository, but does not call `SigningManager.verify`. Treat this as a deliberate
+implementation gap to resolve before relying on FCM as a trusted alert source.
+
+## Permissions and operating constraints
+
+Required permissions vary by Android version:
+
+* Android 12+: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `BLUETOOTH_ADVERTISE`.
+* Older Android versions: legacy Bluetooth permissions plus location permissions.
+* Android 13+: `POST_NOTIFICATIONS` for the foreground-service notification.
+* Foreground service and connected-device service declarations are in
+  `AndroidManifest.xml`.
+
+The user must keep Bluetooth enabled. Android scan behavior also depends on device
+location settings and battery optimization. The UI exposes Bluetooth-disabled and battery
+optimization banners, but `LocationStateReceiver` currently observes provider changes
+without updating mesh state.
+
+## Repository and UI data flow
+
+```text
+AlertStateRepository.alert/message
+  -> DebugViewModel.uiState
+  -> DebugScreen
+
+MeshStatusRepository
+  -> DebugViewModel.uiState
+  -> DebugScreen
+  -> SafeReachApp (Bluetooth-disabled banner)
+
+AlertStateRepository.alert
+  -> HomeScreen
+  -> Mapbox map and alert shape rendering
+```
+
+Repositories are process-local `StateFlow` singletons. They are not a durable database:
+alerts and mesh status are lost when the process is recreated. Firebase authentication,
+Mapbox rendering, and navigation are application concerns around the mesh, not mesh
+transport components.
+
+## Source map
+
+| Responsibility                               | Main files                                                                                |
+|----------------------------------------------|-------------------------------------------------------------------------------------------|
+| Android startup and permissions              | `MainActivity.kt`, `App.kt`, `mesh/ble/BlePermissions.kt`, `AndroidManifest.xml`          |
+| Mesh service lifecycle and packet processing | `mesh/MeshService.kt`                                                                     |
+| Desired-state coordination                   | `mesh/ble/BleOrchestrator.kt`, `mesh/ble/fsm/*`                                           |
+| BLE scanning                                 | `mesh/ble/scanning/BleScanController.kt`, `BleBeaconScanAdapter.kt`, `BleScanReceiver.kt` |
+| BLE advertising                              | `mesh/ble/advertisement/BleAdvController.kt`, `BleBeaconAdvAdapter.kt`                    |
+| Cross-component handoff                      | `mesh/BleResultQueue.kt`                                                                  |
+| Mesh and alert state                         | `mesh/MeshStatusRepository.kt`, `AlertStateRepository.kt`                                 |
+| Wire and domain models                       | `Alert.kt`, `Constants.kt`                                                                |
+| Signing and verification                     | `verification/Signing.kt`, `verification/SigningManager.kt`                               |
+| Cloud ingress                                | `FirebaseAlertService.kt`                                                                 |
+| Mesh diagnostics                             | `debug/DebugViewModel.kt`, `debug/DebugScreen.kt`                                         |
+| Planned, not implemented                     | `mesh/wifi/WifiCoordinator.kt`                                                            |
+
+## Invariants for future changes
+
+1. Keep BLE API calls inside the executors and keep state transitions inside the actors.
+2. Send orchestrator intents rather than manipulating actors from UI code.
+3. Preserve the SafeReach service UUID and ProtoBuf field numbers when changing the wire
+   format; changing either breaks interoperability with existing devices.
+4. Verify signatures before accepting locally broadcast data.
+5. Treat `MeshMeta` as local observation metadata, not part of the wire protocol.
+6. Preserve timestamp-based latest-alert behavior unless a durable message store and
+   explicit deduplication/expiry policy are introduced.
+7. Any new transport should feed the same validated message path and repository state,
+   rather than duplicating alert application logic.
+
+## Known limitations and extension points
+
+The current implementation is intentionally small and has important boundaries:
+
+* Wi-Fi transport is not implemented.
+* There is no explicit maximum hop count, packet expiry, message identifier, or
+  deduplication set. Timestamp comparison limits repeated updates but is not a complete
+  routing protocol.
+* There is no durable queue or persistence across process death.
+* BLE payload size is constrained by Android advertising capabilities.
+* FCM and BLE currently have different signature-validation behavior.
+* `LocationStateReceiver` does not currently feed location state into the orchestrator.
+* Release builds can verify messages but cannot originate newly signed debug alerts.
+
+These are architecture decisions or gaps, not assumptions to hide in a new transport.
+Future mesh work should define packet identity, hop/TTL policy, expiry, deduplication,
+transport selection, and trust/key distribution before adding multi-transport forwarding.
