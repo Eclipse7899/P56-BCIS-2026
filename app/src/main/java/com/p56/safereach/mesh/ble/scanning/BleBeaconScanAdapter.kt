@@ -12,11 +12,11 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
 
-private const val TAG = "BleBeaconScanExecutor"
+private const val TAG = "BleBeaconScanAdapter"
 
 private const val REQUEST_CODE_BLE_SCAN = 100
 
-class BleBeaconScanExecutor(
+class BleBeaconScanAdapter(
     val btManager: BluetoothManager,
     val context: Context
 ) {
