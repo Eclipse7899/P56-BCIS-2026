@@ -3,6 +3,7 @@ package com.p56.safereach
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+
 const val MS_IN_SECOND = 1000L
 
 fun secondsToMillis(seconds: Long): Long = seconds * MS_IN_SECOND

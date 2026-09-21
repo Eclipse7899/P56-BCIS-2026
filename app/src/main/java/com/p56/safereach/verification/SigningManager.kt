@@ -60,7 +60,7 @@ class SigningManager {
     fun sign(
         data: ByteArray
     ): SignedMessage {
-        if (privateKey == null){
+        if (privateKey == null) {
             throw IllegalStateException("Signing is not available in release builds")
         }
         return sign(

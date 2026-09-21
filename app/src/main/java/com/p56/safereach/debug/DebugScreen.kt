@@ -342,9 +342,9 @@ fun SetStatusDebugCard(
                                     }
                                 },
                                 onClick = {
-                                selectedSeverity = s
-                                severityMenuExpanded = false
-                            })
+                                    selectedSeverity = s
+                                    severityMenuExpanded = false
+                                })
                         }
                     }
                 }

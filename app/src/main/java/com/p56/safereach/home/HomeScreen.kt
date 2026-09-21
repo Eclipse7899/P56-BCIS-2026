@@ -131,6 +131,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                                 fillOutlineColor = ColorValue(borderColor)
                             }
                         }
+
                         Shape.KindCase.POLYGON -> TODO()
                         Shape.KindCase.KIND_NOT_SET -> TODO()
                     }

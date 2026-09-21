@@ -36,6 +36,7 @@ class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
     private var bleStateReceiver: BleStateReceiver? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Inject
     lateinit var signingManager: SigningManager
 
@@ -109,10 +110,9 @@ class MeshService : Service() {
     private fun observeIncomingData() {
         serviceScope.launch {
             for (message in BleResultQueue.channel) {
-                try{
+                try {
                     val packet = MeshPacket.parseFrom(message.data)
-                    if (!signingManager.verify(packet.msg))
-                    {
+                    if (!signingManager.verify(packet.msg)) {
                         Log.w(TAG, "Failed to verify incoming mesh packet")
                         continue
                     }
@@ -132,8 +132,7 @@ class MeshService : Service() {
                         Log.d(TAG, "Updated alert state: $alert")
                         Log.d(TAG, "Updated message state: $meta")
                     }
-                }
-                catch (e: Exception){
+                } catch (e: Exception) {
                     Log.w(TAG, "Failed to decode incoming mesh packet", e)
                     continue
                 }

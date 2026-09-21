@@ -1,7 +1,6 @@
 package com.p56.safereach.verification
 
 import com.google.protobuf.ByteString
-import com.p56.safereach.proto.Alert
 import com.p56.safereach.proto.SignedMessage
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.KeyFactory
@@ -16,7 +15,7 @@ import kotlin.io.encoding.Base64
 private const val BC = "BC"
 private const val ED25519 = "Ed25519"
 
-fun setupCrypto(){
+fun setupCrypto() {
     Security.removeProvider(BC)
     Security.insertProviderAt(BouncyCastleProvider(), 1)
 }
