@@ -125,12 +125,6 @@ tasks.register("generateSigningKeysDebug") {
     }
 }
 
-tasks.matching {
-    it.name == "preDebugBuild"
-}.configureEach {
-    dependsOn("generateSigningKeysDebug")
-}
-
 dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
