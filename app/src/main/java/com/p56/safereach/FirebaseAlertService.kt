@@ -24,8 +24,9 @@ class FirebaseAlertService : FirebaseMessagingService() {
                     data = msg
                 )
                 val alert = Alert.parseFrom(msg.data)
-                AlertStateRepository.updateAlert(alert)
-                AlertStateRepository.updateMessage(meta)
+                if (AlertStateRepository.updateAlert(alert)) {
+                    AlertStateRepository.updateMessage(meta)
+                }
             } catch (e: IllegalArgumentException) {
                 Log.w(
                     "FirebaseAlertService",

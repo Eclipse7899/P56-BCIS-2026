@@ -170,9 +170,10 @@ MeshPacket<SignedMessage>
     signature: ByteArray  // Ed25519 signature over data
 ```
 
-`Alert` contains a timestamp, title, description, type, severity, and geographic shape
-(circle or polygon). `MeshMeta` is local metadata and is not transmitted; it records when
-the device received the packet, the source Bluetooth address, the hop count, and the
+`Alert` contains a timestamp, version, title, description, type, severity, and geographic
+shape (circle or polygon). The version identifies the newest alert; the timestamp is
+display-only alert metadata. `MeshMeta` is local metadata and is not transmitted; it records
+when the device received the packet, the source Bluetooth address, the hop count, and the
 signed payload.
 
 ### Outgoing alert
@@ -199,14 +200,14 @@ BLE advertisement
   -> ProtoBuf decode MeshPacket<SignedMessage>
   -> Ed25519 verification of SignedMessage.data
   -> ProtoBuf decode Alert
-  -> compare Alert.timestamp with current alert
+  -> compare Alert.version with current alert
   -> update AlertStateRepository if newer
   -> repository observer increments hopCount and re-advertises
 ```
 
 Invalid or unverifiable BLE packets are logged and discarded. A received alert replaces
-the current alert only when its timestamp is newer; older packets do not trigger a new
-advertisement. Because the repository stores only one current alert and one message,
+the current alert only when its version is newer; older or duplicate packets do not trigger
+a new advertisement. Because the repository stores only one current alert and one message,
 this is a latest-alert relay rather than a queue of independent messages.
 
 ## Security and trust boundaries

@@ -14,8 +14,14 @@ object AlertStateRepository {
 
     val message: StateFlow<MeshMeta?> = messageState.asStateFlow()
 
-    fun updateAlert(value: Alert) {
+    fun updateAlert(value: Alert): Boolean {
+        val current = alertState.value
+        if (current != null && current.version >= value.version) {
+            return false
+        }
+
         alertState.value = value
+        return true
     }
 
     fun updateMessage(value: MeshMeta) {

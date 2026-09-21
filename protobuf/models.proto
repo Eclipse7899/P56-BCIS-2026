@@ -46,6 +46,7 @@ message Alert {
   AlertType type = 4;
   Severity severity = 5;
   Shape shape = 6;
+  int64 version = 7;
 }
 
 message SignedMessage {

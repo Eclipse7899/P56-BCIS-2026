@@ -125,9 +125,7 @@ class MeshService : Service() {
                         packet.msg
                     )
                     Log.d(TAG, "Received mesh packet: $meta")
-                    val current = AlertStateRepository.alert.value
-                    if (current == null || current.timestamp < alert.timestamp) {
-                        AlertStateRepository.updateAlert(alert)
+                    if (AlertStateRepository.updateAlert(alert)) {
                         AlertStateRepository.updateMessage(meta)
                         Log.d(TAG, "Updated alert state: $alert")
                         Log.d(TAG, "Updated message state: $meta")
