@@ -28,8 +28,8 @@ import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfTransformation
 import com.p56.safereach.AlertStateRepository
-import com.p56.safereach.Severity
-import com.p56.safereach.Shape
+import com.p56.safereach.proto.Severity
+import com.p56.safereach.proto.Shape
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityHigh
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityLow
@@ -52,8 +52,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         val center = camera.center
         MapPreferences.saveCameraPosition(
             context = context,
-            lat = center.latitude(),
-            lon = center.longitude(),
+            latitude = center.latitude(),
+            longitude = center.longitude(),
             zoom = camera.zoom,
             pitch = camera.pitch,
             bearing = camera.bearing
@@ -66,8 +66,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             val center = camera.center
             MapPreferences.saveCameraPosition(
                 context = context,
-                lat = center.latitude(),
-                lon = center.longitude(),
+                latitude = center.latitude(),
+                longitude = center.longitude(),
                 zoom = camera.zoom,
                 pitch = camera.pitch,
                 bearing = camera.bearing
@@ -96,25 +96,27 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             when (val alert = alert) {
                 null -> {}
                 else -> {
-                    when (alert.shape) {
-                        is Shape.Circle -> {
+                    when (alert.shape.kindCase) {
+                        Shape.KindCase.CIRCLE -> {
                             val point = Point.fromLngLat(
-                                alert.shape.center.longitude,
-                                alert.shape.center.latitude
+                                alert.shape.circle.center.longitude,
+                                alert.shape.circle.center.latitude
                             )
                             val color = when (alert.severity) {
-                                Severity.LOW -> alertShapeFillColorSeverityLow
-                                Severity.MEDIUM -> alertShapeFillColorSeverityMedium
-                                Severity.HIGH -> alertShapeFillColorSeverityHigh
+                                Severity.SEVERITY_LOW -> alertShapeFillColorSeverityLow
+                                Severity.SEVERITY_MEDIUM -> alertShapeFillColorSeverityMedium
+                                Severity.SEVERITY_HIGH -> alertShapeFillColorSeverityHigh
+                                else -> alertShapeFillColorSeverityLow
                             }
                             val borderColor = when (alert.severity) {
-                                Severity.LOW -> alertShapeBorderColorSeverityLow
-                                Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
-                                Severity.HIGH -> alertShapeBorderColorSeverityHigh
+                                Severity.SEVERITY_LOW -> alertShapeBorderColorSeverityLow
+                                Severity.SEVERITY_MEDIUM -> alertShapeBorderColorSeverityMedium
+                                Severity.SEVERITY_HIGH -> alertShapeBorderColorSeverityHigh
+                                else -> alertShapeBorderColorSeverityLow
                             }
                             val polygonCircle = TurfTransformation.circle(
                                 point,
-                                alert.shape.radius,
+                                alert.shape.circle.radius,
                                 64,
                                 TurfConstants.UNIT_METERS
                             )
@@ -129,7 +131,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                                 fillOutlineColor = ColorValue(borderColor)
                             }
                         }
-                        is Shape.Polygon -> TODO()
+
+                        Shape.KindCase.POLYGON -> TODO()
+                        Shape.KindCase.KIND_NOT_SET -> TODO()
                     }
                 }
             }

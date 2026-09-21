@@ -1,3 +1,6 @@
+import com.android.build.gradle.internal.tasks.factory.dependsOn
+import com.google.protobuf.gradle.id
+import com.google.protobuf.gradle.proto
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import java.io.FileWriter
@@ -8,10 +11,10 @@ import java.util.Base64
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.google.protobuf)
 }
 
 android {
@@ -49,6 +52,31 @@ android {
         compose = true
         buildConfig = true
     }
+    sourceSets {
+        named("main") {
+            proto {
+                srcDir("../protobuf")
+            }
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobufCompiler.get()}"
+    }
+    generateProtoTasks {
+        all().configureEach {
+            builtins {
+                id("kotlin") {
+                    option("lite")
+                }
+                id("java") {
+                    option("lite")
+                }
+            }
+        }
+    }
 }
 
 fun writePem(label: String, derBytes: ByteArray, file: File) {
@@ -59,34 +87,23 @@ fun writePem(label: String, derBytes: ByteArray, file: File) {
     file.writeText(pem)
 }
 
-tasks.register("generateSigningKeys") {
+tasks.register("generateSigningKeysDebug") {
     group = "security"
     description = "Generates an Ed25519 signing key pair for debug builds"
 
     val privateKeyFile = file("src/debug/res/raw/signing_key.pem")
-    val publicKeyFile = file("src/main/res/raw/public_key.pem")
+    val publicKeyFile = file("src/debug/res/raw/public_key.pem")
 
     outputs.files(privateKeyFile, publicKeyFile)
 
+    onlyIf {
+        !privateKeyFile.exists() || !publicKeyFile.exists()
+    }
+
     doLast {
-        if (privateKeyFile.exists() || publicKeyFile.exists()) {
-            throw GradleException(
-                """
-                Signing keys already exist.
-
-                Private key: ${privateKeyFile.path}
-                Public key:  ${publicKeyFile.path}
-
-                Delete them manually if you really want to regenerate them.
-                """.trimIndent()
-            )
-        }
-
         if (Security.getProvider("BC") == null) {
             Security.addProvider(BouncyCastleProvider())
         }
-
-        println("Generating Ed25519 key pair...")
 
         val kpg = KeyPairGenerator.getInstance("Ed25519", "BC")
         val keyPair = kpg.generateKeyPair()
@@ -105,18 +122,13 @@ tasks.register("generateSigningKeys") {
                 pemWriter.writeObject(publicKey)
             }
         }
-
-        println()
-        println("Ed25519 key pair generated successfully.")
-        println()
-        println("Private key:")
-        println("  ${privateKeyFile.path}")
-        println()
-        println("Public key:")
-        println("  ${publicKeyFile.path}")
-        println()
-        println("IMPORTANT: Do NOT commit the private key.")
     }
+}
+
+tasks.matching {
+    it.name == "preDebugBuild"
+}.configureEach {
+    dependsOn("generateSigningKeysDebug")
 }
 
 dependencies {
@@ -126,7 +138,8 @@ dependencies {
     implementation(libs.mapbox.sdk)
     implementation(libs.mapbox.compose)
     implementation(libs.mapbox.turf)
-    implementation(libs.kotlinx.serialization.protobuf)
+    implementation(libs.protobuf.javalite)
+    implementation(libs.protobuf.kotlin.lite)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.datastore.preferences)

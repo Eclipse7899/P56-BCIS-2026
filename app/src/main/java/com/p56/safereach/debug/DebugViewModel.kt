@@ -2,14 +2,13 @@ package com.p56.safereach.debug
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.p56.safereach.Alert
 import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.MeshMeta
-import com.p56.safereach.SignedMessage
 import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import com.p56.safereach.proto.Alert
 import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -17,12 +16,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
 
 data class DebugUiState(
-    val msg: MeshMeta<SignedMessage>? = null,
+    val message: MeshMeta? = null,
     val alert: Alert? = null,
     val isMeshRunning: Boolean = false,
     val orchestratorState: BleState = BleState.Off,
@@ -45,7 +41,7 @@ class DebugViewModel @Inject constructor(
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         DebugUiState(
-            msg = values[0] as MeshMeta<SignedMessage>?,
+            message = values[0] as MeshMeta?,
             alert = values[1] as Alert?,
             isMeshRunning = values[2] as Boolean,
             orchestratorState = values[3] as BleState,
@@ -58,10 +54,12 @@ class DebugViewModel @Inject constructor(
         initialValue = DebugUiState(),
     )
 
-    @OptIn(ExperimentalSerializationApi::class)
     fun updateAlert(alert: Alert) {
-        AlertStateRepository.updateAlert(alert)
-        val signed = signingManager.sign(ProtoBuf.encodeToByteArray(alert))
+        if (!AlertStateRepository.updateAlert(alert)) {
+            return
+        }
+
+        val signed = signingManager.sign(alert.toByteArray())
         AlertStateRepository.updateMessage(
             MeshMeta(
                 receivedAt = System.currentTimeMillis(),

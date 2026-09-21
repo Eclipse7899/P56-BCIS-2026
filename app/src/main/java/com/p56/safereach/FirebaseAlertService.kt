@@ -4,34 +4,29 @@ import android.annotation.SuppressLint
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.decodeFromHexString
-import kotlinx.serialization.protobuf.ProtoBuf
+import com.p56.safereach.proto.Alert
+import com.p56.safereach.proto.SignedMessage
 
 @SuppressLint("MissingFirebaseInstanceTokenRefresh")
 class FirebaseAlertService : FirebaseMessagingService() {
 
-    @OptIn(ExperimentalSerializationApi::class)
     override fun onMessageReceived(
         remoteMessage: RemoteMessage
     ) {
         super.onMessageReceived(remoteMessage)
         remoteMessage.data["alert"]?.let { encoded ->
             try {
-                val msg = ProtoBuf.decodeFromHexString<SignedMessage>(encoded)
+                val signedMessage = SignedMessage.parseFrom(encoded.hexToByteArray())
                 val meta = MeshMeta(
                     receivedAt = System.currentTimeMillis(),
                     receivedFrom = null,
                     hopCount = 0,
-                    data = msg
+                    data = signedMessage
                 )
-                val alert = ProtoBuf.decodeFromByteArray<Alert>(msg.data)
-                AlertStateRepository.updateAlert(alert)
-                AlertStateRepository.updateMessage(meta)
-            } catch (e: SerializationException) {
-                Log.w("FirebaseAlertService", "Failed to decode incoming alert", e)
+                val alert = Alert.parseFrom(signedMessage.data)
+                if (AlertStateRepository.updateAlert(alert)) {
+                    AlertStateRepository.updateMessage(meta)
+                }
             } catch (e: IllegalArgumentException) {
                 Log.w(
                     "FirebaseAlertService",

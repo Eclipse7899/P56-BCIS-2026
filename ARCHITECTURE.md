@@ -70,7 +70,7 @@ State boundary
 Transport coordination
   BleOrchestrator
         |
-Transport state machines and Android executors
+Transport state machines and Android adapters
   BleScanController -> BleBeaconScanAdapter
   BleAdvController  -> BleBeaconAdvAdapter
         |
@@ -89,7 +89,7 @@ permissions and starting `MeshService`; the service owns the mesh for its lifeti
    service; otherwise it requests them.
 3. `MeshService.onCreate` creates one `BleAdvController`, one `BleScanController`, and one
    `BleOrchestrator` on a supervisor-backed background scope.
-4. The service registers `BleStateReceiver`, seeds both actors with the current Bluetooth
+4. The service registers `BleStateReceiver`, seeds both controllers with the current Bluetooth
    enabled state, and starts collecting their state flows.
 5. `onStartCommand` requests `BleIntent.Passive` and calls `startForeground`. The service
    returns `START_STICKY`, so Android may recreate it after process pressure.
@@ -106,7 +106,7 @@ is active, passive, disabled, or failed.
 
 `BleOrchestrator` is a desired-state reconciler. It does not perform Bluetooth I/O. It
 combines the desired `BleIntent` with the scanner and advertiser states, derives a public
-`BleState`, and sends only the commands needed to converge the actors.
+`BleState`, and sends only the commands needed to converge the controllers.
 
 ```text
 BleIntent.Off
@@ -127,8 +127,8 @@ BleIntent.Active(payload)
 ```
 
 Any disabled child produces `BleState.Disabled`; any failed child produces
-`BleState.Failed`. A Bluetooth state broadcast moves both actors to `Disabled` when
-Bluetooth is off and allows them to return to `Idle` when it is on. Actor commands and
+`BleState.Failed`. A Bluetooth state broadcast moves both controllers to `Disabled` when
+Bluetooth is off and allows them to return to `Idle` when it is on. Controller commands and
 callbacks are serialized through coroutine channels. Advertising operations are additionally
 serialized with a `Mutex` and bounded by `BLE_ADVERTISING_TIMEOUT` (2 seconds).
 
@@ -144,7 +144,7 @@ serialized with a `Mutex` and bounded by `BLE_ADVERTISING_TIMEOUT` (2 seconds).
 
 `BleScanReceiver` extracts service data for the SafeReach UUID, records the current time
 and Bluetooth device address, and puts a `BleScanResult` on the process-wide
-`BleResultQueue`. The scanner actor does not process packet contents; `MeshService` is
+`BleResultQueue`. the scanner controller does not process packet contents; `MeshService` is
 the consumer and validation boundary.
 
 ### Advertisement path
@@ -170,9 +170,10 @@ MeshPacket<SignedMessage>
     signature: ByteArray  // Ed25519 signature over data
 ```
 
-`Alert` contains a timestamp, title, description, type, severity, and geographic shape
-(circle or polygon). `MeshMeta` is local metadata and is not transmitted; it records when
-the device received the packet, the source Bluetooth address, the hop count, and the
+`Alert` contains a timestamp, version, title, description, type, severity, and geographic
+shape (circle or polygon). The version identifies the newest alert; the timestamp is
+display-only alert metadata. `MeshMeta` is local metadata and is not transmitted; it records
+when the device received the packet, the source Bluetooth address, the hop count, and the
 signed payload.
 
 ### Outgoing alert
@@ -199,14 +200,14 @@ BLE advertisement
   -> ProtoBuf decode MeshPacket<SignedMessage>
   -> Ed25519 verification of SignedMessage.data
   -> ProtoBuf decode Alert
-  -> compare Alert.timestamp with current alert
+  -> compare Alert.version with current alert
   -> update AlertStateRepository if newer
   -> repository observer increments hopCount and re-advertises
 ```
 
 Invalid or unverifiable BLE packets are logged and discarded. A received alert replaces
-the current alert only when its timestamp is newer; older packets do not trigger a new
-advertisement. Because the repository stores only one current alert and one message,
+the current alert only when its version is newer; older or duplicate packets do not trigger
+a new advertisement. Because the repository stores only one current alert and one message,
 this is a latest-alert relay rather than a queue of independent messages.
 
 ## Security and trust boundaries
@@ -281,8 +282,8 @@ transport components.
 
 ## Invariants for future changes
 
-1. Keep BLE API calls inside the executors and keep state transitions inside the actors.
-2. Send orchestrator intents rather than manipulating actors from UI code.
+1. Keep BLE API calls inside the adapters and keep state transitions inside the controllers.
+2. Send orchestrator intents rather than manipulating controllers from UI code.
 3. Preserve the SafeReach service UUID and ProtoBuf field numbers when changing the wire
    format; changing either breaks interoperability with existing devices.
 4. Verify signatures before accepting locally broadcast data.

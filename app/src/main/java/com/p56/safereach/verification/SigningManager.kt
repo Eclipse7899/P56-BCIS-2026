@@ -3,14 +3,12 @@ package com.p56.safereach.verification
 import android.content.Context
 import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
-import com.p56.safereach.SignedMessage
+import com.p56.safereach.proto.SignedMessage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.security.Security
 
 
 @Singleton
@@ -62,12 +60,12 @@ class SigningManager {
     fun sign(
         data: ByteArray
     ): SignedMessage {
-        if (privateKey == null){
+        if (privateKey == null) {
             throw IllegalStateException("Signing is not available in release builds")
         }
         return sign(
             data = data,
-            privateKey = privateKey!!
+            privateKey = privateKey!!,
         )
     }
 }

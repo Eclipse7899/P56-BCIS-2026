@@ -14,12 +14,12 @@ import com.p56.safereach.navigation.SafeReachApp
 fun MainScreen(context: Context) {
     val auth = FirebaseAuth.getInstance()
     var user by remember { mutableStateOf(auth.currentUser) }
-    var authScreen by remember { mutableStateOf("signin") }
+    var authScreen by remember { mutableStateOf(AuthScreen.SIGN_IN) }
     DisposableEffect(Unit) {
         val listener = FirebaseAuth.AuthStateListener {
             user = it.currentUser
             if (it.currentUser == null) {
-                authScreen = "signin"
+                authScreen = AuthScreen.SIGN_IN
             }
         }
         auth.addAuthStateListener(listener)
@@ -29,25 +29,25 @@ fun MainScreen(context: Context) {
     }
     if (user == null) {
         when (authScreen) {
-            "signin" -> {
-                SignIn(
+            AuthScreen.SIGN_IN -> {
+                SignInScreen(
                     context = context,
-                    onForgotPasswordClick = { authScreen = "forgotPassword" },
-                    onRegisterClick = { authScreen = "register" }
+                    onForgotPasswordClick = { authScreen = AuthScreen.FORGOT_PASSWORD },
+                    onRegisterClick = { authScreen = AuthScreen.REGISTER }
                 )
             }
 
-            "forgotPassword" -> {
+            AuthScreen.FORGOT_PASSWORD -> {
                 ForgotPasswordScreen(
                     context = context,
-                    onBackToSignIn = { authScreen = "signin" }
+                    onBackToSignIn = { authScreen = AuthScreen.SIGN_IN }
                 )
             }
 
-            "register" -> {
+            AuthScreen.REGISTER -> {
                 RegisterScreen(
                     context = context,
-                    onBackToSignIn = { authScreen = "signin" },
+                    onBackToSignIn = { authScreen = AuthScreen.SIGN_IN },
                     onRegisterSuccess = {}
                 )
             }
@@ -55,4 +55,10 @@ fun MainScreen(context: Context) {
     } else {
         SafeReachApp()
     }
+}
+
+private enum class AuthScreen {
+    SIGN_IN,
+    FORGOT_PASSWORD,
+    REGISTER,
 }

@@ -1,5 +1,6 @@
 package com.p56.safereach
 
+import com.p56.safereach.proto.Alert
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -7,17 +8,23 @@ import kotlinx.coroutines.flow.asStateFlow
 object AlertStateRepository {
     private val alertState = MutableStateFlow<Alert?>(null)
 
-    private val messageState = MutableStateFlow<MeshMeta<SignedMessage>?>(null)
+    private val messageState = MutableStateFlow<MeshMeta?>(null)
 
     val alert: StateFlow<Alert?> = alertState.asStateFlow()
 
-    val message: StateFlow<MeshMeta<SignedMessage>?> = messageState.asStateFlow()
+    val message: StateFlow<MeshMeta?> = messageState.asStateFlow()
 
-    fun updateAlert(value: Alert) {
+    fun updateAlert(value: Alert): Boolean {
+        val current = alertState.value
+        if (current != null && current.version >= value.version) {
+            return false
+        }
+
         alertState.value = value
+        return true
     }
 
-    fun updateMessage(value: MeshMeta<SignedMessage>) {
+    fun updateMessage(value: MeshMeta) {
         messageState.value = value
     }
 
@@ -29,4 +36,3 @@ object AlertStateRepository {
         messageState.value = null
     }
 }
-

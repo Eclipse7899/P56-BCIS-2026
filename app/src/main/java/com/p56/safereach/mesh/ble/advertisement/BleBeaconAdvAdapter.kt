@@ -106,7 +106,7 @@ class BleBeaconAdvAdapter(
                         }
 
                         else -> {
-                            Log.w(TAG, "Reporting failure to actor: $failure")
+                            Log.w(TAG, "Reporting failure to controller: $failure")
                             onEvent(BleAdvEvent.Failed(failure))
                         }
                     }
@@ -163,7 +163,7 @@ class BleBeaconAdvAdapter(
                         }
 
                         else -> {
-                            Log.w(TAG, "Reporting data update failure to actor: $failure")
+                            Log.w(TAG, "Reporting data update failure to controller: $failure")
                             onEvent(BleAdvEvent.Failed(failure))
                         }
                     }

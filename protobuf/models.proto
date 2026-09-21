@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package com.p56.safereach.v1;
+
+option java_package = "com.p56.safereach.proto";
+option java_multiple_files = true;
+
+message LatLong {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message Shape {
+  oneof kind {
+    Circle circle = 1;
+    Polygon polygon = 2;
+  }
+
+  message Circle {
+    LatLong center = 1;
+    double radius = 2;
+  }
+
+  message Polygon {
+    repeated LatLong points = 1;
+  }
+}
+
+enum AlertType {
+  ALERT_TYPE_EARTHQUAKE = 0;
+  ALERT_TYPE_TSUNAMI = 1;
+  ALERT_TYPE_FIRE = 2;
+  ALERT_TYPE_FLOOD = 3;
+}
+
+enum Severity {
+  SEVERITY_LOW = 0;
+  SEVERITY_MEDIUM = 1;
+  SEVERITY_HIGH = 2;
+}
+
+message Alert {
+  int64 timestamp = 1;
+  string title = 2;
+  string description = 3;
+  AlertType type = 4;
+  Severity severity = 5;
+  Shape shape = 6;
+  int64 version = 7;
+}
+
+message SignedMessage {
+  bytes data = 1;
+  bytes signature = 2;
+}
+
+message MeshPacket {
+  int64 hop_count = 1;
+  SignedMessage msg = 2;
+}
