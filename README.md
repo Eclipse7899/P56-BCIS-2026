@@ -17,7 +17,6 @@ SafeReach is an Android disaster-management app for the AUT BCIS 2026 project. I
 - JDK 17
 - Android Gradle Plugin / Gradle wrapper from the repo
 - Firebase configuration for the app
-- Ed25519 key pair generated in the local app resources if required for signing verification
 
 ### Setup
 
@@ -25,9 +24,6 @@ SafeReach is an Android disaster-management app for the AUT BCIS 2026 project. I
 # Clone
 git clone https://github.com/Eclipse7899/P56-BCIS-2026.git
 cd P56-BCIS-2026
-
-# Generate local Ed25519 signing keys if they are not already present
-./gradlew generateSigningKeys
 
 # Sync and build the project
 ./gradlew assembleDebug

@@ -49,20 +49,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
-import com.mapbox.maps.extension.style.style
 import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.p56.safereach.Alert
-import com.p56.safereach.AlertType
-import com.p56.safereach.LatLong
 import com.p56.safereach.MeshMeta
-import com.p56.safereach.Severity
-import com.p56.safereach.Shape
-import com.p56.safereach.SignedMessage
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import com.p56.safereach.proto.Alert
+import com.p56.safereach.proto.AlertType
+import com.p56.safereach.proto.LatLong
+import com.p56.safereach.proto.Severity
+import com.p56.safereach.proto.Shape
 import com.p56.safereach.ui.theme.StatusError
 import com.p56.safereach.ui.theme.StatusInfo
 import com.p56.safereach.ui.theme.StatusNeutral
@@ -121,7 +119,7 @@ fun DebugScreen(
 
 @Composable
 fun AlertDebugCard(
-    msg: MeshMeta<SignedMessage>,
+    msg: MeshMeta,
     alert: Alert,
     onDelete: () -> Unit = {},
 ) {
@@ -146,17 +144,24 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Location", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            when (val shape = alert.shape) {
-                is Shape.Circle -> {
+            when (val shapeType = alert.shape.kindCase) {
+                Shape.KindCase.CIRCLE -> {
                     Text(
-                        text = "Circle: Radius: ${shape.radius} meters",
+                        text = "Circle: Radius: ${alert.shape.circle.radius} meters",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
 
-                is Shape.Polygon -> {
+                Shape.KindCase.POLYGON -> {
                     Text(
-                        text = "Polygon: ${shape.points.size} points",
+                        text = "Polygon: ${alert.shape.polygon.pointsCount} points",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                else -> {
+                    Text(
+                        text = "Unknown shape type: $shapeType",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -229,8 +234,8 @@ fun SetStatusDebugCard(
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var selectedType by rememberSaveable { mutableStateOf(AlertType.EARTHQUAKE) }
-    var selectedSeverity by rememberSaveable { mutableStateOf(Severity.MEDIUM) }
+    var selectedType by rememberSaveable { mutableStateOf(AlertType.ALERT_TYPE_EARTHQUAKE) }
+    var selectedSeverity by rememberSaveable { mutableStateOf(Severity.SEVERITY_MEDIUM) }
     var lat by rememberSaveable { mutableStateOf<Double?>(null) }
     var long by rememberSaveable { mutableStateOf<Double?>(null) }
     var radius by rememberSaveable { mutableStateOf<Double?>(null) }
@@ -273,17 +278,36 @@ fun SetStatusDebugCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
                     TextButton(onClick = { typeMenuExpanded = true }) {
-                        Text("Type: ${selectedType.name}")
+                        when (selectedType) {
+                            AlertType.ALERT_TYPE_EARTHQUAKE -> Text("Type: Earthquake")
+                            AlertType.ALERT_TYPE_FIRE -> Text("Type: Fire")
+                            AlertType.ALERT_TYPE_FLOOD -> Text("Type: Flood")
+                            else -> {
+                                Text("Type: Unknown")
+                            }
+                        }
                     }
                     DropdownMenu(
                         expanded = typeMenuExpanded,
                         onDismissRequest = { typeMenuExpanded = false }
                     ) {
-                        AlertType.entries.forEach { t ->
-                            DropdownMenuItem(text = { Text(t.name) }, onClick = {
-                                selectedType = t
-                                typeMenuExpanded = false
-                            })
+                        AlertType.entries.filter { it != AlertType.UNRECOGNIZED }.forEach { t ->
+                            DropdownMenuItem(
+                                text = {
+                                    when (t) {
+                                        AlertType.ALERT_TYPE_EARTHQUAKE -> Text("Earthquake")
+                                        AlertType.ALERT_TYPE_FIRE -> Text("Fire")
+                                        AlertType.ALERT_TYPE_FLOOD -> Text("Flood")
+                                        else -> {
+                                            Text("Unknown")
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    selectedType = t
+                                    typeMenuExpanded = false
+                                }
+                            )
                         }
                     }
                 }
@@ -292,14 +316,32 @@ fun SetStatusDebugCard(
                     TextButton(
                         onClick = { severityMenuExpanded = true }
                     ) {
-                        Text("Severity: ${selectedSeverity.name}")
+                        when (selectedSeverity) {
+                            Severity.SEVERITY_LOW -> Text("Severity: Low")
+                            Severity.SEVERITY_MEDIUM -> Text("Severity: Medium")
+                            Severity.SEVERITY_HIGH -> Text("Severity: High")
+                            else -> {
+                                Text("Severity: Unknown")
+                            }
+                        }
                     }
                     DropdownMenu(
                         expanded = severityMenuExpanded,
                         onDismissRequest = { severityMenuExpanded = false }
                     ) {
-                        Severity.entries.forEach { s ->
-                            DropdownMenuItem(text = { Text(s.name) }, onClick = {
+                        Severity.entries.filter { it != Severity.UNRECOGNIZED }.forEach { s ->
+                            DropdownMenuItem(
+                                text = {
+                                    when (s) {
+                                        Severity.SEVERITY_LOW -> Text("Low")
+                                        Severity.SEVERITY_MEDIUM -> Text("Medium")
+                                        Severity.SEVERITY_HIGH -> Text("High")
+                                        else -> {
+                                            Text("Unknown")
+                                        }
+                                    }
+                                },
+                                onClick = {
                                 selectedSeverity = s
                                 severityMenuExpanded = false
                             })
@@ -316,20 +358,25 @@ fun SetStatusDebugCard(
             }
             Button(
                 onClick = {
-                    val alert = Alert(
-                        System.currentTimeMillis(),
-                        title.ifBlank { "" },
-                        description.ifBlank { "" },
-                        selectedType,
-                        selectedSeverity,
-                        Shape.Circle(
-                            LatLong(
-                                lat ?: 0.0,
-                                long ?: 0.0
-                            ),
-                            radius ?: 0.0
-                        )
-                    )
+                    val location = LatLong.newBuilder()
+                        .setLatitude(lat ?: 0.0)
+                        .setLongitude(long ?: 0.0)
+                        .build()
+                    val circle = Shape.Circle.newBuilder()
+                        .setCenter(location)
+                        .setRadius(radius ?: 0.0)
+                        .build()
+                    val shape = Shape.newBuilder()
+                        .setCircle(circle)
+                        .build()
+                    val alert = Alert.newBuilder()
+                        .setTimestamp(System.currentTimeMillis())
+                        .setTitle(title.ifBlank { "" })
+                        .setDescription(description.ifBlank { "" })
+                        .setType(selectedType)
+                        .setSeverity(selectedSeverity)
+                        .setShape(shape)
+                        .build()
                     onSent(alert)
                 },
                 enabled =
@@ -623,10 +670,10 @@ fun LocationSelectDialog(
                         onClick = {
                             if (mapViewportState.cameraState == null) return@TextButton
                             onConfirmation(
-                                LatLong(
-                                    mapViewportState.cameraState!!.center.latitude(),
-                                    mapViewportState.cameraState!!.center.longitude()
-                                ),
+                                LatLong.newBuilder()
+                                    .setLatitude(mapViewportState.cameraState!!.center.latitude())
+                                    .setLongitude(mapViewportState.cameraState!!.center.longitude())
+                                    .build(),
                                 radius
                             )
                         },
