@@ -1,7 +1,7 @@
 package com.p56.safereach.mesh.ble
 
 import android.util.Log
-import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
+import com.p56.safereach.mesh.ble.advertisement.BleAdvController
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvIntent
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
@@ -11,7 +11,7 @@ import com.p56.safereach.mesh.ble.fsm.BleState.Disabled
 import com.p56.safereach.mesh.ble.fsm.BleState.Failed
 import com.p56.safereach.mesh.ble.fsm.BleState.Off
 import com.p56.safereach.mesh.ble.fsm.BleState.Passive
-import com.p56.safereach.mesh.ble.scanning.BleScanActor
+import com.p56.safereach.mesh.ble.scanning.BleScanController
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import kotlinx.coroutines.CoroutineScope
@@ -33,8 +33,8 @@ private data class Snapshot(
 
 class BleOrchestrator(
     scope: CoroutineScope,
-    private val advertiser: BleAdvActor,
-    private val scanner: BleScanActor,
+    private val advertiser: BleAdvController,
+    private val scanner: BleScanController,
 ) {
     private val _state: MutableStateFlow<BleState> =
         MutableStateFlow(

@@ -24,10 +24,10 @@ private sealed interface Message {
     data class BluetoothState(val enabled: Boolean) : Message
 }
 
-private const val TAG = "BleScanActor"
+private const val TAG = "BleScanController"
 
 @SuppressLint("MissingPermission")
-class BleScanActor(
+class BleScanController(
     scope: CoroutineScope,
     manager: BluetoothManager,
     context: Context,
@@ -39,7 +39,7 @@ class BleScanActor(
 
     private val messages = Channel<Message>(Channel.UNLIMITED)
 
-    private val executor = BleBeaconScanExecutor(
+    private val executor = BleBeaconScanAdapter(
         btManager = manager,
         context = context
     )

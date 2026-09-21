@@ -18,11 +18,11 @@ import com.p56.safereach.MeshPacket
 import com.p56.safereach.R
 import com.p56.safereach.SignedMessage
 import com.p56.safereach.mesh.ble.BleOrchestrator
-import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
+import com.p56.safereach.mesh.ble.advertisement.BleAdvController
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.fsm.BleState
-import com.p56.safereach.mesh.ble.scanning.BleScanActor
+import com.p56.safereach.mesh.ble.scanning.BleScanController
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,8 +49,8 @@ class MeshService : Service() {
         super.onCreate()
         MeshStatusRepository.updateServiceRunning(true)
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val advActor = BleAdvActor(serviceScope, btManager)
-        val scanActor = BleScanActor(serviceScope, btManager, this)
+        val advActor = BleAdvController(serviceScope, btManager)
+        val scanActor = BleScanController(serviceScope, btManager, this)
         orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
         observeBluetoothState(btManager, advActor, scanActor)
         observeAlertStateRepository()
@@ -61,8 +61,8 @@ class MeshService : Service() {
 
     private fun observeBluetoothState(
         btManager: BluetoothManager,
-        advActor: BleAdvActor,
-        scanActor: BleScanActor
+        advActor: BleAdvController,
+        scanActor: BleScanController
     ) {
         val receiver = BleStateReceiver { enabled ->
             advActor.onBluetoothStateChanged(enabled)
@@ -82,7 +82,7 @@ class MeshService : Service() {
         bleStateReceiver = receiver
     }
 
-    private fun observeSubsystemStates(advActor: BleAdvActor, scanActor: BleScanActor) {
+    private fun observeSubsystemStates(advActor: BleAdvController, scanActor: BleScanController) {
         serviceScope.launch {
             advActor.state.collect {
                 MeshStatusRepository.updateAdvertiserState(it)

@@ -34,9 +34,9 @@ private sealed interface OperationStatus {
     data object Idle : OperationStatus
 }
 
-private const val TAG = "BleBeaconAdvExecutor"
+private const val TAG = "BleBeaconAdvAdapter"
 
-class BleBeaconAdvExecutor(
+class BleBeaconAdvAdapter(
     private val onEvent: (BleAdvEvent) -> Unit,
     private val btManager: BluetoothManager
 ) {

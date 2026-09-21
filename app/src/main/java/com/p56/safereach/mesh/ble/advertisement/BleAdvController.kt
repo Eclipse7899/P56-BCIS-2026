@@ -24,14 +24,14 @@ private sealed interface Message {
     data class BluetoothState(val enabled: Boolean) : Message
 }
 
-private const val TAG = "BleAdvActor"
+private const val TAG = "BleAdvController"
 
 @SuppressLint("MissingPermission")
-class BleAdvActor(
+class BleAdvController(
     scope: CoroutineScope,
     btManager: BluetoothManager,
 ) {
-    private val executor = BleBeaconAdvExecutor(
+    private val executor = BleBeaconAdvAdapter(
         onEvent = { event ->
             messages.trySend(Message.Event(event))
         },
