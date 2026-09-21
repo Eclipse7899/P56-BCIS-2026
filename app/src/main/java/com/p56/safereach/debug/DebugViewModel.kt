@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 data class DebugUiState(
-    val msg: MeshMeta? = null,
+    val message: MeshMeta? = null,
     val alert: Alert? = null,
     val isMeshRunning: Boolean = false,
     val orchestratorState: BleState = BleState.Off,
@@ -41,7 +41,7 @@ class DebugViewModel @Inject constructor(
     ) { values ->
         @Suppress("UNCHECKED_CAST")
         DebugUiState(
-            msg = values[0] as MeshMeta?,
+            message = values[0] as MeshMeta?,
             alert = values[1] as Alert?,
             isMeshRunning = values[2] as Boolean,
             orchestratorState = values[3] as BleState,

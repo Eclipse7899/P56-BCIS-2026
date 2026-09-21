@@ -16,14 +16,14 @@ class FirebaseAlertService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         remoteMessage.data["alert"]?.let { encoded ->
             try {
-                val msg = SignedMessage.parseFrom(encoded.hexToByteArray())
+                val signedMessage = SignedMessage.parseFrom(encoded.hexToByteArray())
                 val meta = MeshMeta(
                     receivedAt = System.currentTimeMillis(),
                     receivedFrom = null,
                     hopCount = 0,
-                    data = msg
+                    data = signedMessage
                 )
-                val alert = Alert.parseFrom(msg.data)
+                val alert = Alert.parseFrom(signedMessage.data)
                 if (AlertStateRepository.updateAlert(alert)) {
                     AlertStateRepository.updateMessage(meta)
                 }

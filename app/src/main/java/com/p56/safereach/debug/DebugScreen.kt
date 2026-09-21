@@ -97,14 +97,14 @@ fun DebugScreen(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (uiState.msg != null && uiState.alert != null) {
+            if (uiState.message != null && uiState.alert != null) {
                 AlertDebugCard(
-                    msg = uiState.msg,
+                    message = uiState.message,
                     alert = uiState.alert,
-                    onDelete = clearAlert
+                    onClear = clearAlert
                 )
             }
-            SetStatusDebugCard { alert ->
+            GenerateAlertDebugCard { alert ->
                 updateAlert(alert)
             }
             MeshStatusCollapsibleCard(
@@ -119,9 +119,9 @@ fun DebugScreen(
 
 @Composable
 fun AlertDebugCard(
-    msg: MeshMeta,
+    message: MeshMeta,
     alert: Alert,
-    onDelete: () -> Unit = {},
+    onClear: () -> Unit = {},
 ) {
     Card(
         modifier = Modifier.fillMaxWidth()
@@ -167,7 +167,7 @@ fun AlertDebugCard(
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedAlertTime = remember(msg) {
+            val formattedAlertTime = remember(message) {
                 java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
                     .format(java.util.Date(alert.timestamp))
             }
@@ -178,9 +178,9 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Metadata", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedReceivedTime = remember(msg) {
+            val formattedReceivedTime = remember(message) {
                 java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
-                    .format(java.util.Date(msg.receivedAt))
+                    .format(java.util.Date(message.receivedAt))
             }
             Text(
                 text = "Received at: $formattedReceivedTime",
@@ -188,12 +188,12 @@ fun AlertDebugCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Received from: ${msg.receivedFrom ?: "Unknown"}",
+                text = "Received from: ${message.receivedFrom ?: "Unknown"}",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedTimeDifference = remember(msg) {
-                val timeDifference = msg.receivedAt - alert.timestamp
+            val formattedTimeDifference = remember(message) {
+                val timeDifference = message.receivedAt - alert.timestamp
                 val minutes = timeDifference / (1000 * 60)
                 val seconds = (timeDifference % (1000 * 60)) / 1000
                 if (minutes > 0) {
@@ -210,7 +210,7 @@ fun AlertDebugCard(
             Text(text = "Packet", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Hop Count: ${msg.hopCount}",
+                text = "Hop Count: ${message.hopCount}",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -220,7 +220,7 @@ fun AlertDebugCard(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.error
                 ),
-                onClick = onDelete
+                onClick = onClear
             ) {
                 Text("Delete")
             }
@@ -229,15 +229,15 @@ fun AlertDebugCard(
 }
 
 @Composable
-fun SetStatusDebugCard(
-    onSent: (Alert) -> Unit
+fun GenerateAlertDebugCard(
+    onAlertGenerated: (Alert) -> Unit
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var selectedType by rememberSaveable { mutableStateOf(AlertType.ALERT_TYPE_EARTHQUAKE) }
     var selectedSeverity by rememberSaveable { mutableStateOf(Severity.SEVERITY_MEDIUM) }
-    var lat by rememberSaveable { mutableStateOf<Double?>(null) }
-    var long by rememberSaveable { mutableStateOf<Double?>(null) }
+    var latitude by rememberSaveable { mutableStateOf<Double?>(null) }
+    var longitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var radius by rememberSaveable { mutableStateOf<Double?>(null) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var severityMenuExpanded by remember { mutableStateOf(false) }
@@ -248,8 +248,8 @@ fun SetStatusDebugCard(
                 onDismissRequest = { openAlertDialog = false },
                 onConfirmation = { newLatLong, newRadius ->
                     openAlertDialog = false
-                    lat = newLatLong.latitude
-                    long = newLatLong.longitude
+                    latitude = newLatLong.latitude
+                    longitude = newLatLong.longitude
                     radius = newRadius
                 },
             )
@@ -359,8 +359,8 @@ fun SetStatusDebugCard(
             Button(
                 onClick = {
                     val location = LatLong.newBuilder()
-                        .setLatitude(lat ?: 0.0)
-                        .setLongitude(long ?: 0.0)
+                        .setLatitude(latitude ?: 0.0)
+                        .setLongitude(longitude ?: 0.0)
                         .build()
                     val circle = Shape.Circle.newBuilder()
                         .setCenter(location)
@@ -379,12 +379,12 @@ fun SetStatusDebugCard(
                         .setSeverity(selectedSeverity)
                         .setShape(shape)
                         .build()
-                    onSent(alert)
+                    onAlertGenerated(alert)
                 },
                 enabled =
                     title.isNotBlank() &&
-                            lat != null &&
-                            long != null &&
+                            latitude != null &&
+                            longitude != null &&
                             radius != null
             ) {
                 Text("Send Over Mesh")
@@ -424,14 +424,14 @@ fun MeshStatusCollapsibleCard(
                 onToggle = { isMeshExpanded = !isMeshExpanded },
                 indentation = 0
             ) {
-                val orchStatusText = when (orchestratorState) {
+                val orchestratorStatusText = when (orchestratorState) {
                     is BleState.Active -> "Active"
                     BleState.Passive -> "Passive"
                     BleState.Off -> "Off"
                     BleState.Failed -> "Failed"
                     BleState.Disabled -> "Disabled"
                 }
-                val orchStatusColor = when (orchestratorState) {
+                val orchestratorStatusColor = when (orchestratorState) {
                     is BleState.Active -> StatusSuccess
                     BleState.Passive -> StatusInfo
                     BleState.Off -> StatusNeutral
@@ -441,8 +441,8 @@ fun MeshStatusCollapsibleCard(
 
                 CollapsibleTreeNode(
                     title = "BLE Orchestrator",
-                    statusText = orchStatusText,
-                    statusColor = orchStatusColor,
+                    statusText = orchestratorStatusText,
+                    statusColor = orchestratorStatusColor,
                     isExpanded = isOrchestratorExpanded,
                     onToggle = { isOrchestratorExpanded = !isOrchestratorExpanded },
                     indentation = 16
@@ -455,13 +455,13 @@ fun MeshStatusCollapsibleCard(
                             modifier = Modifier.padding(start = 36.dp, top = 2.dp, bottom = 4.dp)
                         )
                     }
-                    val advStatusText = when (advertiserState) {
+                    val advertiserStatusText = when (advertiserState) {
                         is BleAdvState.Advertising -> "Advertising"
                         BleAdvState.Idle -> "Idle"
                         BleAdvState.Disabled -> "Disabled"
                         is BleAdvState.Failed -> "Failed (${advertiserState.error})"
                     }
-                    val advStatusColor = when (advertiserState) {
+                    val advertiserStatusColor = when (advertiserState) {
                         is BleAdvState.Advertising -> StatusSuccess
                         BleAdvState.Idle -> StatusNeutral
                         BleAdvState.Disabled -> StatusError
@@ -470,8 +470,8 @@ fun MeshStatusCollapsibleCard(
 
                     CollapsibleTreeNode(
                         title = "Advertiser",
-                        statusText = advStatusText,
-                        statusColor = advStatusColor,
+                        statusText = advertiserStatusText,
+                        statusColor = advertiserStatusColor,
                         isExpanded = isAdvertiserExpanded,
                         onToggle = { isAdvertiserExpanded = !isAdvertiserExpanded },
                         indentation = 32
@@ -502,13 +502,13 @@ fun MeshStatusCollapsibleCard(
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
-                    val scanStatusText = when (scannerState) {
+                    val scannerStatusText = when (scannerState) {
                         is BleScanState.Scanning -> "Scanning"
                         BleScanState.Idle -> "Idle"
                         BleScanState.Disabled -> "Disabled"
                         BleScanState.Failed -> "Failed"
                     }
-                    val scanStatusColor = when (scannerState) {
+                    val scannerStatusColor = when (scannerState) {
                         is BleScanState.Scanning -> StatusSuccess
                         BleScanState.Idle -> StatusNeutral
                         BleScanState.Disabled -> StatusError
@@ -517,8 +517,8 @@ fun MeshStatusCollapsibleCard(
 
                     CollapsibleTreeNode(
                         title = "Scanner",
-                        statusText = scanStatusText,
-                        statusColor = scanStatusColor,
+                        statusText = scannerStatusText,
+                        statusColor = scannerStatusColor,
                         isExpanded = isScannerExpanded,
                         onToggle = { isScannerExpanded = !isScannerExpanded },
                         indentation = 32
@@ -694,7 +694,7 @@ fun LocationSelectDialog(
 fun DebugScreenPreview() {
     DebugScreen(
         DebugUiState(
-            msg = null,
+            message = null,
             alert = null,
             isMeshRunning = true,
             orchestratorState = BleState.Active(ByteArray(10)),

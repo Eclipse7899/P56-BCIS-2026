@@ -44,29 +44,29 @@ class MeshService : Service() {
         super.onCreate()
         MeshStatusRepository.updateServiceRunning(true)
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val advActor = BleAdvController(serviceScope, btManager)
-        val scanActor = BleScanController(serviceScope, btManager, this)
-        orchestrator = BleOrchestrator(serviceScope, advActor, scanActor)
-        observeBluetoothState(btManager, advActor, scanActor)
+        val advertiserController = BleAdvController(serviceScope, btManager)
+        val scannerController = BleScanController(serviceScope, btManager, this)
+        orchestrator = BleOrchestrator(serviceScope, advertiserController, scannerController)
+        observeBluetoothState(btManager, advertiserController, scannerController)
         observeAlertStateRepository()
         observeIncomingData()
         observeOrchestratorState()
-        observeSubsystemStates(advActor, scanActor)
+        observeSubsystemStates(advertiserController, scannerController)
     }
 
     private fun observeBluetoothState(
         btManager: BluetoothManager,
-        advActor: BleAdvController,
-        scanActor: BleScanController
+        advertiserController: BleAdvController,
+        scannerController: BleScanController
     ) {
         val receiver = BleStateReceiver { enabled ->
-            advActor.onBluetoothStateChanged(enabled)
-            scanActor.onBluetoothStateChanged(enabled)
+            advertiserController.onBluetoothStateChanged(enabled)
+            scannerController.onBluetoothStateChanged(enabled)
         }
 
         val isBluetoothEnabled = btManager.adapter?.isEnabled == true
-        advActor.onBluetoothStateChanged(isBluetoothEnabled)
-        scanActor.onBluetoothStateChanged(isBluetoothEnabled)
+        advertiserController.onBluetoothStateChanged(isBluetoothEnabled)
+        scannerController.onBluetoothStateChanged(isBluetoothEnabled)
 
         ContextCompat.registerReceiver(
             this,
@@ -77,14 +77,17 @@ class MeshService : Service() {
         bleStateReceiver = receiver
     }
 
-    private fun observeSubsystemStates(advActor: BleAdvController, scanActor: BleScanController) {
+    private fun observeSubsystemStates(
+        advertiserController: BleAdvController,
+        scannerController: BleScanController
+    ) {
         serviceScope.launch {
-            advActor.state.collect {
+            advertiserController.state.collect {
                 MeshStatusRepository.updateAdvertiserState(it)
             }
         }
         serviceScope.launch {
-            scanActor.state.collect {
+            scannerController.state.collect {
                 MeshStatusRepository.updateScannerState(it)
             }
         }

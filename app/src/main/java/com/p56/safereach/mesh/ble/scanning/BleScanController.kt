@@ -39,7 +39,7 @@ class BleScanController(
 
     private val messages = Channel<Message>(Channel.UNLIMITED)
 
-    private val executor = BleBeaconScanAdapter(
+    private val adapter = BleBeaconScanAdapter(
         btManager = manager,
         context = context
     )
@@ -111,7 +111,7 @@ class BleScanController(
                 when (val state = _state.value) {
                     Idle -> {
                         try {
-                            executor.scan()
+                            adapter.scan()
                             BleScanEvent.Started
                         } catch (_: SecurityException) {
                             BleScanEvent.Failed
@@ -128,7 +128,7 @@ class BleScanController(
                 when (val state = _state.value) {
                     is Scanning -> {
                         try {
-                            executor.stop()
+                            adapter.stop()
                             BleScanEvent.Stopped
                         } catch (_: SecurityException) {
                             BleScanEvent.Failed

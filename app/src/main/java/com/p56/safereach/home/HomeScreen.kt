@@ -52,8 +52,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         val center = camera.center
         MapPreferences.saveCameraPosition(
             context = context,
-            lat = center.latitude(),
-            lon = center.longitude(),
+            latitude = center.latitude(),
+            longitude = center.longitude(),
             zoom = camera.zoom,
             pitch = camera.pitch,
             bearing = camera.bearing
@@ -66,8 +66,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             val center = camera.center
             MapPreferences.saveCameraPosition(
                 context = context,
-                lat = center.latitude(),
-                lon = center.longitude(),
+                latitude = center.latitude(),
+                longitude = center.longitude(),
                 zoom = camera.zoom,
                 pitch = camera.pitch,
                 bearing = camera.bearing

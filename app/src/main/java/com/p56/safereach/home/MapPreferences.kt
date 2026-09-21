@@ -16,16 +16,16 @@ object MapPreferences {
 
     fun saveCameraPosition(
         context: Context,
-        lat: Double,
-        lon: Double,
+        latitude: Double,
+        longitude: Double,
         zoom: Double,
         pitch: Double = 0.0,
         bearing: Double = 0.0
     ) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit {
-                putFloat(KEY_LAT, lat.toFloat())
-                    .putFloat(KEY_LON, lon.toFloat())
+                putFloat(KEY_LAT, latitude.toFloat())
+                    .putFloat(KEY_LON, longitude.toFloat())
                     .putFloat(KEY_ZOOM, zoom.toFloat())
                     .putFloat(KEY_PITCH, pitch.toFloat())
                     .putFloat(KEY_BEARING, bearing.toFloat())
@@ -42,14 +42,14 @@ object MapPreferences {
         if (!prefs.contains(KEY_LAT) || !prefs.contains(KEY_LON)) {
             return null
         }
-        val lat = prefs.getFloat(KEY_LAT, 0.0f).toDouble()
-        val lon = prefs.getFloat(KEY_LON, 0.0f).toDouble()
+        val latitude = prefs.getFloat(KEY_LAT, 0.0f).toDouble()
+        val longitude = prefs.getFloat(KEY_LON, 0.0f).toDouble()
         val zoom = prefs.getFloat(KEY_ZOOM, DEFAULT_ZOOM.toFloat()).toDouble()
         val pitch = prefs.getFloat(KEY_PITCH, 0.0f).toDouble()
         val bearing = prefs.getFloat(KEY_BEARING, 0.0f).toDouble()
 
         return CameraOptions.Builder()
-            .center(Point.fromLngLat(lon, lat))
+            .center(Point.fromLngLat(longitude, latitude))
             .zoom(zoom)
             .pitch(pitch)
             .bearing(bearing)

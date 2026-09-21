@@ -31,7 +31,7 @@ class BleAdvController(
     scope: CoroutineScope,
     btManager: BluetoothManager,
 ) {
-    private val executor = BleBeaconAdvAdapter(
+    private val adapter = BleBeaconAdvAdapter(
         onEvent = { event ->
             messages.trySend(Message.Event(event))
         },
@@ -144,7 +144,7 @@ class BleAdvController(
                 when (val state = _state.value) {
                     is Advertising if shouldUpdate(state, intent) -> {
                         try {
-                            executor.update(intent.payload, state.advertisingSet)
+                            adapter.update(intent.payload, state.advertisingSet)
                             BleAdvEvent.Started(state.advertisingSet, intent.payload)
                         } catch (e: BleAdvException) {
                             BleAdvEvent.Failed(e.failure)
@@ -153,7 +153,7 @@ class BleAdvController(
 
                     is Idle -> {
                         try {
-                            return executor.start(intent.payload)
+                            return adapter.start(intent.payload)
                         } catch (e: BleAdvException) {
                             BleAdvEvent.Failed(e.failure)
                         }
@@ -166,7 +166,7 @@ class BleAdvController(
                 when (_state.value) {
                     is Advertising -> {
                         try {
-                            executor.stop()
+                            adapter.stop()
                             BleAdvEvent.Stopped
                         } catch (e: BleAdvException) {
                             BleAdvEvent.Failed(e.failure)
