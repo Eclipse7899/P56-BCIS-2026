@@ -93,7 +93,7 @@ permissions and starting `MeshService`; the service owns the mesh for its lifeti
    enabled state, and starts collecting their state flows.
 5. `onStartCommand` requests `BleIntent.Passive` and calls `startForeground`. The service
    returns `START_STICKY`, so Android may recreate it after process pressure.
-6. The service observes `AlertStateRepository.message`:
+6. The service observes `AlertStateRepository.meshMeta`:
    * `null` means passive mode: scan, do not advertise.
    * a signed message means active mode: scan and advertise the encoded packet.
 7. `onDestroy` marks repository state as stopped and requests `BleIntent.Off`.
@@ -170,11 +170,13 @@ MeshPacket<SignedMessage>
     signature: ByteArray  // Ed25519 signature over data
 ```
 
-`Alert` contains a timestamp, version, title, description, type, severity, and geographic
-shape (circle or polygon). The version identifies the newest alert; the timestamp is
-display-only alert metadata. `MeshMeta` is local metadata and is not transmitted; it records
-when the device received the packet, the source Bluetooth address, the hop count, and the
-signed payload.
+`Alert` contains a timestamp, version, expiry time, invalidation flag, title, description,
+type, severity, and geographic shape (circle or polygon). The version identifies the newest
+alert; the timestamp is display-only alert metadata. A node removes a non-invalidated alert
+when its expiry time is reached. Immediate invalidation is represented by a higher-version
+alert with `invalidated = true`, which remains in the message flow long enough to be relayed.
+`MeshMeta` is local metadata and is not transmitted; it records when the device received the
+packet, the source Bluetooth address, the hop count, and the signed payload.
 
 ### Outgoing alert
 
@@ -210,6 +212,11 @@ the current alert only when its version is newer; older or duplicate packets do 
 a new advertisement. Because the repository stores only one current alert and one message,
 this is a latest-alert relay rather than a queue of independent messages.
 
+Alerts with an expiry time are removed locally when the deadline is reached. This does not
+need a new network message because every node receives the same expiry deadline. An immediate
+invalidation is different: it is a signed, higher-version alert update and is advertised
+through the normal repository message flow so neighboring nodes remove it as well.
+
 ## Security and trust boundaries
 
 `SigningManager` loads a bundled public Ed25519 key from `res/raw/public_key.pem`.
@@ -244,7 +251,7 @@ without updating mesh state.
 ## Repository and UI data flow
 
 ```text
-AlertStateRepository.alert/message
+AlertStateRepository.activeAlerts/meshMeta
   -> DebugViewModel.uiState
   -> DebugScreen
 
@@ -253,15 +260,18 @@ MeshStatusRepository
   -> DebugScreen
   -> SafeReachApp (Bluetooth-disabled banner)
 
-AlertStateRepository.alert
+AlertStateRepository.activeAlerts
+  -> HomeViewModel
   -> HomeScreen
   -> Mapbox map and alert shape rendering
 ```
 
-Repositories are process-local `StateFlow` singletons. They are not a durable database:
-alerts and mesh status are lost when the process is recreated. Firebase authentication,
-Mapbox rendering, and navigation are application concerns around the mesh, not mesh
-transport components.
+Repositories are process-local `StateFlow` singletons owned by Hilt: each one is a
+`@Singleton` class with an `@Inject` constructor, so services, activities, and view models
+receive the same instance through constructor or field injection instead of reaching into a
+static object. They are not a durable database: alerts and mesh status are lost when the
+process is recreated. Firebase authentication, Mapbox rendering, and navigation are
+application concerns around the mesh, not mesh transport components.
 
 ## Source map
 
@@ -288,8 +298,8 @@ transport components.
    format; changing either breaks interoperability with existing devices.
 4. Verify signatures before accepting locally broadcast data.
 5. Treat `MeshMeta` as local observation metadata, not part of the wire protocol.
-6. Preserve timestamp-based latest-alert behavior unless a durable message store and
-   explicit deduplication/expiry policy are introduced.
+6. Preserve version-based latest-alert behavior and expiry/invalidation semantics when
+   adding transports or storage.
 7. Any new transport should feed the same validated message path and repository state,
    rather than duplicating alert application logic.
 
