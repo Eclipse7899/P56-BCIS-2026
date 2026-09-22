@@ -22,7 +22,7 @@ class BleScanReceiver : BroadcastReceiver() {
             Log.d(TAG, "Checking for service data with UUID: $uuid")
             val fragment = record.getServiceData(ParcelUuid(uuid))
             if (fragment != null) {
-                Log.d(TAG, "Found service data for UUID $uuid: ${fragment?.size}")
+                Log.d(TAG, "Found service data for UUID $uuid: ${fragment.size}")
                 fragments.add(fragment)
             }
         }

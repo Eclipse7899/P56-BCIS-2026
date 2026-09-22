@@ -25,6 +25,9 @@ object Constants {
         BLE_SERVICE_UUID_PART_6
     )
 
+    const val EXPIRY_TICK_MARGIN_MS = 1L
+
+
     const val MAX_DATA_PAYLOAD = 220
 
     const val BLE_ADVERTISING_TIMEOUT: Long = 2000
