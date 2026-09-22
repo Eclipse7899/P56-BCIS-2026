@@ -41,7 +41,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeReach">
         <service
-            android:name=".mesh.MeshService"
+            android:name=".service.MeshService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
         <receiver android:name=".mesh.ble.scanning.BleScanReceiver"
@@ -51,7 +51,7 @@
             </intent-filter>
         </receiver>
         <service
-            android:name=".FirebaseAlertService"
+            android:name=".service.FirebaseAlertService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
