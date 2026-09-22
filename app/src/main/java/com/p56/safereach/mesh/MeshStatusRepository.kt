@@ -3,11 +3,14 @@ package com.p56.safereach.mesh
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-object MeshStatusRepository {
+@Singleton
+class MeshStatusRepository @Inject constructor() {
     private val _isServiceRunning = MutableStateFlow(false)
     val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
 
