@@ -28,7 +28,6 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfTransformation
-import com.p56.safereach.isExpired
 import com.p56.safereach.proto.Alert
 import com.p56.safereach.proto.Severity
 import com.p56.safereach.proto.Shape

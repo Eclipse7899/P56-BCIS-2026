@@ -63,7 +63,7 @@ import com.p56.safereach.proto.AlertType
 import com.p56.safereach.proto.LatLong
 import com.p56.safereach.proto.Severity
 import com.p56.safereach.proto.Shape
-import com.p56.safereach.proto.alert
+import com.p56.safereach.proto.SignedMessage
 import com.p56.safereach.ui.theme.StatusError
 import com.p56.safereach.ui.theme.StatusInfo
 import com.p56.safereach.ui.theme.StatusNeutral
@@ -103,8 +103,7 @@ fun DebugScreen(
         ) {
             for (ctx in uiState.alertCtx) {
                 AlertDebugCard(
-                    alert = ctx.alert,
-                    meta = ctx.meta,
+                    ctx = ctx,
                     onClear = {
                         invalidateAlert(ctx.alert.id)
                     }
@@ -125,10 +124,12 @@ fun DebugScreen(
 
 @Composable
 fun AlertDebugCard(
-    alert: Alert,
-    meta: AlertMeta,
+    ctx: AlertContext,
     onClear: () -> Unit = {},
 ) {
+    val alert = ctx.alert
+    val meta = ctx.meta
+    val msg = ctx.signedMessage
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -198,7 +199,6 @@ fun AlertDebugCard(
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Spacer(modifier = Modifier.height(4.dp))
             val formattedTimeDifference = remember(alert) {
                 val timeDifference = meta.receivedAt - alert.timestamp
                 val minutes = timeDifference / (1000 * 60)
@@ -213,6 +213,18 @@ fun AlertDebugCard(
                 text = "Time difference: $formattedTimeDifference",
                 style = MaterialTheme.typography.bodySmall
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Signed Message", style = MaterialTheme.typography.labelMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Data: ${msg.data.size()} bytes",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Signature: ${msg.signature.size()} bytes",
+                style = MaterialTheme.typography.bodySmall
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 modifier = Modifier.fillMaxWidth(),
@@ -371,6 +383,7 @@ fun GenerateAlertDebugCard(
                         .build()
                     val version = System.currentTimeMillis()
                     val alert = Alert.newBuilder()
+                        .setId("debug-${version}")
                         .setTimestamp(version)
                         .setVersion(version)
                         .setExpiresAt(version + DEFAULT_ALERT_LIFETIME_MILLIS)
@@ -379,6 +392,7 @@ fun GenerateAlertDebugCard(
                         .setType(selectedType)
                         .setSeverity(selectedSeverity)
                         .setShape(shape)
+                        .setInvalidated(false)
                         .build()
                     onAlertGenerated(alert)
                 },
@@ -703,6 +717,7 @@ fun DebugScreenPreview() {
                         .setType(AlertType.ALERT_TYPE_FIRE)
                         .setSeverity(Severity.SEVERITY_HIGH)
                         .setTimestamp(System.currentTimeMillis())
+                        .setInvalidated(false)
                         .setExpiresAt(System.currentTimeMillis() + 60000)
                         .setShape(Shape.newBuilder()
                             .setCircle(Shape.Circle.newBuilder()
@@ -714,7 +729,7 @@ fun DebugScreenPreview() {
                         receivedAt = System.currentTimeMillis(),
                         receivedFrom = "Device123"
                     ),
-                    signedMessage = com.p56.safereach.proto.SignedMessage.newBuilder()
+                    signedMessage = SignedMessage.newBuilder()
                         .setData(ByteArray(10).toByteString())
                         .setSignature(ByteArray(10).toByteString())
                         .build()

@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.p56.safereach.AlertContext
 import com.p56.safereach.AlertMeta
-import com.p56.safereach.service.AlertService
 import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.proto.Alert
+import com.p56.safereach.service.AlertService
 import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -32,9 +32,6 @@ class DebugViewModel @Inject constructor(
     private val alertService: AlertService,
     meshStatusRepository: MeshStatusRepository,
 ) : ViewModel() {
-
-    val id: String = "DebugViewModel"
-
     val uiState: StateFlow<DebugUiState> = combine(
         alertService.alerts,
         meshStatusRepository.isServiceRunning,
