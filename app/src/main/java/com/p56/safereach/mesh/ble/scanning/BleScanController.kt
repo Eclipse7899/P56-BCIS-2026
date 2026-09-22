@@ -108,12 +108,13 @@ class BleScanController(
     private fun execute(intent: BleScanIntent): BleScanEvent {
         return when (intent) {
             BleScanIntent.Start -> {
-                when (val state = _state.value) {
-                    Idle -> {
+                when (_state.value) {
+                    Idle, is Failed -> {
                         try {
                             adapter.scan()
                             BleScanEvent.Started
-                        } catch (_: SecurityException) {
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to start scan", e)
                             BleScanEvent.Failed
                         }
                     }
@@ -125,12 +126,13 @@ class BleScanController(
             }
 
             BleScanIntent.Stop -> {
-                when (val state = _state.value) {
+                when (_state.value) {
                     is Scanning -> {
                         try {
                             adapter.stop()
                             BleScanEvent.Stopped
-                        } catch (_: SecurityException) {
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to stop scan", e)
                             BleScanEvent.Failed
                         }
                     }

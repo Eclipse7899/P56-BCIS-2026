@@ -47,8 +47,8 @@ class BleBeaconScanAdapter(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun scan() {
-        val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.")
+        val bluetoothLeScanner = btManager.adapter?.bluetoothLeScanner
+            ?: throw IllegalStateException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.")
         Log.d(TAG, "Starting scan")
         val intent = buildPendingIntent()
         bluetoothLeScanner.startScan(
@@ -62,13 +62,11 @@ class BleBeaconScanAdapter(
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun stop() {
         Log.d(TAG, "Stopping scan")
-        val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also {
-                Log.e(
-                    TAG,
-                    "Bluetooth LE scanner is not available during stop"
-                )
-            }
+        val bluetoothLeScanner = btManager.adapter?.bluetoothLeScanner
+        if (bluetoothLeScanner == null) {
+            Log.e(TAG, "Bluetooth LE scanner is not available during stop")
+            return
+        }
         val intent = buildPendingIntent()
         bluetoothLeScanner.stopScan(intent)
         Log.d(TAG, "Scan stopped successfully")

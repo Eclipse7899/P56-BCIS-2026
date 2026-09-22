@@ -126,8 +126,8 @@ class BleOrchestrator(
             }
 
             BleIntent.Passive -> {
-                if (scanState is BleScanState.Idle) {
-                    Log.d(TAG, "reconcile(Passive): Starting scanner")
+                if (scanState is BleScanState.Idle || scanState is BleScanState.Failed) {
+                    Log.d(TAG, "reconcile(Passive): Starting scanner (state=$scanState)")
                     scanner.send(BleScanIntent.Start)
                 }
 
@@ -138,14 +138,16 @@ class BleOrchestrator(
             }
 
             is BleIntent.Active -> {
-                if (scanState is BleScanState.Idle) {
-                    Log.d(TAG, "reconcile(Active): Starting scanner")
+                if (scanState is BleScanState.Idle || scanState is BleScanState.Failed) {
+                    Log.d(TAG, "reconcile(Active): Starting scanner (state=$scanState)")
                     scanner.send(BleScanIntent.Start)
                 }
 
                 when (advState) {
-                    BleAdvState.Idle -> {
-                        Log.d(TAG, "reconcile(Active): Starting advertiser")
+                    // Failed is retryable: a transient advertising error must not leave the mesh
+                    // unable to advertise for the rest of the process lifetime.
+                    BleAdvState.Idle, is BleAdvState.Failed -> {
+                        Log.d(TAG, "reconcile(Active): Starting advertiser (state=$advState)")
                         advertiser.send(BleAdvIntent.Start(intent.payload))
                     }
 
@@ -158,10 +160,6 @@ class BleOrchestrator(
 
                     BleAdvState.Disabled -> {
                         Log.d(TAG, "reconcile(Active): Advertiser is in Disabled state")
-                    }
-
-                    is BleAdvState.Failed -> {
-                        Log.w(TAG, "reconcile(Active): Advertiser is in Failed state")
                     }
                 }
             }
