@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mapbox.geojson.Point
 import com.mapbox.maps.extension.compose.MapEffect
@@ -27,7 +28,7 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfTransformation
-import com.p56.safereach.AlertStateRepository
+import com.p56.safereach.proto.Alert
 import com.p56.safereach.proto.Severity
 import com.p56.safereach.proto.Shape
 import com.p56.safereach.ui.theme.SafeReachTheme
@@ -39,7 +40,16 @@ import com.p56.safereach.ui.theme.alertShapeFillColorSeverityLow
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityMedium
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeRoute(viewModel: HomeViewModel = hiltViewModel()) {
+    val alerts by viewModel.activeAlerts.collectAsStateWithLifecycle()
+    HomeScreen(alerts = alerts)
+}
+
+@Composable
+fun HomeScreen(
+    alerts: List<Alert>,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val mapViewportState = rememberMapViewportState {
         MapPreferences.getSavedCameraOptions(context)?.let { cameraOptions ->
@@ -75,7 +85,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    val alert by AlertStateRepository.alert.collectAsStateWithLifecycle()
     Column(modifier = modifier) {
         MapboxMap(
             Modifier
@@ -93,48 +102,44 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 }
                 mapViewportState.transitionToFollowPuckState()
             }
-            when (val alert = alert) {
-                null -> {}
-                else -> {
-                    when (alert.shape.kindCase) {
-                        Shape.KindCase.CIRCLE -> {
-                            val point = Point.fromLngLat(
-                                alert.shape.circle.center.longitude,
-                                alert.shape.circle.center.latitude
-                            )
-                            val color = when (alert.severity) {
-                                Severity.SEVERITY_LOW -> alertShapeFillColorSeverityLow
-                                Severity.SEVERITY_MEDIUM -> alertShapeFillColorSeverityMedium
-                                Severity.SEVERITY_HIGH -> alertShapeFillColorSeverityHigh
-                                else -> alertShapeFillColorSeverityLow
-                            }
-                            val borderColor = when (alert.severity) {
-                                Severity.SEVERITY_LOW -> alertShapeBorderColorSeverityLow
-                                Severity.SEVERITY_MEDIUM -> alertShapeBorderColorSeverityMedium
-                                Severity.SEVERITY_HIGH -> alertShapeBorderColorSeverityHigh
-                                else -> alertShapeBorderColorSeverityLow
-                            }
-                            val polygonCircle = TurfTransformation.circle(
-                                point,
-                                alert.shape.circle.radius,
-                                64,
-                                TurfConstants.UNIT_METERS
-                            )
-                            val geoJson = GeoJSONData(polygonCircle)
-                            val geoSourceState = GeoJsonSourceState()
-                            geoSourceState.data = geoJson
-                            FillLayer(
-                                sourceState = geoSourceState,
-                                layerId = "physical-circle-layer"
-                            ) {
-                                fillColor = ColorValue(color)
-                                fillOutlineColor = ColorValue(borderColor)
-                            }
+            alerts.forEach { alert ->
+                when (alert.shape.kindCase) {
+                    Shape.KindCase.CIRCLE -> {
+                        val point = Point.fromLngLat(
+                            alert.shape.circle.center.longitude,
+                            alert.shape.circle.center.latitude
+                        )
+                        val color = when (alert.severity) {
+                            Severity.SEVERITY_LOW -> alertShapeFillColorSeverityLow
+                            Severity.SEVERITY_MEDIUM -> alertShapeFillColorSeverityMedium
+                            Severity.SEVERITY_HIGH -> alertShapeFillColorSeverityHigh
+                            else -> alertShapeFillColorSeverityLow
                         }
-
-                        Shape.KindCase.POLYGON -> TODO()
-                        Shape.KindCase.KIND_NOT_SET -> TODO()
+                        val borderColor = when (alert.severity) {
+                            Severity.SEVERITY_LOW -> alertShapeBorderColorSeverityLow
+                            Severity.SEVERITY_MEDIUM -> alertShapeBorderColorSeverityMedium
+                            Severity.SEVERITY_HIGH -> alertShapeBorderColorSeverityHigh
+                            else -> alertShapeBorderColorSeverityLow
+                        }
+                        val polygonCircle = TurfTransformation.circle(
+                            point,
+                            alert.shape.circle.radius,
+                            64,
+                            TurfConstants.UNIT_METERS
+                        )
+                        val geoJson = GeoJSONData(polygonCircle)
+                        val geoSourceState = GeoJsonSourceState()
+                        geoSourceState.data = geoJson
+                        FillLayer(
+                            sourceState = geoSourceState,
+                            layerId = "physical-circle-layer"
+                        ) {
+                            fillColor = ColorValue(color)
+                            fillOutlineColor = ColorValue(borderColor)
+                        }
                     }
+                    Shape.KindCase.POLYGON -> TODO()
+                    Shape.KindCase.KIND_NOT_SET -> TODO()
                 }
             }
         }
@@ -145,6 +150,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Composable
 fun HomeScreenPreview() {
     SafeReachTheme {
-        HomeScreen()
+        HomeScreen(alerts = emptyList())
     }
 }

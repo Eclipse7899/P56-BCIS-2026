@@ -1,4 +1,4 @@
-package com.p56.safereach.mesh
+package com.p56.safereach.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,10 +10,13 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.p56.safereach.AlertStateRepository
+import com.p56.safereach.AlertContext
+import com.p56.safereach.AlertMeta
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
-import com.p56.safereach.MeshMeta
 import com.p56.safereach.R
+import com.p56.safereach.mesh.BleResultQueue
+import com.p56.safereach.mesh.BleStateReceiver
+import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.BleAdvController
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
@@ -29,6 +32,7 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -40,9 +44,15 @@ class MeshService : Service() {
     @Inject
     lateinit var signingManager: SigningManager
 
+    @Inject
+    lateinit var alertService: AlertService
+
+    @Inject
+    lateinit var meshStatusRepository: MeshStatusRepository
+
     override fun onCreate() {
         super.onCreate()
-        MeshStatusRepository.updateServiceRunning(true)
+        meshStatusRepository.updateServiceRunning(true)
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val advertiserController = BleAdvController(serviceScope, btManager)
         val scannerController = BleScanController(serviceScope, btManager, this)
@@ -83,28 +93,30 @@ class MeshService : Service() {
     ) {
         serviceScope.launch {
             advertiserController.state.collect {
-                MeshStatusRepository.updateAdvertiserState(it)
+                meshStatusRepository.updateAdvertiserState(it)
             }
         }
         serviceScope.launch {
             scannerController.state.collect {
-                MeshStatusRepository.updateScannerState(it)
+                meshStatusRepository.updateScannerState(it)
             }
         }
     }
 
     private fun observeAlertStateRepository() {
         serviceScope.launch {
-            AlertStateRepository.message.collect { message ->
-                if (message != null) {
-                    val packet = MeshPacket.newBuilder()
-                        .setHopCount(message.hopCount + 1)
-                        .setMsg(message.data)
-                        .build()
-                    val payloadBytes = packet.toByteArray()
-                    orchestrator.send(BleIntent.Active(payloadBytes))
-                } else {
+            alertService.broadcastableMessages.stateIn(serviceScope).collect { messages ->
+                Log.d(TAG, "messages updated: ${messages.size}")
+                if (messages.isEmpty()){
+                    Log.d(TAG, "No alerts to send")
                     orchestrator.send(BleIntent.Passive)
+                }
+                else {
+                    Log.d(TAG, "Sending ${messages.size} alerts")
+                    val packet = MeshPacket.newBuilder()
+                        .addAllMsg(messages)
+                        .build()
+                    orchestrator.send(BleIntent.Active(packet.toByteArray()))
                 }
             }
         }
@@ -115,23 +127,18 @@ class MeshService : Service() {
             for (message in BleResultQueue.channel) {
                 try {
                     val packet = MeshPacket.parseFrom(message.data)
-                    if (!signingManager.verify(packet.msg)) {
-                        Log.w(TAG, "Failed to verify incoming mesh packet")
-                        continue
-                    }
-
-                    val alert = Alert.parseFrom(packet.msg.data)
-                    val meta = MeshMeta(
-                        message.receivedAt,
-                        message.receivedFrom,
-                        packet.hopCount,
-                        packet.msg
-                    )
-                    Log.d(TAG, "Received mesh packet: $meta")
-                    if (AlertStateRepository.updateAlert(alert)) {
-                        AlertStateRepository.updateMessage(meta)
-                        Log.d(TAG, "Updated alert state: $alert")
-                        Log.d(TAG, "Updated message state: $meta")
+                    for (signedMessage in packet.msgList) {
+                        val alert = Alert.parseFrom(signedMessage.data)
+                        val ctx = AlertContext(
+                            alert = alert,
+                            signedMessage = signedMessage,
+                            meta = AlertMeta(
+                                receivedAt = message.receivedAt,
+                                receivedFrom = message.receivedFrom
+                            )
+                        )
+                        Log.d(TAG, "Received alert: $alert")
+                        alertService.add(ctx)
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to decode incoming mesh packet", e)
@@ -144,7 +151,7 @@ class MeshService : Service() {
     private fun observeOrchestratorState() {
         serviceScope.launch {
             orchestrator.state.collect {
-                MeshStatusRepository.updateOrchestratorState(it)
+                meshStatusRepository.updateOrchestratorState(it)
                 when (it) {
                     is BleState.Active -> {
                         updateNotification(
@@ -193,10 +200,10 @@ class MeshService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        MeshStatusRepository.updateServiceRunning(false)
-        MeshStatusRepository.updateOrchestratorState(BleState.Off)
-        MeshStatusRepository.updateAdvertiserState(BleAdvState.Idle)
-        MeshStatusRepository.updateScannerState(BleScanState.Idle)
+        meshStatusRepository.updateServiceRunning(false)
+        meshStatusRepository.updateOrchestratorState(BleState.Off)
+        meshStatusRepository.updateAdvertiserState(BleAdvState.Idle)
+        meshStatusRepository.updateScannerState(BleScanState.Idle)
         orchestrator.send(BleIntent.Off)
     }
 

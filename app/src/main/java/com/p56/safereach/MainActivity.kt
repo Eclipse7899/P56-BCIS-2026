@@ -14,7 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.p56.safereach.auth.MainScreen
-import com.p56.safereach.mesh.MeshService
+import com.p56.safereach.service.MeshService
 import com.p56.safereach.mesh.ble.BlePermissions
 import com.p56.safereach.ui.theme.SafeReachTheme
 import dagger.hilt.android.AndroidEntryPoint

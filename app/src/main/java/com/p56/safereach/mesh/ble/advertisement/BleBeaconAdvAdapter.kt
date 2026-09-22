@@ -18,6 +18,8 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
+import com.p56.safereach.Constants.MAX_DATA_PAYLOAD
+import com.p56.safereach.Constants.SERVICE_UUID_MAP
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvEvent
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -46,21 +48,36 @@ class BleBeaconAdvAdapter(
         .setConnectable(false)
         .setLegacyMode(false)
         .setPrimaryPhy(BluetoothDevice.PHY_LE_CODED)
-        .setSecondaryPhy(BluetoothDevice.PHY_LE_1M)
+        .setSecondaryPhy(BluetoothDevice.PHY_LE_CODED)
         .setInterval(INTERVAL_HIGH)
         .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
         .build()
 
+    fun fragmentData(payload: ByteArray): List<ByteArray> {
+        val fragments = mutableListOf<ByteArray>()
+        var offset = 0
+        while (offset < payload.size) {
+            val end = (offset + MAX_DATA_PAYLOAD).coerceAtMost(payload.size)
+            val fragment = payload.copyOfRange(offset, end)
+            fragments.add(fragment)
+            offset += MAX_DATA_PAYLOAD
+        }
+        Log.d(TAG, "fragmentData: created ${fragments.size} fragments")
+        return fragments
+    }
+
     fun buildAdvertiseData(payload: ByteArray): AdvertiseData {
-        return AdvertiseData.Builder()
-            .addServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID))
-            .addServiceData(
-                ParcelUuid(Constants.BLE_SERVICE_UUID),
-                payload
-            )
+        val fragments = fragmentData(payload)
+        val builder = AdvertiseData.Builder()
+            .addServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID_START))
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
-            .build()
+        for (i in fragments.indices) {
+            if (SERVICE_UUID_MAP.size > i) {
+                builder.addServiceData(ParcelUuid(SERVICE_UUID_MAP[i]), fragments[i])
+            }
+        }
+        return builder.build()
     }
 
     private var operationStatus: OperationStatus = OperationStatus.Idle
@@ -175,6 +192,9 @@ class BleBeaconAdvAdapter(
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun start(data: ByteArray): BleAdvEvent.Started {
         Log.d(TAG, "start: data size=${data.size}")
+        val maxPayloadBytes: Int = btManager.adapter.getLeMaximumAdvertisingDataLength()
+        Log.d(TAG, "start: max payload bytes=$maxPayloadBytes")
+        Log.d(TAG, "start: payload size=${data.size}")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
             ?: throw BleAdvException(BleAdvFail.InternalError).also {
                 Log.e(

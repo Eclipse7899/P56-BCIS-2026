@@ -2,13 +2,14 @@ package com.p56.safereach.debug
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.p56.safereach.AlertStateRepository
-import com.p56.safereach.MeshMeta
+import com.p56.safereach.AlertContext
+import com.p56.safereach.AlertMeta
 import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.proto.Alert
+import com.p56.safereach.service.AlertService
 import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -18,8 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 data class DebugUiState(
-    val message: MeshMeta? = null,
-    val alert: Alert? = null,
+    val alertCtx: List<AlertContext> = listOf(),
     val isMeshRunning: Boolean = false,
     val orchestratorState: BleState = BleState.Off,
     val advertiserState: BleAdvState = BleAdvState.Idle,
@@ -28,25 +28,23 @@ data class DebugUiState(
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
-    private val signingManager: SigningManager
+    private val signingManager: SigningManager,
+    private val alertService: AlertService,
+    meshStatusRepository: MeshStatusRepository,
 ) : ViewModel() {
-
     val uiState: StateFlow<DebugUiState> = combine(
-        AlertStateRepository.message,
-        AlertStateRepository.alert,
-        MeshStatusRepository.isServiceRunning,
-        MeshStatusRepository.orchestratorState,
-        MeshStatusRepository.advertiserState,
-        MeshStatusRepository.scannerState,
-    ) { values ->
-        @Suppress("UNCHECKED_CAST")
+        alertService.alerts,
+        meshStatusRepository.isServiceRunning,
+        meshStatusRepository.orchestratorState,
+        meshStatusRepository.advertiserState,
+        meshStatusRepository.scannerState,
+    ) { alerts, isMeshRunning, orchestratorState, advertiserState, scannerState ->
         DebugUiState(
-            message = values[0] as MeshMeta?,
-            alert = values[1] as Alert?,
-            isMeshRunning = values[2] as Boolean,
-            orchestratorState = values[3] as BleState,
-            advertiserState = values[4] as BleAdvState,
-            scannerState = values[5] as BleScanState,
+            alertCtx = alerts.values.toList().map { it },
+            isMeshRunning = isMeshRunning,
+            orchestratorState = orchestratorState,
+            advertiserState = advertiserState,
+            scannerState = scannerState,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -55,23 +53,16 @@ class DebugViewModel @Inject constructor(
     )
 
     fun updateAlert(alert: Alert) {
-        if (!AlertStateRepository.updateAlert(alert)) {
-            return
-        }
-
         val signed = signingManager.sign(alert.toByteArray())
-        AlertStateRepository.updateMessage(
-            MeshMeta(
-                receivedAt = System.currentTimeMillis(),
-                receivedFrom = null,
-                hopCount = 0,
-                data = signed
-            )
+        val ctx = AlertContext(
+            alert = alert,
+            signedMessage = signed,
+            meta = AlertMeta(System.currentTimeMillis(), null)
         )
+        alertService.add(ctx)
     }
 
-    fun clearAlert() {
-        AlertStateRepository.clearAlert()
-        AlertStateRepository.clearMessage()
+    fun invalidateAlert(id: String) {
+        alertService.remove(id)
     }
 }

@@ -46,13 +46,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.protobuf.kotlin.toByteString
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.p56.safereach.MeshMeta
+import com.p56.safereach.AlertContext
+import com.p56.safereach.AlertMeta
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
@@ -61,11 +63,13 @@ import com.p56.safereach.proto.AlertType
 import com.p56.safereach.proto.LatLong
 import com.p56.safereach.proto.Severity
 import com.p56.safereach.proto.Shape
+import com.p56.safereach.proto.SignedMessage
 import com.p56.safereach.ui.theme.StatusError
 import com.p56.safereach.ui.theme.StatusInfo
 import com.p56.safereach.ui.theme.StatusNeutral
 import com.p56.safereach.ui.theme.StatusSuccess
 
+private const val DEFAULT_ALERT_LIFETIME_MILLIS = 60 * 60 * 1000L
 
 @Composable
 fun DebugRoute(
@@ -75,7 +79,7 @@ fun DebugRoute(
 
     DebugScreen(
         uiState = uiState,
-        clearAlert = viewModel::clearAlert,
+        invalidateAlert = viewModel::invalidateAlert,
         updateAlert = viewModel::updateAlert,
     )
 }
@@ -83,7 +87,7 @@ fun DebugRoute(
 @Composable
 fun DebugScreen(
     uiState: DebugUiState,
-    clearAlert: () -> Unit,
+    invalidateAlert: (String) -> Unit,
     updateAlert: (Alert) -> Unit,
 ) {
     val scrollState = rememberScrollState()
@@ -97,11 +101,12 @@ fun DebugScreen(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (uiState.message != null && uiState.alert != null) {
+            for (ctx in uiState.alertCtx) {
                 AlertDebugCard(
-                    message = uiState.message,
-                    alert = uiState.alert,
-                    onClear = clearAlert
+                    ctx = ctx,
+                    onClear = {
+                        invalidateAlert(ctx.alert.id)
+                    }
                 )
             }
             GenerateAlertDebugCard { alert ->
@@ -119,10 +124,12 @@ fun DebugScreen(
 
 @Composable
 fun AlertDebugCard(
-    message: MeshMeta,
-    alert: Alert,
+    ctx: AlertContext,
     onClear: () -> Unit = {},
 ) {
+    val alert = ctx.alert
+    val meta = ctx.meta
+    val msg = ctx.signedMessage
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -167,7 +174,7 @@ fun AlertDebugCard(
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedAlertTime = remember(message) {
+            val formattedAlertTime = remember(alert) {
                 java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
                     .format(java.util.Date(alert.timestamp))
             }
@@ -178,22 +185,22 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Metadata", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedReceivedTime = remember(message) {
+            Text(
+                text = "Received from: ${meta.receivedFrom ?: "Unknown"}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            val formattedReceivedTime = remember(alert) {
                 java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
-                    .format(java.util.Date(message.receivedAt))
+                    .format(java.util.Date(alert.timestamp))
             }
             Text(
                 text = "Received at: $formattedReceivedTime",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Received from: ${message.receivedFrom ?: "Unknown"}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            val formattedTimeDifference = remember(message) {
-                val timeDifference = message.receivedAt - alert.timestamp
+            val formattedTimeDifference = remember(alert) {
+                val timeDifference = meta.receivedAt - alert.timestamp
                 val minutes = timeDifference / (1000 * 60)
                 val seconds = (timeDifference % (1000 * 60)) / 1000
                 if (minutes > 0) {
@@ -207,12 +214,17 @@ fun AlertDebugCard(
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Packet", style = MaterialTheme.typography.labelMedium)
+            Text(text = "Signed Message", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Hop Count: ${message.hopCount}",
+                text = "Data: ${msg.data.size()} bytes",
                 style = MaterialTheme.typography.bodySmall
             )
+            Text(
+                text = "Signature: ${msg.signature.size()} bytes",
+                style = MaterialTheme.typography.bodySmall
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 modifier = Modifier.fillMaxWidth(),
@@ -371,13 +383,16 @@ fun GenerateAlertDebugCard(
                         .build()
                     val version = System.currentTimeMillis()
                     val alert = Alert.newBuilder()
+                        .setId("debug-${version}")
                         .setTimestamp(version)
                         .setVersion(version)
+                        .setExpiresAt(version + DEFAULT_ALERT_LIFETIME_MILLIS)
                         .setTitle(title.ifBlank { "" })
                         .setDescription(description.ifBlank { "" })
                         .setType(selectedType)
                         .setSeverity(selectedSeverity)
                         .setShape(shape)
+                        .setInvalidated(false)
                         .build()
                     onAlertGenerated(alert)
                 },
@@ -694,14 +709,38 @@ fun LocationSelectDialog(
 fun DebugScreenPreview() {
     DebugScreen(
         DebugUiState(
-            message = null,
-            alert = null,
+            alertCtx = listOf(
+                AlertContext(
+                    alert = Alert.newBuilder()
+                        .setTitle("Test Alert")
+                        .setDescription("This is a test alert for preview purposes.")
+                        .setType(AlertType.ALERT_TYPE_FIRE)
+                        .setSeverity(Severity.SEVERITY_HIGH)
+                        .setTimestamp(System.currentTimeMillis())
+                        .setInvalidated(false)
+                        .setExpiresAt(System.currentTimeMillis() + 60000)
+                        .setShape(Shape.newBuilder()
+                            .setCircle(Shape.Circle.newBuilder()
+                                .setCenter(LatLong.newBuilder().setLatitude(37.7749).setLongitude(-122.4194))
+                                .setRadius(100.0)
+                            )
+                        ).build(),
+                    meta = AlertMeta(
+                        receivedAt = System.currentTimeMillis(),
+                        receivedFrom = "Device123"
+                    ),
+                    signedMessage = SignedMessage.newBuilder()
+                        .setData(ByteArray(10).toByteString())
+                        .setSignature(ByteArray(10).toByteString())
+                        .build()
+                )
+            ),
             isMeshRunning = true,
             orchestratorState = BleState.Active(ByteArray(10)),
             advertiserState = BleAdvState.Idle,
             scannerState = BleScanState.Scanning
         ),
-        clearAlert = {},
+        invalidateAlert = {},
         updateAlert = {}
     )
 }

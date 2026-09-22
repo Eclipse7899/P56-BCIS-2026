@@ -1,14 +1,22 @@
-package com.p56.safereach
+package com.p56.safereach.service
 
 import android.annotation.SuppressLint
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.p56.safereach.AlertContext
+import com.p56.safereach.AlertMeta
 import com.p56.safereach.proto.Alert
 import com.p56.safereach.proto.SignedMessage
+import dagger.hilt.android.AndroidEntryPoint
+import jakarta.inject.Inject
 
 @SuppressLint("MissingFirebaseInstanceTokenRefresh")
+@AndroidEntryPoint
 class FirebaseAlertService : FirebaseMessagingService() {
+
+    @Inject
+    lateinit var alertService: AlertService
 
     override fun onMessageReceived(
         remoteMessage: RemoteMessage
@@ -17,16 +25,13 @@ class FirebaseAlertService : FirebaseMessagingService() {
         remoteMessage.data["alert"]?.let { encoded ->
             try {
                 val signedMessage = SignedMessage.parseFrom(encoded.hexToByteArray())
-                val meta = MeshMeta(
-                    receivedAt = System.currentTimeMillis(),
-                    receivedFrom = null,
-                    hopCount = 0,
-                    data = signedMessage
-                )
                 val alert = Alert.parseFrom(signedMessage.data)
-                if (AlertStateRepository.updateAlert(alert)) {
-                    AlertStateRepository.updateMessage(meta)
-                }
+                val ctx = AlertContext(
+                    alert = alert,
+                    signedMessage = signedMessage,
+                    meta = AlertMeta(System.currentTimeMillis(), null)
+                )
+                alertService.add(ctx)
             } catch (e: IllegalArgumentException) {
                 Log.w(
                     "FirebaseAlertService",
