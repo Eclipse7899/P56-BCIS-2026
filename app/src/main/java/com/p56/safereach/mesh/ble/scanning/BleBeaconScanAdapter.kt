@@ -29,7 +29,7 @@ class BleBeaconScanAdapter(
         .build()
 
     private val filter = ScanFilter.Builder()
-        .setServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID))
+        .setServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID_START))
         .build()
 
     fun buildPendingIntent(): PendingIntent {
