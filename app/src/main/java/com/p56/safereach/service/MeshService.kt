@@ -14,7 +14,6 @@ import com.p56.safereach.AlertContext
 import com.p56.safereach.AlertMeta
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.R
-import com.p56.safereach.isExpired
 import com.p56.safereach.mesh.BleResultQueue
 import com.p56.safereach.mesh.BleStateReceiver
 import com.p56.safereach.mesh.MeshStatusRepository
@@ -33,9 +32,8 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-private const val MAX_ADVERTISING_ALERTS = 3
 
 @AndroidEntryPoint
 class MeshService : Service() {
@@ -107,18 +105,14 @@ class MeshService : Service() {
 
     private fun observeAlertStateRepository() {
         serviceScope.launch {
-            alertService.alerts.collect { alerts ->
-                val messages = alerts.values
-                    .filter { it.alert.isExpired() }
-                    .sortedWith(
-                        compareByDescending<AlertContext> { it.alert.severityValue }.thenByDescending { it.alert.timestamp }
-                    )
-                    .map{ it.signedMessage }
-                    .take(MAX_ADVERTISING_ALERTS)
+            alertService.broadcastableMessages.stateIn(serviceScope).collect { messages ->
+                Log.d(TAG, "messages updated: ${messages.size}")
                 if (messages.isEmpty()){
+                    Log.d(TAG, "No alerts to send")
                     orchestrator.send(BleIntent.Passive)
                 }
                 else {
+                    Log.d(TAG, "Sending ${messages.size} alerts")
                     val packet = MeshPacket.newBuilder()
                         .addAllMsg(messages)
                         .build()
@@ -134,10 +128,6 @@ class MeshService : Service() {
                 try {
                     val packet = MeshPacket.parseFrom(message.data)
                     for (signedMessage in packet.msgList) {
-                        if (!signingManager.verify(signedMessage)) {
-                            Log.w(TAG, "Failed to verify incoming mesh packet")
-                            continue
-                        }
                         val alert = Alert.parseFrom(signedMessage.data)
                         val ctx = AlertContext(
                             alert = alert,

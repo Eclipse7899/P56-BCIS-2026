@@ -20,7 +20,7 @@ sealed interface Either<out L, out R> {
     data class Right<out R>(val value: R) : Either<Nothing, R>
 }
 
-fun Alert.isExpired() = this.expiresAt > 0L && this.expiresAt <= System.currentTimeMillis()
+fun Alert.isExpired() = this.expiresAt > 0L && this.expiresAt < System.currentTimeMillis()
 
 fun Alert.isSuperseded(other: Alert): Boolean {
     return this.version < other.version
