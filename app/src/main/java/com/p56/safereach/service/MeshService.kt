@@ -115,10 +115,15 @@ class MeshService : Service() {
                     )
                     .map{ it.signedMessage }
                     .take(MAX_ADVERTISING_ALERTS)
-                val packet = MeshPacket.newBuilder()
-                    .addAllMsg(messages)
-                    .build()
-                orchestrator.send(BleIntent.Active(packet.toByteArray()))
+                if (messages.isEmpty()){
+                    orchestrator.send(BleIntent.Passive)
+                }
+                else {
+                    val packet = MeshPacket.newBuilder()
+                        .addAllMsg(messages)
+                        .build()
+                    orchestrator.send(BleIntent.Active(packet.toByteArray()))
+                }
             }
         }
     }
