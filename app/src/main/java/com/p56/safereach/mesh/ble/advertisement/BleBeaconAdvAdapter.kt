@@ -21,6 +21,7 @@ import com.p56.safereach.Constants
 import com.p56.safereach.Constants.MAX_DATA_PAYLOAD
 import com.p56.safereach.Constants.SERVICE_UUID_MAP
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvEvent
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -72,10 +73,16 @@ class BleBeaconAdvAdapter(
             .addServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID_START))
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
+        if (fragments.size > SERVICE_UUID_MAP.size) {
+            Log.e(
+                TAG,
+                "Payload of ${payload.size} bytes needs ${fragments.size} fragments, " +
+                        "but only ${SERVICE_UUID_MAP.size} service-data slots are available"
+            )
+            throw BleAdvException(BleAdvFail.DataTooLarge)
+        }
         for (i in fragments.indices) {
-            if (SERVICE_UUID_MAP.size > i) {
-                builder.addServiceData(ParcelUuid(SERVICE_UUID_MAP[i]), fragments[i])
-            }
+            builder.addServiceData(ParcelUuid(SERVICE_UUID_MAP[i]), fragments[i])
         }
         return builder.build()
     }
@@ -202,7 +209,7 @@ class BleBeaconAdvAdapter(
                     "BluetoothLeAdvertiser is null"
                 )
             }
-        val set = withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) {
+        val set = withAdvertisingTimeout {
             awaitOperation(
                 advertiser,
                 operation = {
@@ -234,7 +241,7 @@ class BleBeaconAdvAdapter(
                     "BluetoothLeAdvertiser is null"
                 )
             }
-        return withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) {
+        return withAdvertisingTimeout {
             awaitOperation(
                 advertiser,
                 operation = {
@@ -257,7 +264,7 @@ class BleBeaconAdvAdapter(
                     "BluetoothLeAdvertiser is null"
                 )
             }
-        return withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) {
+        return withAdvertisingTimeout {
             awaitOperation(
                 advertiser,
                 operation = {
@@ -293,6 +300,17 @@ class BleBeaconAdvAdapter(
             operationStatus = OperationStatus.Idle
         }
     }
+
+    private suspend fun <T> withAdvertisingTimeout(block: suspend () -> T): T =
+        try {
+            withTimeout(Constants.BLE_ADVERTISING_TIMEOUT.milliseconds) { block() }
+        } catch (_: TimeoutCancellationException) {
+            Log.e(
+                TAG,
+                "Advertising operation timed out after ${Constants.BLE_ADVERTISING_TIMEOUT}ms"
+            )
+            throw BleAdvException(BleAdvFail.Timeout)
+        }
 
     fun mapStatus(status: Int): BleAdvFail {
         return when (status) {

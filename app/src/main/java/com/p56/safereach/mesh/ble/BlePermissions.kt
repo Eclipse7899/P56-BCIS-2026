@@ -7,6 +7,13 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 
 object BlePermissions {
+    fun requiredBlePermissions(): Set<String> {
+        val permissions = mutableSetOf<String>()
+        permissions.addAll(requiredScanPermissions())
+        permissions.addAll(requiredAdvertisingPermissions())
+        return permissions
+    }
+
     fun requiredRuntimePermissions(): Collection<String> {
         val permissions = mutableSetOf<String>()
 
@@ -14,8 +21,7 @@ object BlePermissions {
             permissions += Manifest.permission.POST_NOTIFICATIONS
         }
 
-        permissions.addAll(requiredScanPermissions())
-        permissions.addAll(requiredAdvertisingPermissions())
+        permissions.addAll(requiredBlePermissions())
 
         return permissions
     }
@@ -45,15 +51,15 @@ object BlePermissions {
         return permissions
     }
 
-    fun missingRuntimePermissions(context: Context): List<String> {
-        return requiredRuntimePermissions().filter { permission ->
+    fun missingBlePermissions(context: Context): List<String> {
+        return requiredBlePermissions().filter { permission ->
             ContextCompat.checkSelfPermission(context, permission) !=
                     PackageManager.PERMISSION_GRANTED
         }
     }
 
     fun hasBlePermissions(context: Context): Boolean {
-        return missingRuntimePermissions(context).isEmpty()
+        return missingBlePermissions(context).isEmpty()
     }
 }
 

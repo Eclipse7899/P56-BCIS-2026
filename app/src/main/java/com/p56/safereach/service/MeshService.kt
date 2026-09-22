@@ -32,12 +32,15 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MeshService : Service() {
     private lateinit var orchestrator: BleOrchestrator
+    private lateinit var advertiserController: BleAdvController
+    private lateinit var scannerController: BleScanController
     private var bleStateReceiver: BleStateReceiver? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -54,8 +57,8 @@ class MeshService : Service() {
         super.onCreate()
         meshStatusRepository.updateServiceRunning(true)
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val advertiserController = BleAdvController(serviceScope, btManager)
-        val scannerController = BleScanController(serviceScope, btManager, this)
+        advertiserController = BleAdvController(serviceScope, btManager)
+        scannerController = BleScanController(serviceScope, btManager, this)
         orchestrator = BleOrchestrator(serviceScope, advertiserController, scannerController)
         observeBluetoothState(btManager, advertiserController, scannerController)
         observeAlertStateRepository()
@@ -205,6 +208,15 @@ class MeshService : Service() {
         meshStatusRepository.updateAdvertiserState(BleAdvState.Idle)
         meshStatusRepository.updateScannerState(BleScanState.Idle)
         orchestrator.send(BleIntent.Off)
+        bleStateReceiver?.let { receiver ->
+            try {
+                unregisterReceiver(receiver)
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "BLE state receiver was already unregistered", e)
+            }
+        }
+        bleStateReceiver = null
+        serviceScope.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
