@@ -1,7 +1,7 @@
 package com.p56.safereach.mesh.ble
 
 import android.util.Log
-import com.p56.safereach.mesh.ble.advertisement.BleAdvActor
+import com.p56.safereach.mesh.ble.advertisement.BleAdvController
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvIntent
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
@@ -11,7 +11,7 @@ import com.p56.safereach.mesh.ble.fsm.BleState.Disabled
 import com.p56.safereach.mesh.ble.fsm.BleState.Failed
 import com.p56.safereach.mesh.ble.fsm.BleState.Off
 import com.p56.safereach.mesh.ble.fsm.BleState.Passive
-import com.p56.safereach.mesh.ble.scanning.BleScanActor
+import com.p56.safereach.mesh.ble.scanning.BleScanController
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import kotlinx.coroutines.CoroutineScope
@@ -33,8 +33,8 @@ private data class Snapshot(
 
 class BleOrchestrator(
     scope: CoroutineScope,
-    private val advertiser: BleAdvActor,
-    private val scanner: BleScanActor,
+    private val advertiser: BleAdvController,
+    private val scanner: BleScanController,
 ) {
     private val _state: MutableStateFlow<BleState> =
         MutableStateFlow(
@@ -126,8 +126,8 @@ class BleOrchestrator(
             }
 
             BleIntent.Passive -> {
-                if (scanState is BleScanState.Idle) {
-                    Log.d(TAG, "reconcile(Passive): Starting scanner")
+                if (scanState is BleScanState.Idle || scanState is BleScanState.Failed) {
+                    Log.d(TAG, "reconcile(Passive): Starting scanner (state=$scanState)")
                     scanner.send(BleScanIntent.Start)
                 }
 
@@ -138,14 +138,16 @@ class BleOrchestrator(
             }
 
             is BleIntent.Active -> {
-                if (scanState is BleScanState.Idle) {
-                    Log.d(TAG, "reconcile(Active): Starting scanner")
+                if (scanState is BleScanState.Idle || scanState is BleScanState.Failed) {
+                    Log.d(TAG, "reconcile(Active): Starting scanner (state=$scanState)")
                     scanner.send(BleScanIntent.Start)
                 }
 
                 when (advState) {
-                    BleAdvState.Idle -> {
-                        Log.d(TAG, "reconcile(Active): Starting advertiser")
+                    // Failed is retryable: a transient advertising error must not leave the mesh
+                    // unable to advertise for the rest of the process lifetime.
+                    BleAdvState.Idle, is BleAdvState.Failed -> {
+                        Log.d(TAG, "reconcile(Active): Starting advertiser (state=$advState)")
                         advertiser.send(BleAdvIntent.Start(intent.payload))
                     }
 
@@ -158,10 +160,6 @@ class BleOrchestrator(
 
                     BleAdvState.Disabled -> {
                         Log.d(TAG, "reconcile(Active): Advertiser is in Disabled state")
-                    }
-
-                    is BleAdvState.Failed -> {
-                        Log.w(TAG, "reconcile(Active): Advertiser is in Failed state")
                     }
                 }
             }

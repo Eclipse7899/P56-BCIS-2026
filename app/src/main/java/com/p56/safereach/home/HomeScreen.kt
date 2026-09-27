@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mapbox.geojson.Point
 import com.mapbox.maps.extension.compose.MapEffect
@@ -27,9 +28,9 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfTransformation
-import com.p56.safereach.AlertStateRepository
-import com.p56.safereach.Severity
-import com.p56.safereach.Shape
+import com.p56.safereach.proto.Alert
+import com.p56.safereach.proto.Severity
+import com.p56.safereach.proto.Shape
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityHigh
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityLow
@@ -50,7 +51,16 @@ import com.p56.safereach.Alert
 
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeRoute(viewModel: HomeViewModel = hiltViewModel()) {
+    val alerts by viewModel.activeAlerts.collectAsStateWithLifecycle()
+    HomeScreen(alerts = alerts)
+}
+
+@Composable
+fun HomeScreen(
+    alerts: List<Alert>,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val mapViewportState = rememberMapViewportState {
         MapPreferences.getSavedCameraOptions(context)?.let { cameraOptions ->
@@ -63,8 +73,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         val center = camera.center
         MapPreferences.saveCameraPosition(
             context = context,
-            lat = center.latitude(),
-            lon = center.longitude(),
+            latitude = center.latitude(),
+            longitude = center.longitude(),
             zoom = camera.zoom,
             pitch = camera.pitch,
             bearing = camera.bearing
@@ -77,8 +87,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             val center = camera.center
             MapPreferences.saveCameraPosition(
                 context = context,
-                lat = center.latitude(),
-                lon = center.longitude(),
+                latitude = center.latitude(),
+                longitude = center.longitude(),
                 zoom = camera.zoom,
                 pitch = camera.pitch,
                 bearing = camera.bearing
@@ -86,14 +96,13 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    val alert by AlertStateRepository.alert.collectAsStateWithLifecycle()
     Column(modifier = modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             MapboxMap(
                 Modifier
                     .fillMaxSize()
                     .padding(4.dp)
-                    .clip(shape = RoundedCornerShape(24.dp)), 
+                    .clip(shape = RoundedCornerShape(24.dp)),
                 mapViewportState = mapViewportState,
                 ) {
                 MapEffect(Unit) { mapView ->
@@ -191,6 +200,62 @@ private fun ActiveAlertCard(
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold
             )
+        MapboxMap(
+            Modifier
+                .fillMaxSize()
+                .padding(4.dp)
+                .clip(shape = RoundedCornerShape(24.dp)),
+            mapViewportState = mapViewportState,
+        ) {
+            MapEffect(Unit) { mapView ->
+                mapView.location.updateSettings {
+                    locationPuck = createDefault2DPuck(withBearing = true)
+                    enabled = true
+                    puckBearing = PuckBearing.HEADING
+                    puckBearingEnabled = true
+                }
+                mapViewportState.transitionToFollowPuckState()
+            }
+            alerts.forEach { alert ->
+                when (alert.shape.kindCase) {
+                    Shape.KindCase.CIRCLE -> {
+                        val point = Point.fromLngLat(
+                            alert.shape.circle.center.longitude,
+                            alert.shape.circle.center.latitude
+                        )
+                        val color = when (alert.severity) {
+                            Severity.SEVERITY_LOW -> alertShapeFillColorSeverityLow
+                            Severity.SEVERITY_MEDIUM -> alertShapeFillColorSeverityMedium
+                            Severity.SEVERITY_HIGH -> alertShapeFillColorSeverityHigh
+                            else -> alertShapeFillColorSeverityLow
+                        }
+                        val borderColor = when (alert.severity) {
+                            Severity.SEVERITY_LOW -> alertShapeBorderColorSeverityLow
+                            Severity.SEVERITY_MEDIUM -> alertShapeBorderColorSeverityMedium
+                            Severity.SEVERITY_HIGH -> alertShapeBorderColorSeverityHigh
+                            else -> alertShapeBorderColorSeverityLow
+                        }
+                        val polygonCircle = TurfTransformation.circle(
+                            point,
+                            alert.shape.circle.radius,
+                            64,
+                            TurfConstants.UNIT_METERS
+                        )
+                        val geoJson = GeoJSONData(polygonCircle)
+                        val geoSourceState = GeoJsonSourceState()
+                        geoSourceState.data = geoJson
+                        FillLayer(
+                            sourceState = geoSourceState,
+                            layerId = "physical-circle-layer"
+                        ) {
+                            fillColor = ColorValue(color)
+                            fillOutlineColor = ColorValue(borderColor)
+                        }
+                    }
+                    Shape.KindCase.POLYGON -> TODO()
+                    Shape.KindCase.KIND_NOT_SET -> TODO()
+                }
+            }
         }
     }
 }
@@ -201,5 +266,6 @@ fun HomeScreenPreview() {
     SafeReachTheme {
         Column(modifier = Modifier.fillMaxSize())
         {Text(text = "Home Screen Preview")}
+        HomeScreen(alerts = emptyList())
     }
 }

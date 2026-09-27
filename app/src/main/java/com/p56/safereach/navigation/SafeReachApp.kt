@@ -27,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
 import com.p56.safereach.battery.BatteryOptimizationBanner
 import com.p56.safereach.battery.BatteryOptimizationHelper
@@ -34,23 +35,27 @@ import com.p56.safereach.bluetooth.BluetoothDisabledBanner
 import com.p56.safereach.bluetooth.BluetoothHelper
 import com.p56.safereach.debug.DebugRoute
 import com.p56.safereach.debug.DebugViewModel
-import com.p56.safereach.home.HomeScreen
-import com.p56.safereach.mesh.MeshStatusRepository
+import com.p56.safereach.home.HomeRoute
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.profile.ProfileScreen
-import com.p56.safereach.BuildConfig
+import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.alert.AlertHistoryScreen
 
-@PreviewScreenSizes
 @Composable
 fun SafeReachApp() {
+    val viewModel: SafeReachAppViewModel = hiltViewModel()
+    val orchestratorState by viewModel.orchestratorState.collectAsStateWithLifecycle()
+    SafeReachAppContent(orchestratorState = orchestratorState)
+}
+
+@Composable
+fun SafeReachAppContent(orchestratorState: BleState) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var isBatteryOptimizationOn by remember {
         mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationEnabled(context))
     }
-    val state = MeshStatusRepository.orchestratorState.collectAsStateWithLifecycle()
-    val isBluetoothEnabled = when (state.value) {
+    val isBluetoothEnabled = when (orchestratorState) {
         BleState.Disabled -> false
         else -> true
     }
@@ -124,6 +129,7 @@ fun SafeReachApp() {
                 when (currentDestination) {
                     AppDestinations.HOME -> HomeScreen()
                     AppDestinations.ALERTS -> AlertHistoryScreen()
+                    AppDestinations.HOME -> HomeRoute()
                     AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
                         val vm = hiltViewModel<DebugViewModel>()
@@ -132,6 +138,14 @@ fun SafeReachApp() {
                 }
             }
         }
+    }
+}
+
+@PreviewScreenSizes
+@Composable
+private fun SafeReachAppPreview() {
+    SafeReachTheme {
+        SafeReachAppContent(orchestratorState = BleState.Passive)
     }
 }
 

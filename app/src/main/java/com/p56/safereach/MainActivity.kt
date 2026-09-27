@@ -14,8 +14,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.p56.safereach.auth.MainScreen
-import com.p56.safereach.mesh.MeshService
 import com.p56.safereach.mesh.ble.BlePermissions
+import com.p56.safereach.service.MeshService
 import com.p56.safereach.ui.theme.SafeReachTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -24,15 +24,13 @@ class MainActivity : ComponentActivity() {
 
     private val requestBlePermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
-    ) { grants ->
-        val allGranted = grants.values.all { it }
-        if (allGranted) {
+    ) {
+        if (hasBlePermissions()) {
             startBleService()
         }
     }
 
-    private fun hasAllRequiredPermissions(): Boolean =
-        BlePermissions.missingRuntimePermissions(this).isEmpty()
+    private fun hasBlePermissions(): Boolean = BlePermissions.hasBlePermissions(this)
 
     private fun startBleService() {
         val intent = Intent(this, MeshService::class.java)
@@ -40,7 +38,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun ensureBleServiceRunning() {
-        if (hasAllRequiredPermissions()) {
+        if (hasBlePermissions()) {
             startBleService()
         } else {
             requestBlePermissionsLauncher.launch(

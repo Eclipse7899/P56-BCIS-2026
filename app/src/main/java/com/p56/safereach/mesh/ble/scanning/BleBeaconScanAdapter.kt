@@ -12,11 +12,11 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
 
-private const val TAG = "BleBeaconScanExecutor"
+private const val TAG = "BleBeaconScanAdapter"
 
 private const val REQUEST_CODE_BLE_SCAN = 100
 
-class BleBeaconScanExecutor(
+class BleBeaconScanAdapter(
     val btManager: BluetoothManager,
     val context: Context
 ) {
@@ -29,7 +29,7 @@ class BleBeaconScanExecutor(
         .build()
 
     private val filter = ScanFilter.Builder()
-        .setServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID))
+        .setServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID_START))
         .build()
 
     fun buildPendingIntent(): PendingIntent {
@@ -47,8 +47,8 @@ class BleBeaconScanExecutor(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun scan() {
-        val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.")
+        val bluetoothLeScanner = btManager.adapter?.bluetoothLeScanner
+            ?: throw IllegalStateException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.")
         Log.d(TAG, "Starting scan")
         val intent = buildPendingIntent()
         bluetoothLeScanner.startScan(
@@ -62,13 +62,11 @@ class BleBeaconScanExecutor(
     @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun stop() {
         Log.d(TAG, "Stopping scan")
-        val bluetoothLeScanner = btManager.adapter.bluetoothLeScanner
-            ?: throw IllegalArgumentException("Bluetooth LE scanner is not available. Ensure Bluetooth is enabled.").also {
-                Log.e(
-                    TAG,
-                    "Bluetooth LE scanner is not available during stop"
-                )
-            }
+        val bluetoothLeScanner = btManager.adapter?.bluetoothLeScanner
+        if (bluetoothLeScanner == null) {
+            Log.e(TAG, "Bluetooth LE scanner is not available during stop")
+            return
+        }
         val intent = buildPendingIntent()
         bluetoothLeScanner.stopScan(intent)
         Log.d(TAG, "Scan stopped successfully")

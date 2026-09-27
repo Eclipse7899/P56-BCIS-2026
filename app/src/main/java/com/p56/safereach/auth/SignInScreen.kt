@@ -46,7 +46,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.p56.safereach.R
 
 @Composable
-fun SignIn(
+fun SignInScreen(
     context: Context,
     onForgotPasswordClick: () -> Unit,
     onRegisterClick: () -> Unit
@@ -216,8 +216,8 @@ fun SignIn(
 
 @Composable
 @Preview(showBackground = true)
-fun SignInPreview() {
-    SignIn(
+fun SignInScreenPreview() {
+    SignInScreen(
         context = LocalContext.current,
         onForgotPasswordClick = {},
     ) {}

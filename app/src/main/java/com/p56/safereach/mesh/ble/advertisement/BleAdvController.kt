@@ -10,7 +10,9 @@ import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Advertising
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Disabled
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Failed
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Idle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,14 +26,14 @@ private sealed interface Message {
     data class BluetoothState(val enabled: Boolean) : Message
 }
 
-private const val TAG = "BleAdvActor"
+private const val TAG = "BleAdvController"
 
 @SuppressLint("MissingPermission")
-class BleAdvActor(
+class BleAdvController(
     scope: CoroutineScope,
     btManager: BluetoothManager,
 ) {
-    private val executor = BleBeaconAdvExecutor(
+    private val adapter = BleBeaconAdvAdapter(
         onEvent = { event ->
             messages.trySend(Message.Event(event))
         },
@@ -138,39 +140,47 @@ class BleAdvActor(
         }
     }
 
+    /**
+     * Runs one advertising operation and turns every BLE outcome into an event. A [CancellationException]
+     * that is *not* a timeout means the owning scope is shutting down and must propagate, otherwise the
+     * message loop below would swallow its own cancellation.
+     */
+    private suspend fun advertisingEvent(action: suspend () -> BleAdvEvent): BleAdvEvent =
+        try {
+            action()
+        } catch (e: TimeoutCancellationException) {
+            Log.e(TAG, "Advertising operation timed out")
+            BleAdvEvent.Failed(BleAdvFail.Timeout)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: BleAdvException) {
+            BleAdvEvent.Failed(e.failure)
+        } catch (e: Exception) {
+            Log.e(TAG, "Advertising operation failed", e)
+            BleAdvEvent.Failed(BleAdvFail.InternalError)
+        }
+
     private suspend fun execute(intent: BleAdvIntent): BleAdvEvent {
         return when (intent) {
             is BleAdvIntent.Start ->
                 when (val state = _state.value) {
-                    is Advertising if shouldUpdate(state, intent) -> {
-                        try {
-                            executor.update(intent.payload, state.advertisingSet)
-                            BleAdvEvent.Started(state.advertisingSet, intent.payload)
-                        } catch (e: BleAdvException) {
-                            BleAdvEvent.Failed(e.failure)
-                        }
+                    is Advertising if shouldUpdate(state, intent) -> advertisingEvent {
+                        adapter.update(intent.payload, state.advertisingSet)
+                        BleAdvEvent.Started(state.advertisingSet, intent.payload)
                     }
 
-                    is Idle -> {
-                        try {
-                            return executor.start(intent.payload)
-                        } catch (e: BleAdvException) {
-                            BleAdvEvent.Failed(e.failure)
-                        }
-                    }
+                    // Failed is retryable: a transient advertising error must not leave the mesh
+                    // unable to advertise for the rest of the process lifetime.
+                    is Idle, is Failed -> advertisingEvent { adapter.start(intent.payload) }
 
                     else -> BleAdvEvent.NoOp
                 }
 
             is BleAdvIntent.Stop -> {
                 when (_state.value) {
-                    is Advertising -> {
-                        try {
-                            executor.stop()
-                            BleAdvEvent.Stopped
-                        } catch (e: BleAdvException) {
-                            BleAdvEvent.Failed(e.failure)
-                        }
+                    is Advertising -> advertisingEvent {
+                        adapter.stop()
+                        BleAdvEvent.Stopped
                     }
 
                     else -> BleAdvEvent.NoOp

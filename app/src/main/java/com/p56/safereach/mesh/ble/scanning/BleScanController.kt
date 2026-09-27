@@ -24,10 +24,10 @@ private sealed interface Message {
     data class BluetoothState(val enabled: Boolean) : Message
 }
 
-private const val TAG = "BleScanActor"
+private const val TAG = "BleScanController"
 
 @SuppressLint("MissingPermission")
-class BleScanActor(
+class BleScanController(
     scope: CoroutineScope,
     manager: BluetoothManager,
     context: Context,
@@ -39,7 +39,7 @@ class BleScanActor(
 
     private val messages = Channel<Message>(Channel.UNLIMITED)
 
-    private val executor = BleBeaconScanExecutor(
+    private val adapter = BleBeaconScanAdapter(
         btManager = manager,
         context = context
     )
@@ -108,12 +108,13 @@ class BleScanActor(
     private fun execute(intent: BleScanIntent): BleScanEvent {
         return when (intent) {
             BleScanIntent.Start -> {
-                when (val state = _state.value) {
-                    Idle -> {
+                when (_state.value) {
+                    Idle, is Failed -> {
                         try {
-                            executor.scan()
+                            adapter.scan()
                             BleScanEvent.Started
-                        } catch (_: SecurityException) {
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to start scan", e)
                             BleScanEvent.Failed
                         }
                     }
@@ -125,12 +126,13 @@ class BleScanActor(
             }
 
             BleScanIntent.Stop -> {
-                when (val state = _state.value) {
+                when (_state.value) {
                     is Scanning -> {
                         try {
-                            executor.stop()
+                            adapter.stop()
                             BleScanEvent.Stopped
-                        } catch (_: SecurityException) {
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to stop scan", e)
                             BleScanEvent.Failed
                         }
                     }

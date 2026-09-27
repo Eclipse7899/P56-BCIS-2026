@@ -17,7 +17,6 @@ SafeReach is an Android disaster-management app for the AUT BCIS 2026 project. I
 - JDK 17
 - Android Gradle Plugin / Gradle wrapper from the repo
 - Firebase configuration for the app
-- Ed25519 key pair generated in the local app resources if required for signing verification
 
 ### Setup
 
@@ -26,8 +25,8 @@ SafeReach is an Android disaster-management app for the AUT BCIS 2026 project. I
 git clone https://github.com/Eclipse7899/P56-BCIS-2026.git
 cd P56-BCIS-2026
 
-# Generate local Ed25519 signing keys if they are not already present
-./gradlew generateSigningKeys
+# Generate debug signing keys
+./gradlew generateSigningKeysDebug
 
 # Sync and build the project
 ./gradlew assembleDebug
@@ -68,7 +67,7 @@ The app is built around a Compose UI layer, state repositories, and background s
 - `SafeReachApp` hosts the top-level navigation and screen switching.
 - `HomeScreen`, `ProfileScreen`, and `DebugScreen` render the main UI.
 - `DebugViewModel` owns debug screen state and exposes the current mesh/alert state.
-- `AlertStateRepository` stores the currently active alert and associated metadata.
+- `AlertStateRepository` stores the active alerts keyed by id, plus the mesh metadata of the last accepted packet.
 - `MeshStatusRepository` tracks BLE service and subsystem states.
 - `MeshService` receives and broadcasts mesh messages and updates repository state.
 - `FirebaseAlertService` decodes incoming Firebase alerts and stores them in the same alert state flow.
