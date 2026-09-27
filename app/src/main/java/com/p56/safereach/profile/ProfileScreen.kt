@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -47,6 +48,7 @@ fun ProfileContent(
     onSignOut: () -> Unit
 ) {
     var notificationsEnabled by remember { mutableStateOf(true) }
+    var darkModeEnabled by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -80,6 +82,14 @@ fun ProfileContent(
             style = MaterialTheme.typography.bodyLarge
         )
         Spacer(modifier = Modifier.height(32.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "Preferences",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = "Notifications",
             style = MaterialTheme.typography.titleMedium,
@@ -91,25 +101,92 @@ fun ProfileContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = if (notificationsEnabled) {
-                    "Enabled"
-                } else {
-                    "Disabled"
+            Column {
+                Text(
+                    text = "Disaster Alerts",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = if (notificationsEnabled) {
+                        "Enabled"
+                    } else {
+                        "Disabled"
+                    },
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Switch(
+                checked = notificationsEnabled,
+                onCheckedChange = {
+                    notificationsEnabled = it
+                    // TODO: Connect to the notification system.
                 }
             )
         }
-        Switch(
-            checked = notificationsEnabled,
-            onCheckedChange = { notificationsEnabled = it }
+        Spacer(modifier = Modifier.height(20.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(20.dp))
+        //
+        Text(
+            text = "Appearance",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Column{
+                Text(
+                    text = "Dark Mode",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = if(darkModeEnabled) {
+                        "Enabled"
+                    } else {
+                        "Disabled"
+                           },
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Switch(
+                checked = darkModeEnabled,
+                onCheckedChange = {
+                    darkModeEnabled = it
+                    //TODO: Connect to the app theme
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = "About",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "SafeReach",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Disaster monitoring and emergency response application.",
+            style = MaterialTheme.typography.bodyMedium
         )
         Spacer(modifier = Modifier.weight(1f))
-        //
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = onSignOut
         ) {
-            Text(text = "Sign Out")
+            Text(text = "Sign Out",
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
