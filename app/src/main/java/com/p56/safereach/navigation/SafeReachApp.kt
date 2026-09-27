@@ -39,6 +39,7 @@ import com.p56.safereach.mesh.MeshStatusRepository
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.profile.ProfileScreen
 import com.p56.safereach.BuildConfig
+import com.p56.safereach.alert.AlertHistoryScreen
 
 @PreviewScreenSizes
 @Composable
@@ -122,6 +123,7 @@ fun SafeReachApp() {
                 }
                 when (currentDestination) {
                     AppDestinations.HOME -> HomeScreen()
+                    AppDestinations.ALERTS -> AlertHistoryScreen()
                     AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
                         val vm = hiltViewModel<DebugViewModel>()
@@ -138,6 +140,7 @@ enum class AppDestinations(
     val icon: Int,
 ) {
     HOME("Home", R.drawable.ic_home),
+    ALERTS("Alerts", R.drawable.ic_warning),
     PROFILE("Profile", R.drawable.ic_account_box),
     DEBUG("Debug", R.drawable.ic_debug),
 }
