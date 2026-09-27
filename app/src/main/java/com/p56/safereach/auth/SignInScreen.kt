@@ -54,6 +54,8 @@ fun SignIn(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var loading by rememberSaveable { mutableStateOf(false) }
+    var emailError by rememberSaveable { mutableStateOf<String?>(null) }
+    var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     Column(
@@ -96,12 +98,15 @@ fun SignIn(
         ) {
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it
+                                emailError = null},
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("Email") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                isError = emailError != null,
+                supportingText = { emailError?.let { Text(it) } }
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -113,6 +118,8 @@ fun SignIn(
                 placeholder = { Text("Password") },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = passwordError != null,
+                supportingText = { passwordError?.let { Text (it) } },
                 trailingIcon = {
                     val painter = if (passwordVisible)
                         painterResource(id = R.drawable.ic_visibility_24px)
@@ -140,9 +147,22 @@ fun SignIn(
                 shape = MaterialTheme.shapes.extraLarge,
                 contentPadding = PaddingValues(vertical = 12.dp),
                 onClick = {
+                    emailError = null
+                    passwordError = null
+                    when {
+                        !isValidEmail(email) -> {
+                            emailError = "Email does not exist."
+                            return@Button
+                        }
+                        password.length < 8 -> {
+                            passwordError = "Password is incorrect."
+                            return@Button
+                        }
+                    }
+                    // TODO: Firebase Authentication
                     loading = true
                     val auth = FirebaseAuth.getInstance()
-                    auth.signInWithEmailAndPassword(email, password)
+                    auth.signInWithEmailAndPassword(email.trim(), password)
                         .addOnCompleteListener { task ->
                             loading = false
                             if (task.isSuccessful) {
@@ -187,7 +207,7 @@ fun SignIn(
                 }
             ) {
                 Text(
-                    text = "Don't have an profile? Register Now"
+                    text = "Don't have a profile? Register Now"
                 )
             }
         }
@@ -200,6 +220,5 @@ fun SignInPreview() {
     SignIn(
         context = LocalContext.current,
         onForgotPasswordClick = {},
-        onRegisterClick = {}
-    )
+    ) {}
 }
