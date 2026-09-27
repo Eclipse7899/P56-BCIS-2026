@@ -37,6 +37,17 @@ import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityMedium
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityHigh
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityLow
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityMedium
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import com.p56.safereach.Alert
+
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -77,62 +88,109 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     val alert by AlertStateRepository.alert.collectAsStateWithLifecycle()
     Column(modifier = modifier) {
-        MapboxMap(
-            Modifier
-                .fillMaxSize()
-                .padding(4.dp)
-                .clip(shape = RoundedCornerShape(24.dp)),
-            mapViewportState = mapViewportState,
-        ) {
-            MapEffect(Unit) { mapView ->
-                mapView.location.updateSettings {
-                    locationPuck = createDefault2DPuck(withBearing = true)
-                    enabled = true
-                    puckBearing = PuckBearing.HEADING
-                    puckBearingEnabled = true
+        Box(modifier = Modifier.fillMaxSize()) {
+            MapboxMap(
+                Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
+                    .clip(shape = RoundedCornerShape(24.dp)), 
+                mapViewportState = mapViewportState,
+                ) {
+                MapEffect(Unit) { mapView ->
+                    mapView.location.updateSettings {
+                        locationPuck = createDefault2DPuck(withBearing = true)
+                        enabled = true
+                        puckBearing = PuckBearing.HEADING
+                        puckBearingEnabled = true
+                    }
+                    mapViewportState.transitionToFollowPuckState()
                 }
-                mapViewportState.transitionToFollowPuckState()
-            }
-            when (val alert = alert) {
-                null -> {}
-                else -> {
-                    when (alert.shape) {
-                        is Shape.Circle -> {
-                            val point = Point.fromLngLat(
-                                alert.shape.center.longitude,
-                                alert.shape.center.latitude
-                            )
-                            val color = when (alert.severity) {
-                                Severity.LOW -> alertShapeFillColorSeverityLow
-                                Severity.MEDIUM -> alertShapeFillColorSeverityMedium
-                                Severity.HIGH -> alertShapeFillColorSeverityHigh
+                when (val alert = alert) {
+                    null -> {}
+                    else -> {
+                        when (alert.shape) {
+                            is Shape.Circle -> {
+                                val point = Point.fromLngLat(
+                                    alert.shape.center.longitude,
+                                    alert.shape.center.latitude
+                                )
+                                val color = when (alert.severity) {
+                                    Severity.LOW -> alertShapeFillColorSeverityLow
+                                    Severity.MEDIUM -> alertShapeFillColorSeverityMedium
+                                    Severity.HIGH -> alertShapeFillColorSeverityHigh
+                                }
+                                val borderColor = when (alert.severity) {
+                                    Severity.LOW -> alertShapeBorderColorSeverityLow
+                                    Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
+                                    Severity.HIGH -> alertShapeBorderColorSeverityHigh
+                                }
+                                val polygonCircle = TurfTransformation.circle(
+                                    point,
+                                    alert.shape.radius,
+                                    64,
+                                    TurfConstants.UNIT_METERS
+                                )
+                                val geoJson = GeoJSONData(polygonCircle)
+                                val geoSourceState = GeoJsonSourceState()
+                                geoSourceState.data = geoJson
+                                FillLayer(
+                                    sourceState = geoSourceState,
+                                    layerId = "physical-circle-layer"
+                                ) {
+                                    fillColor = ColorValue(color)
+                                    fillOutlineColor = ColorValue(borderColor)
+                                }
                             }
-                            val borderColor = when (alert.severity) {
-                                Severity.LOW -> alertShapeBorderColorSeverityLow
-                                Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
-                                Severity.HIGH -> alertShapeBorderColorSeverityHigh
-                            }
-                            val polygonCircle = TurfTransformation.circle(
-                                point,
-                                alert.shape.radius,
-                                64,
-                                TurfConstants.UNIT_METERS
-                            )
-                            val geoJson = GeoJSONData(polygonCircle)
-                            val geoSourceState = GeoJsonSourceState()
-                            geoSourceState.data = geoJson
-                            FillLayer(
-                                sourceState = geoSourceState,
-                                layerId = "physical-circle-layer"
-                            ) {
-                                fillColor = ColorValue(color)
-                                fillOutlineColor = ColorValue(borderColor)
-                            }
+
+                            is Shape.Polygon -> TODO()
                         }
-                        is Shape.Polygon -> TODO()
                     }
                 }
             }
+            alert?.let {currentAlert ->
+                ActiveAlertCard(alert = currentAlert,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveAlertCard(
+    alert: Alert,
+    modifier: Modifier = Modifier
+){
+    Card(modifier = Modifier.fillMaxWidth()){
+        Column(modifier = Modifier.padding(16.dp)){
+            Text(
+                text = "ACTIVE ALERT",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = alert.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = alert.description,
+                style= MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Type: ${alert.type.name}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Severity: ${alert.severity.name}",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -141,6 +199,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Composable
 fun HomeScreenPreview() {
     SafeReachTheme {
-        HomeScreen()
+        Column(modifier = Modifier.fillMaxSize())
+        {Text(text = "Home Screen Preview")}
     }
 }
