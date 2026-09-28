@@ -1,15 +1,18 @@
 package com.p56.safereach.debug
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.p56.safereach.AlertContext
-import com.p56.safereach.AlertMeta
-import com.p56.safereach.mesh.MeshStatusRepository
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
-import com.p56.safereach.proto.Alert
-import com.p56.safereach.service.AlertService
+import com.p56.safereach.model.Alert
+import com.p56.safereach.model.AlertBatch
+import com.p56.safereach.model.ReceivedMessage
+import com.p56.safereach.model.SignedMessage
+import com.p56.safereach.model.toDto
+import com.p56.safereach.service.AlertRepository
+import com.p56.safereach.service.MeshStatusStore
 import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -17,30 +20,32 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class DebugUiState(
-    val alertCtx: List<AlertContext> = listOf(),
+    val receivedMessage: ReceivedMessage? = null,
     val isMeshRunning: Boolean = false,
     val orchestratorState: BleState = BleState.Off,
-    val advertiserState: BleAdvState = BleAdvState.Idle,
+    val advertiserState: BleAdvertisingState = BleAdvertisingState.Idle,
     val scannerState: BleScanState = BleScanState.Idle,
 )
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
     private val signingManager: SigningManager,
-    private val alertService: AlertService,
-    meshStatusRepository: MeshStatusRepository,
+    private val alertRepository: AlertRepository,
+    meshStatusStore: MeshStatusStore,
 ) : ViewModel() {
     val uiState: StateFlow<DebugUiState> = combine(
-        alertService.alerts,
-        meshStatusRepository.isServiceRunning,
-        meshStatusRepository.orchestratorState,
-        meshStatusRepository.advertiserState,
-        meshStatusRepository.scannerState,
-    ) { alerts, isMeshRunning, orchestratorState, advertiserState, scannerState ->
+        alertRepository.receivedMessage,
+        meshStatusStore.isServiceRunning,
+        meshStatusStore.orchestratorState,
+        meshStatusStore.advertiserState,
+        meshStatusStore.scannerState,
+    ) { receivedMessage, isMeshRunning, orchestratorState, advertiserState, scannerState ->
+        Log.d("DebugViewModel", "Received message: $receivedMessage")
         DebugUiState(
-            alertCtx = alerts.values.toList().map { it },
+            receivedMessage = receivedMessage,
             isMeshRunning = isMeshRunning,
             orchestratorState = orchestratorState,
             advertiserState = advertiserState,
@@ -52,17 +57,28 @@ class DebugViewModel @Inject constructor(
         initialValue = DebugUiState(),
     )
 
-    fun updateAlert(alert: Alert) {
-        val signed = signingManager.sign(alert.toByteArray())
-        val ctx = AlertContext(
-            alert = alert,
-            signedMessage = signed,
-            meta = AlertMeta(System.currentTimeMillis(), null)
-        )
-        alertService.add(ctx)
+    fun addAlert(alert: Alert) {
+        viewModelScope.launch {
+            val data = AlertBatch(
+                alerts = listOf(alert),
+                validUntil = alert.expiresAt,
+                timestamp = alert.timestamp,
+            )
+            val signature = signingManager.sign(data.toDto().toByteArray())
+            val message = SignedMessage(
+                payload = data.toDto().toByteArray(),
+                signature = signature,
+                receivedAt = System.currentTimeMillis(),
+                receivedFrom = "Debug"
+            )
+            alertRepository.addSigned(message)
+        }
     }
 
-    fun invalidateAlert(id: String) {
-        alertService.remove(id)
+    fun deleteAlert() {
+        viewModelScope.launch {
+            Log.d("DebugViewModel", "Deleting message")
+            alertRepository.removeSigned()
+        }
     }
 }

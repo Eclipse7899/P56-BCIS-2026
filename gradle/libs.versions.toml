@@ -9,10 +9,9 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 kotlin = "2.4.0"
-kotlinMultiplatform = "2.4.0"
 composeBom = "2026.05.01"
 google-services = "4.4.4"
-mapbox-ndk = "11.28.0"
+mapbox-ndk = "11.31.1"
 mapbox-turf = "7.10.1"
 datastore-preferences = "1.2.0"
 playServicesLocation = "21.4.0"
@@ -23,6 +22,7 @@ bouncyCastle = "1.85.2"
 protobuf = "0.10.0"
 protobufCompiler = "4.36.2"
 protobufRuntime = "4.36.2"
+room = "2.8.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -56,10 +56,12 @@ bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.re
 protobuf-compiler = { group = "com.google.protobuf", name = "protoc", version.ref = "protobufCompiler" }
 protobuf-javalite = { group = "com.google.protobuf", name = "protobuf-javalite", version.ref = "protobufRuntime" }
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobufRuntime" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
