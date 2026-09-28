@@ -50,7 +50,7 @@ class BleBeaconAdvAdapter(
         .setLegacyMode(false)
         .setPrimaryPhy(BluetoothDevice.PHY_LE_CODED)
         .setSecondaryPhy(BluetoothDevice.PHY_LE_CODED)
-        .setInterval(INTERVAL_HIGH)
+        .setInterval(AdvertisingSetParameters.INTERVAL_MEDIUM)
         .setTxPowerLevel(AdvertisingSetParameters.TX_POWER_HIGH)
         .build()
 
