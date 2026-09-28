@@ -3,13 +3,13 @@ package com.p56.safereach.mesh.ble.advertisement
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.util.Log
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvEvent
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvIntent
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Advertising
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Disabled
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Failed
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState.Idle
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingCommand
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingEvent
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState.Advertising
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState.Disabled
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState.Failed
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState.Idle
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
@@ -21,15 +21,15 @@ import kotlinx.coroutines.launch
 
 
 private sealed interface Message {
-    data class Intent(val intent: BleAdvIntent) : Message
-    data class Event(val event: BleAdvEvent) : Message
+    data class Intent(val intent: BleAdvertisingCommand) : Message
+    data class Event(val event: BleAdvertisingEvent) : Message
     data class BluetoothState(val enabled: Boolean) : Message
 }
 
-private const val TAG = "BleAdvController"
+private const val TAG = "BleAdvertisingController"
 
 @SuppressLint("MissingPermission")
-class BleAdvController(
+class BleAdvertisingController(
     scope: CoroutineScope,
     btManager: BluetoothManager,
 ) {
@@ -39,13 +39,13 @@ class BleAdvController(
         },
         btManager
     )
-    private val _state = MutableStateFlow<BleAdvState>(Idle)
+    private val _state = MutableStateFlow<BleAdvertisingState>(Idle)
 
     private val messages = Channel<Message>(Channel.UNLIMITED)
 
-    val state: StateFlow<BleAdvState> = _state.asStateFlow()
+    val state: StateFlow<BleAdvertisingState> = _state.asStateFlow()
 
-    fun send(intent: BleAdvIntent) {
+    fun send(intent: BleAdvertisingCommand) {
         messages.trySend(Message.Intent(intent))
     }
 
@@ -100,41 +100,41 @@ class BleAdvController(
         }
     }
 
-    fun reduce(state: BleAdvState, event: BleAdvEvent): BleAdvState {
+    fun reduce(state: BleAdvertisingState, event: BleAdvertisingEvent): BleAdvertisingState {
         return when (state) {
             is Advertising -> {
                 when (event) {
-                    is BleAdvEvent.Started -> Advertising(event.set, event.data)
-                    is BleAdvEvent.Failed -> Failed(event.error)
-                    is BleAdvEvent.Stopped -> Idle
-                    BleAdvEvent.NoOp -> state
+                    is BleAdvertisingEvent.Started -> Advertising(event.set, event.payload)
+                    is BleAdvertisingEvent.Failed -> Failed(event.error)
+                    is BleAdvertisingEvent.Stopped -> Idle
+                    BleAdvertisingEvent.NoOp -> state
                 }
             }
 
             is Idle -> {
                 when (event) {
-                    is BleAdvEvent.Started -> Advertising(event.set, event.data)
-                    is BleAdvEvent.Failed -> Failed(event.error)
-                    is BleAdvEvent.Stopped -> Idle
-                    BleAdvEvent.NoOp -> state
+                    is BleAdvertisingEvent.Started -> Advertising(event.set, event.payload)
+                    is BleAdvertisingEvent.Failed -> Failed(event.error)
+                    is BleAdvertisingEvent.Stopped -> Idle
+                    BleAdvertisingEvent.NoOp -> state
                 }
             }
 
             is Failed -> {
                 when (event) {
-                    is BleAdvEvent.Started -> Advertising(event.set, event.data)
-                    is BleAdvEvent.Failed -> Failed(event.error)
-                    is BleAdvEvent.Stopped -> Idle
-                    BleAdvEvent.NoOp -> state
+                    is BleAdvertisingEvent.Started -> Advertising(event.set, event.payload)
+                    is BleAdvertisingEvent.Failed -> Failed(event.error)
+                    is BleAdvertisingEvent.Stopped -> Idle
+                    BleAdvertisingEvent.NoOp -> state
                 }
             }
 
             is Disabled -> {
                 when (event) {
-                    is BleAdvEvent.Started -> Advertising(event.set, event.data)
-                    is BleAdvEvent.Failed -> Failed(event.error)
-                    is BleAdvEvent.Stopped -> Idle
-                    BleAdvEvent.NoOp -> state
+                    is BleAdvertisingEvent.Started -> Advertising(event.set, event.payload)
+                    is BleAdvertisingEvent.Failed -> Failed(event.error)
+                    is BleAdvertisingEvent.Stopped -> Idle
+                    BleAdvertisingEvent.NoOp -> state
                 }
             }
         }
@@ -145,45 +145,45 @@ class BleAdvController(
      * that is *not* a timeout means the owning scope is shutting down and must propagate, otherwise the
      * message loop below would swallow its own cancellation.
      */
-    private suspend fun advertisingEvent(action: suspend () -> BleAdvEvent): BleAdvEvent =
+    private suspend fun advertisingEvent(action: suspend () -> BleAdvertisingEvent): BleAdvertisingEvent =
         try {
             action()
         } catch (e: TimeoutCancellationException) {
             Log.e(TAG, "Advertising operation timed out")
-            BleAdvEvent.Failed(BleAdvFail.Timeout)
+            BleAdvertisingEvent.Failed(BleAdvertisingFail.Timeout)
         } catch (e: CancellationException) {
             throw e
-        } catch (e: BleAdvException) {
-            BleAdvEvent.Failed(e.failure)
+        } catch (e: BleAdvertisingException) {
+            BleAdvertisingEvent.Failed(e.failure)
         } catch (e: Exception) {
             Log.e(TAG, "Advertising operation failed", e)
-            BleAdvEvent.Failed(BleAdvFail.InternalError)
+            BleAdvertisingEvent.Failed(BleAdvertisingFail.InternalError)
         }
 
-    private suspend fun execute(intent: BleAdvIntent): BleAdvEvent {
+    private suspend fun execute(intent: BleAdvertisingCommand): BleAdvertisingEvent {
         return when (intent) {
-            is BleAdvIntent.Start ->
+            is BleAdvertisingCommand.Start ->
                 when (val state = _state.value) {
                     is Advertising if shouldUpdate(state, intent) -> advertisingEvent {
                         adapter.update(intent.payload, state.advertisingSet)
-                        BleAdvEvent.Started(state.advertisingSet, intent.payload)
+                        BleAdvertisingEvent.Started(state.advertisingSet, intent.payload)
                     }
 
                     // Failed is retryable: a transient advertising error must not leave the mesh
                     // unable to advertise for the rest of the process lifetime.
                     is Idle, is Failed -> advertisingEvent { adapter.start(intent.payload) }
 
-                    else -> BleAdvEvent.NoOp
+                    else -> BleAdvertisingEvent.NoOp
                 }
 
-            is BleAdvIntent.Stop -> {
+            is BleAdvertisingCommand.Stop -> {
                 when (_state.value) {
                     is Advertising -> advertisingEvent {
                         adapter.stop()
-                        BleAdvEvent.Stopped
+                        BleAdvertisingEvent.Stopped
                     }
 
-                    else -> BleAdvEvent.NoOp
+                    else -> BleAdvertisingEvent.NoOp
                 }
             }
         }
@@ -191,6 +191,6 @@ class BleAdvController(
 
     private fun shouldUpdate(
         state: Advertising,
-        intent: BleAdvIntent.Start
-    ): Boolean = !state.data.contentEquals(intent.payload)
+        intent: BleAdvertisingCommand.Start
+    ): Boolean = !state.payload.contentEquals(intent.payload)
 }

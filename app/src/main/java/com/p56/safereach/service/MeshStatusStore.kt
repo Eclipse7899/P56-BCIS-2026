@@ -1,6 +1,6 @@
-package com.p56.safereach.mesh
+package com.p56.safereach.service
 
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import jakarta.inject.Inject
@@ -10,15 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 @Singleton
-class MeshStatusRepository @Inject constructor() {
+class MeshStatusStore @Inject constructor() {
     private val _isServiceRunning = MutableStateFlow(false)
     val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
 
     private val _orchestratorState = MutableStateFlow<BleState>(BleState.Off)
     val orchestratorState: StateFlow<BleState> = _orchestratorState.asStateFlow()
 
-    private val _advertiserState = MutableStateFlow<BleAdvState>(BleAdvState.Idle)
-    val advertiserState: StateFlow<BleAdvState> = _advertiserState.asStateFlow()
+    private val _advertiserState = MutableStateFlow<BleAdvertisingState>(BleAdvertisingState.Idle)
+    val advertiserState: StateFlow<BleAdvertisingState> = _advertiserState.asStateFlow()
 
     private val _scannerState = MutableStateFlow<BleScanState>(BleScanState.Idle)
     val scannerState: StateFlow<BleScanState> = _scannerState.asStateFlow()
@@ -31,7 +31,7 @@ class MeshStatusRepository @Inject constructor() {
         _orchestratorState.value = state
     }
 
-    fun updateAdvertiserState(state: BleAdvState) {
+    fun updateAdvertiserState(state: BleAdvertisingState) {
         _advertiserState.value = state
     }
 

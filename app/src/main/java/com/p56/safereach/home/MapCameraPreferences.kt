@@ -5,7 +5,7 @@ import androidx.core.content.edit
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 
-object MapPreferences {
+object MapCameraPreferences {
     private const val PREFS_NAME = "MapPrefs"
     private const val KEY_LAT = "lat"
     private const val KEY_LON = "lon"

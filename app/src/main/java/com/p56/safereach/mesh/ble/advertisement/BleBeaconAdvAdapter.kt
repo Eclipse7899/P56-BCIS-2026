@@ -12,15 +12,14 @@ import android.bluetooth.le.AdvertisingSetCallback.ADVERTISE_FAILED_FEATURE_UNSU
 import android.bluetooth.le.AdvertisingSetCallback.ADVERTISE_FAILED_INTERNAL_ERROR
 import android.bluetooth.le.AdvertisingSetCallback.ADVERTISE_FAILED_TOO_MANY_ADVERTISERS
 import android.bluetooth.le.AdvertisingSetParameters
-import android.bluetooth.le.AdvertisingSetParameters.INTERVAL_HIGH
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.p56.safereach.Constants
 import com.p56.safereach.Constants.MAX_DATA_PAYLOAD
-import com.p56.safereach.Constants.SERVICE_UUID_MAP
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvEvent
+import com.p56.safereach.Constants.SERVICE_UUIDS
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingEvent
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -40,7 +39,7 @@ private sealed interface OperationStatus {
 private const val TAG = "BleBeaconAdvAdapter"
 
 class BleBeaconAdvAdapter(
-    private val onEvent: (BleAdvEvent) -> Unit,
+    private val onEvent: (BleAdvertisingEvent) -> Unit,
     private val btManager: BluetoothManager
 ) {
 
@@ -73,16 +72,16 @@ class BleBeaconAdvAdapter(
             .addServiceUuid(ParcelUuid(Constants.BLE_SERVICE_UUID_START))
             .setIncludeDeviceName(false)
             .setIncludeTxPowerLevel(false)
-        if (fragments.size > SERVICE_UUID_MAP.size) {
+        if (fragments.size > SERVICE_UUIDS.size) {
             Log.e(
                 TAG,
                 "Payload of ${payload.size} bytes needs ${fragments.size} fragments, " +
-                        "but only ${SERVICE_UUID_MAP.size} service-data slots are available"
+                        "but only ${SERVICE_UUIDS.size} service-data slots are available"
             )
-            throw BleAdvException(BleAdvFail.DataTooLarge)
+            throw BleAdvertisingException(BleAdvertisingFail.DataTooLarge)
         }
         for (i in fragments.indices) {
-            builder.addServiceData(ParcelUuid(SERVICE_UUID_MAP[i]), fragments[i])
+            builder.addServiceData(ParcelUuid(SERVICE_UUIDS[i]), fragments[i])
         }
         return builder.build()
     }
@@ -122,7 +121,7 @@ class BleBeaconAdvAdapter(
                         is OperationStatus.Starting -> {
                             operation.continuation.resumeWith(
                                 Result.failure(
-                                    BleAdvException(
+                                    BleAdvertisingException(
                                         failure
                                     )
                                 )
@@ -131,7 +130,7 @@ class BleBeaconAdvAdapter(
 
                         else -> {
                             Log.w(TAG, "Reporting failure to controller: $failure")
-                            onEvent(BleAdvEvent.Failed(failure))
+                            onEvent(BleAdvertisingEvent.Failed(failure))
                         }
                     }
                 }
@@ -148,7 +147,7 @@ class BleBeaconAdvAdapter(
 
                 else -> {
                     Log.d(TAG, "Advertising set stopped (external or redundant)")
-                    onEvent(BleAdvEvent.Stopped)
+                    onEvent(BleAdvertisingEvent.Stopped)
                 }
             }
         }
@@ -179,7 +178,7 @@ class BleBeaconAdvAdapter(
                         is OperationStatus.Updating -> {
                             status.continuation.resumeWith(
                                 Result.failure(
-                                    BleAdvException(
+                                    BleAdvertisingException(
                                         failure
                                     )
                                 )
@@ -188,7 +187,7 @@ class BleBeaconAdvAdapter(
 
                         else -> {
                             Log.w(TAG, "Reporting data update failure to controller: $failure")
-                            onEvent(BleAdvEvent.Failed(failure))
+                            onEvent(BleAdvertisingEvent.Failed(failure))
                         }
                     }
                 }
@@ -197,13 +196,13 @@ class BleBeaconAdvAdapter(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
-    suspend fun start(data: ByteArray): BleAdvEvent.Started {
-        Log.d(TAG, "start: data size=${data.size}")
+    suspend fun start(payload: ByteArray): BleAdvertisingEvent.Started {
+        Log.d(TAG, "start: data size=${payload.size}")
         val maxPayloadBytes: Int = btManager.adapter.getLeMaximumAdvertisingDataLength()
         Log.d(TAG, "start: max payload bytes=$maxPayloadBytes")
-        Log.d(TAG, "start: payload size=${data.size}")
+        Log.d(TAG, "start: payload size=${payload.size}")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvException(BleAdvFail.InternalError).also {
+            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
                 Log.e(
                     TAG,
                     "BluetoothLeAdvertiser is null"
@@ -219,7 +218,7 @@ class BleBeaconAdvAdapter(
                 Log.d(TAG, "Executing startAdvertisingSet")
                 advertiser.startAdvertisingSet(
                     params,
-                    buildAdvertiseData(data),
+                    buildAdvertiseData(payload),
                     null,
                     null,
                     null,
@@ -228,14 +227,14 @@ class BleBeaconAdvAdapter(
             }
         }
         Log.d(TAG, "start: completed")
-        return BleAdvEvent.Started(set, data)
+        return BleAdvertisingEvent.Started(set, payload)
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun stop() {
         Log.d(TAG, "stop")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvException(BleAdvFail.InternalError).also {
+            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
                 Log.e(
                     TAG,
                     "BluetoothLeAdvertiser is null"
@@ -255,10 +254,10 @@ class BleBeaconAdvAdapter(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
-    suspend fun update(data: ByteArray, set: AdvertisingSet) {
-        Log.d(TAG, "update: data size=${data.size}")
+    suspend fun update(payload: ByteArray, set: AdvertisingSet) {
+        Log.d(TAG, "update: data size=${payload.size}")
         val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvException(BleAdvFail.InternalError).also {
+            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
                 Log.e(
                     TAG,
                     "BluetoothLeAdvertiser is null"
@@ -272,7 +271,7 @@ class BleBeaconAdvAdapter(
                 }
             ) {
                 Log.d(TAG, "Executing setAdvertisingData")
-                set.setAdvertisingData(buildAdvertiseData(data))
+                set.setAdvertisingData(buildAdvertiseData(payload))
             }
         }
     }
@@ -309,17 +308,17 @@ class BleBeaconAdvAdapter(
                 TAG,
                 "Advertising operation timed out after ${Constants.BLE_ADVERTISING_TIMEOUT}ms"
             )
-            throw BleAdvException(BleAdvFail.Timeout)
+            throw BleAdvertisingException(BleAdvertisingFail.Timeout)
         }
 
-    fun mapStatus(status: Int): BleAdvFail {
+    fun mapStatus(status: Int): BleAdvertisingFail {
         return when (status) {
-            ADVERTISE_FAILED_ALREADY_STARTED -> BleAdvFail.AlreadyStarted
-            ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> BleAdvFail.FeatureUnsupported
-            ADVERTISE_FAILED_INTERNAL_ERROR -> BleAdvFail.InternalError
-            ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> BleAdvFail.TooManyAdvertisements
-            ADVERTISE_FAILED_DATA_TOO_LARGE -> BleAdvFail.DataTooLarge
-            else -> BleAdvFail.Unknown(status)
+            ADVERTISE_FAILED_ALREADY_STARTED -> BleAdvertisingFail.AlreadyStarted
+            ADVERTISE_FAILED_FEATURE_UNSUPPORTED -> BleAdvertisingFail.FeatureUnsupported
+            ADVERTISE_FAILED_INTERNAL_ERROR -> BleAdvertisingFail.InternalError
+            ADVERTISE_FAILED_TOO_MANY_ADVERTISERS -> BleAdvertisingFail.TooManyAdvertisements
+            ADVERTISE_FAILED_DATA_TOO_LARGE -> BleAdvertisingFail.DataTooLarge
+            else -> BleAdvertisingFail.Unknown(status)
         }
     }
 }

@@ -1,14 +1,15 @@
 package com.p56.safereach.verification
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
-import com.p56.safereach.proto.SignedMessage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.security.PrivateKey
 import java.security.PublicKey
+
 
 
 @Singleton
@@ -33,6 +34,7 @@ class SigningManager {
         if (!BuildConfig.DEBUG) {
             null
         } else {
+            @SuppressLint("DiscouragedApi")
             val resourceId = context.resources.getIdentifier(
                 "signing_key",
                 "raw",
@@ -52,20 +54,24 @@ class SigningManager {
     }
 
     fun verify(
-        signed: SignedMessage,
+        data: ByteArray,
+        signature: ByteArray
     ): Boolean {
-        return verify(signed, publicKey)
+        val verifier = getSigner()
+        verifier.initVerify(publicKey)
+        verifier.update(data)
+        return verifier.verify(signature)
     }
 
     fun sign(
         data: ByteArray
-    ): SignedMessage {
+    ): ByteArray {
         if (privateKey == null) {
             throw IllegalStateException("Signing is not available in release builds")
         }
-        return sign(
-            data = data,
-            privateKey = privateKey!!,
-        )
+        val signer = getSigner()
+        signer.initSign(privateKey)
+        signer.update(data)
+        return signer.sign()
     }
 }

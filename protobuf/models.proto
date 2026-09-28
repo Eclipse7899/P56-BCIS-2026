@@ -5,58 +5,60 @@ package com.p56.safereach.v1;
 option java_package = "com.p56.safereach.proto";
 option java_multiple_files = true;
 
-message LatLong {
+message LatLongDto {
   double latitude = 1;
   double longitude = 2;
 }
 
-message Shape {
+message ShapeDto {
   oneof kind {
-    Circle circle = 1;
-    Polygon polygon = 2;
+    CircleDto circle = 1;
+    PolygonDto polygon = 2;
   }
 
-  message Circle {
-    LatLong center = 1;
+  message CircleDto {
+    LatLongDto center = 1;
     double radius = 2;
   }
 
-  message Polygon {
-    repeated LatLong points = 1;
+  message PolygonDto {
+    repeated LatLongDto points = 1;
   }
 }
 
-enum AlertType {
+enum AlertTypeDto {
   ALERT_TYPE_EARTHQUAKE = 0;
   ALERT_TYPE_TSUNAMI = 1;
   ALERT_TYPE_FIRE = 2;
   ALERT_TYPE_FLOOD = 3;
 }
 
-enum Severity {
+enum SeverityDto {
   SEVERITY_LOW = 0;
   SEVERITY_MEDIUM = 1;
   SEVERITY_HIGH = 2;
 }
 
-message Alert {
+message AlertDto {
   string id = 1;
   uint64 timestamp = 2;
   string title = 3;
   string description = 4;
-  AlertType type = 5;
-  Severity severity = 6;
-  Shape shape = 7;
+  AlertTypeDto type = 5;
+  SeverityDto severity = 6;
+  ShapeDto shape = 7;
   uint64 version = 8;
   uint64 expires_at = 9;
   bool invalidated = 10;
 }
 
-message SignedMessage {
+message SignedMessageDto {
   bytes data = 1;
   bytes signature = 2;
 }
 
-message MeshPacket {
-  repeated SignedMessage msg = 2;
+message MessageDataDto {
+  repeated AlertDto msg = 2;
+  uint64 valid_until = 3;
+  uint64 timestamp = 4;
 }

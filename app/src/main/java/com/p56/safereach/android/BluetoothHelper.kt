@@ -1,4 +1,4 @@
-package com.p56.safereach.bluetooth
+package com.p56.safereach.android
 
 import android.Manifest
 import android.bluetooth.BluetoothAdapter

@@ -1,4 +1,4 @@
-package com.p56.safereach.bluetooth
+package com.p56.safereach.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,13 +18,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.p56.safereach.R
+import com.p56.safereach.ui.theme.SafeReachTheme
 
 @Composable
-fun BluetoothDisabledBanner(
-    modifier: Modifier,
-    onEnableClick: () -> Unit
+fun BatteryOptimizationBanner(
+    modifier: Modifier = Modifier,
+    onDisableClick: () -> Unit,
 ) {
     Card(
         modifier = modifier,
@@ -38,7 +40,7 @@ fun BluetoothDisabledBanner(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp, 16.dp, 16.dp, 8.dp)
+                .padding(16.dp)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -47,33 +49,41 @@ fun BluetoothDisabledBanner(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_warning),
-                    contentDescription = "Bluetooth Disabled Warning",
-                    modifier = Modifier
-                        .size(24.dp),
+                    contentDescription = "Battery Optimization Warning",
+                    modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Bluetooth Is Disabled",
+                    text = "Battery Optimization Is On",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
             Text(
-                text = "Bluetooth is disabled. Please enable it to continue receiving alerts.",
+                text = "Battery optimization may restrict background emergency mesh communication and alerts.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onEnableClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
+                onClick = onDisableClick,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
                 )
             ) {
-                Text(text = "Enable Bluetooth")
+                Text(text = "Disable Optimization")
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun BatteryOptimizationBannerPreview() {
+    SafeReachTheme {
+        BatteryOptimizationBanner(
+            onDisableClick = {},
+        )
     }
 }

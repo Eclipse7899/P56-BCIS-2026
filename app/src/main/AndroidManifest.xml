@@ -31,7 +31,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <application
-        android:name=".App"
+        android:name=".SafeReachApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -41,7 +41,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SafeReach">
         <service
-            android:name=".service.MeshService"
+            android:name=".android.MeshForegroundService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
         <receiver android:name=".mesh.ble.scanning.BleScanReceiver"
@@ -51,7 +51,7 @@
             </intent-filter>
         </receiver>
         <service
-            android:name=".service.FirebaseAlertService"
+            android:name=".android.FirebaseAlertMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

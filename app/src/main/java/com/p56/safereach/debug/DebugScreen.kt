@@ -46,28 +46,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.protobuf.kotlin.toByteString
 import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.p56.safereach.AlertContext
-import com.p56.safereach.AlertMeta
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvState
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
-import com.p56.safereach.proto.Alert
-import com.p56.safereach.proto.AlertType
-import com.p56.safereach.proto.LatLong
-import com.p56.safereach.proto.Severity
-import com.p56.safereach.proto.Shape
-import com.p56.safereach.proto.SignedMessage
+import com.p56.safereach.model.Alert
+import com.p56.safereach.model.AlertBatch
+import com.p56.safereach.model.AlertType
+import com.p56.safereach.model.LatLong
+import com.p56.safereach.model.ReceivedMessage
+import com.p56.safereach.model.Severity
+import com.p56.safereach.model.Shape
+import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.ui.theme.StatusError
 import com.p56.safereach.ui.theme.StatusInfo
 import com.p56.safereach.ui.theme.StatusNeutral
 import com.p56.safereach.ui.theme.StatusSuccess
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val DEFAULT_ALERT_LIFETIME_MILLIS = 60 * 60 * 1000L
 
@@ -79,16 +81,16 @@ fun DebugRoute(
 
     DebugScreen(
         uiState = uiState,
-        invalidateAlert = viewModel::invalidateAlert,
-        updateAlert = viewModel::updateAlert,
+        onDelete = viewModel::deleteAlert,
+        onAdded = viewModel::addAlert,
     )
 }
 
 @Composable
 fun DebugScreen(
     uiState: DebugUiState,
-    invalidateAlert: (String) -> Unit,
-    updateAlert: (Alert) -> Unit,
+    onDelete: () -> Unit,
+    onAdded: (Alert) -> Unit,
 ) {
     val scrollState = rememberScrollState()
 
@@ -101,16 +103,18 @@ fun DebugScreen(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            for (ctx in uiState.alertCtx) {
-                AlertDebugCard(
-                    ctx = ctx,
-                    onClear = {
-                        invalidateAlert(ctx.alert.id)
-                    }
-                )
+            uiState.receivedMessage?.let { wrapper ->
+                wrapper.batch.alerts.forEach { alert ->
+                    AlertDebugCard(
+                        alert = alert,
+                        wrapper = wrapper,
+                        onDelete = onDelete,
+                    )
+                }
             }
+
             GenerateAlertDebugCard { alert ->
-                updateAlert(alert)
+                onAdded(alert)
             }
             MeshStatusCollapsibleCard(
                 isMeshRunning = uiState.isMeshRunning,
@@ -124,12 +128,11 @@ fun DebugScreen(
 
 @Composable
 fun AlertDebugCard(
-    ctx: AlertContext,
-    onClear: () -> Unit = {},
+    alert: Alert,
+    wrapper: ReceivedMessage,
+    onDelete: () -> Unit = {},
 ) {
-    val alert = ctx.alert
-    val meta = ctx.meta
-    val msg = ctx.signedMessage
+    val signed = wrapper.signedMessage
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -145,38 +148,38 @@ fun AlertDebugCard(
             Text(text = alert.description)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Type: ${alert.type.name}, Severity: ${alert.severity.name}",
+                text = "Type: ${alert.type.displayName}, Severity: ${alert.severity.displayName}",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Location", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            when (val shapeType = alert.shape.kindCase) {
-                Shape.KindCase.CIRCLE -> {
+            when (val shape = alert.shape) {
+                is Shape.Circle -> {
                     Text(
-                        text = "Circle: Radius: ${alert.shape.circle.radius} meters",
+                        text = "Circle: Radius: ${shape.radius} meters",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
 
-                Shape.KindCase.POLYGON -> {
+                is Shape.Polygon -> {
                     Text(
-                        text = "Polygon: ${alert.shape.polygon.pointsCount} points",
+                        text = "Polygon: ${shape.points.size} points",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
 
-                else -> {
+                null -> {
                     Text(
-                        text = "Unknown shape type: $shapeType",
+                        text = "Unknown shape type",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
             val formattedAlertTime = remember(alert) {
-                java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
-                    .format(java.util.Date(alert.timestamp))
+                SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    .format(Date(alert.timestamp))
             }
             Text(
                 text = "Time: $formattedAlertTime",
@@ -186,13 +189,13 @@ fun AlertDebugCard(
             Text(text = "Metadata", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Received from: ${meta.receivedFrom ?: "Unknown"}",
+                text = "Received from: ${wrapper.receivedFrom}",
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(4.dp))
             val formattedReceivedTime = remember(alert) {
-                java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
-                    .format(java.util.Date(alert.timestamp))
+                SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    .format(Date(alert.timestamp))
             }
             Text(
                 text = "Received at: $formattedReceivedTime",
@@ -200,7 +203,7 @@ fun AlertDebugCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             val formattedTimeDifference = remember(alert) {
-                val timeDifference = meta.receivedAt - alert.timestamp
+                val timeDifference = wrapper.receivedAt - alert.timestamp
                 val minutes = timeDifference / (1000 * 60)
                 val seconds = (timeDifference % (1000 * 60)) / 1000
                 if (minutes > 0) {
@@ -217,11 +220,11 @@ fun AlertDebugCard(
             Text(text = "Signed Message", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Data: ${msg.data.size()} bytes",
+                text = "Data: ${signed.payload.size} bytes",
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = "Signature: ${msg.signature.size()} bytes",
+                text = "Signature: ${signed.signature.size} bytes",
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -232,7 +235,7 @@ fun AlertDebugCard(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.error
                 ),
-                onClick = onClear
+                onClick = onDelete
             ) {
                 Text("Delete")
             }
@@ -246,8 +249,8 @@ fun GenerateAlertDebugCard(
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var selectedType by rememberSaveable { mutableStateOf(AlertType.ALERT_TYPE_EARTHQUAKE) }
-    var selectedSeverity by rememberSaveable { mutableStateOf(Severity.SEVERITY_MEDIUM) }
+    var selectedType by rememberSaveable { mutableStateOf(AlertType.EARTHQUAKE) }
+    var selectedSeverity by rememberSaveable { mutableStateOf(Severity.MEDIUM) }
     var latitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var longitude by rememberSaveable { mutableStateOf<Double?>(null) }
     var radius by rememberSaveable { mutableStateOf<Double?>(null) }
@@ -290,31 +293,15 @@ fun GenerateAlertDebugCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box {
                     TextButton(onClick = { typeMenuExpanded = true }) {
-                        when (selectedType) {
-                            AlertType.ALERT_TYPE_EARTHQUAKE -> Text("Type: Earthquake")
-                            AlertType.ALERT_TYPE_FIRE -> Text("Type: Fire")
-                            AlertType.ALERT_TYPE_FLOOD -> Text("Type: Flood")
-                            else -> {
-                                Text("Type: Unknown")
-                            }
-                        }
+                        Text("Type: ${selectedType.displayName}")
                     }
                     DropdownMenu(
                         expanded = typeMenuExpanded,
                         onDismissRequest = { typeMenuExpanded = false }
                     ) {
-                        AlertType.entries.filter { it != AlertType.UNRECOGNIZED }.forEach { t ->
+                        AlertType.entries.filter { it != AlertType.UNKNOWN }.forEach { t ->
                             DropdownMenuItem(
-                                text = {
-                                    when (t) {
-                                        AlertType.ALERT_TYPE_EARTHQUAKE -> Text("Earthquake")
-                                        AlertType.ALERT_TYPE_FIRE -> Text("Fire")
-                                        AlertType.ALERT_TYPE_FLOOD -> Text("Flood")
-                                        else -> {
-                                            Text("Unknown")
-                                        }
-                                    }
-                                },
+                                text = { Text(t.displayName) },
                                 onClick = {
                                     selectedType = t
                                     typeMenuExpanded = false
@@ -328,31 +315,15 @@ fun GenerateAlertDebugCard(
                     TextButton(
                         onClick = { severityMenuExpanded = true }
                     ) {
-                        when (selectedSeverity) {
-                            Severity.SEVERITY_LOW -> Text("Severity: Low")
-                            Severity.SEVERITY_MEDIUM -> Text("Severity: Medium")
-                            Severity.SEVERITY_HIGH -> Text("Severity: High")
-                            else -> {
-                                Text("Severity: Unknown")
-                            }
-                        }
+                        Text("Severity: ${selectedSeverity.displayName}")
                     }
                     DropdownMenu(
                         expanded = severityMenuExpanded,
                         onDismissRequest = { severityMenuExpanded = false }
                     ) {
-                        Severity.entries.filter { it != Severity.UNRECOGNIZED }.forEach { s ->
+                        Severity.entries.filter { it != Severity.UNKNOWN }.forEach { s ->
                             DropdownMenuItem(
-                                text = {
-                                    when (s) {
-                                        Severity.SEVERITY_LOW -> Text("Low")
-                                        Severity.SEVERITY_MEDIUM -> Text("Medium")
-                                        Severity.SEVERITY_HIGH -> Text("High")
-                                        else -> {
-                                            Text("Unknown")
-                                        }
-                                    }
-                                },
+                                text = { Text(s.displayName) },
                                 onClick = {
                                     selectedSeverity = s
                                     severityMenuExpanded = false
@@ -370,30 +341,26 @@ fun GenerateAlertDebugCard(
             }
             Button(
                 onClick = {
-                    val location = LatLong.newBuilder()
-                        .setLatitude(latitude ?: 0.0)
-                        .setLongitude(longitude ?: 0.0)
-                        .build()
-                    val circle = Shape.Circle.newBuilder()
-                        .setCenter(location)
-                        .setRadius(radius ?: 0.0)
-                        .build()
-                    val shape = Shape.newBuilder()
-                        .setCircle(circle)
-                        .build()
+                    val shape = Shape.Circle(
+                        center = LatLong(
+                            latitude = latitude ?: 0.0,
+                            longitude = longitude ?: 0.0,
+                        ),
+                        radius = radius ?: 0.0,
+                    )
                     val version = System.currentTimeMillis()
-                    val alert = Alert.newBuilder()
-                        .setId("debug-${version}")
-                        .setTimestamp(version)
-                        .setVersion(version)
-                        .setExpiresAt(version + DEFAULT_ALERT_LIFETIME_MILLIS)
-                        .setTitle(title.ifBlank { "" })
-                        .setDescription(description.ifBlank { "" })
-                        .setType(selectedType)
-                        .setSeverity(selectedSeverity)
-                        .setShape(shape)
-                        .setInvalidated(false)
-                        .build()
+                    val alert = Alert(
+                        id = "debug-$version",
+                        timestamp = version,
+                        title = title.ifBlank { "" },
+                        description = description.ifBlank { "" },
+                        type = selectedType,
+                        severity = selectedSeverity,
+                        shape = shape,
+                        version = version,
+                        expiresAt = version + DEFAULT_ALERT_LIFETIME_MILLIS,
+                        invalidated = false,
+                    )
                     onAlertGenerated(alert)
                 },
                 enabled =
@@ -412,7 +379,7 @@ fun GenerateAlertDebugCard(
 fun MeshStatusCollapsibleCard(
     isMeshRunning: Boolean,
     orchestratorState: BleState,
-    advertiserState: BleAdvState,
+    advertiserState: BleAdvertisingState,
     scannerState: BleScanState,
 ) {
     var isMeshExpanded by rememberSaveable { mutableStateOf(true) }
@@ -471,16 +438,16 @@ fun MeshStatusCollapsibleCard(
                         )
                     }
                     val advertiserStatusText = when (advertiserState) {
-                        is BleAdvState.Advertising -> "Advertising"
-                        BleAdvState.Idle -> "Idle"
-                        BleAdvState.Disabled -> "Disabled"
-                        is BleAdvState.Failed -> "Failed (${advertiserState.error})"
+                        is BleAdvertisingState.Advertising -> "Advertising"
+                        BleAdvertisingState.Idle -> "Idle"
+                        BleAdvertisingState.Disabled -> "Disabled"
+                        is BleAdvertisingState.Failed -> "Failed (${advertiserState.error})"
                     }
                     val advertiserStatusColor = when (advertiserState) {
-                        is BleAdvState.Advertising -> StatusSuccess
-                        BleAdvState.Idle -> StatusNeutral
-                        BleAdvState.Disabled -> StatusError
-                        is BleAdvState.Failed -> StatusError
+                        is BleAdvertisingState.Advertising -> StatusSuccess
+                        BleAdvertisingState.Idle -> StatusNeutral
+                        BleAdvertisingState.Disabled -> StatusError
+                        is BleAdvertisingState.Failed -> StatusError
                     }
 
                     CollapsibleTreeNode(
@@ -491,9 +458,9 @@ fun MeshStatusCollapsibleCard(
                         onToggle = { isAdvertiserExpanded = !isAdvertiserExpanded },
                         indentation = 32
                     ) {
-                        if (advertiserState is BleAdvState.Advertising) {
+                        if (advertiserState is BleAdvertisingState.Advertising) {
                             Text(
-                                text = "Data Size: ${advertiserState.data.size} bytes",
+                                text = "Data Size: ${advertiserState.payload.size} bytes",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontFamily = FontFamily.Monospace,
                                 modifier = Modifier.padding(
@@ -502,7 +469,7 @@ fun MeshStatusCollapsibleCard(
                                     bottom = 2.dp
                                 )
                             )
-                        } else if (advertiserState is BleAdvState.Failed) {
+                        } else if (advertiserState is BleAdvertisingState.Failed) {
                             Text(
                                 text = "Error: ${advertiserState.error}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -687,10 +654,10 @@ fun LocationSelectDialog(
                         onClick = {
                             if (mapViewportState.cameraState == null) return@TextButton
                             onConfirmation(
-                                LatLong.newBuilder()
-                                    .setLatitude(mapViewportState.cameraState!!.center.latitude())
-                                    .setLongitude(mapViewportState.cameraState!!.center.longitude())
-                                    .build(),
+                                LatLong(
+                                    latitude = mapViewportState.cameraState!!.center.latitude(),
+                                    longitude = mapViewportState.cameraState!!.center.longitude(),
+                                ),
                                 radius
                             )
                         },
@@ -707,40 +674,46 @@ fun LocationSelectDialog(
 @Composable
 @Preview(showBackground = true)
 fun DebugScreenPreview() {
+    val now = System.currentTimeMillis()
     DebugScreen(
-        DebugUiState(
-            alertCtx = listOf(
-                AlertContext(
-                    alert = Alert.newBuilder()
-                        .setTitle("Test Alert")
-                        .setDescription("This is a test alert for preview purposes.")
-                        .setType(AlertType.ALERT_TYPE_FIRE)
-                        .setSeverity(Severity.SEVERITY_HIGH)
-                        .setTimestamp(System.currentTimeMillis())
-                        .setInvalidated(false)
-                        .setExpiresAt(System.currentTimeMillis() + 60000)
-                        .setShape(Shape.newBuilder()
-                            .setCircle(Shape.Circle.newBuilder()
-                                .setCenter(LatLong.newBuilder().setLatitude(37.7749).setLongitude(-122.4194))
-                                .setRadius(100.0)
-                            )
-                        ).build(),
-                    meta = AlertMeta(
-                        receivedAt = System.currentTimeMillis(),
-                        receivedFrom = "Device123"
+        uiState = DebugUiState(
+            receivedMessage = ReceivedMessage(
+                signedMessage = SignedMessage(
+                    ByteArray(10),
+                    ByteArray(10),
+                    "Debug",
+                    1
+                ),
+                batch = AlertBatch(
+                    alerts = listOf(
+                        Alert(
+                            id = "preview",
+                            timestamp = now,
+                            title = "Test Alert",
+                            description = "This is a test alert for preview purposes.",
+                            type = AlertType.FIRE,
+                            severity = Severity.HIGH,
+                            shape = Shape.Circle(
+                                center = LatLong(37.7749, -122.4194),
+                                radius = 100.0,
+                            ),
+                            version = now,
+                            expiresAt = now + 60_000,
+                            invalidated = false,
+                        )
                     ),
-                    signedMessage = SignedMessage.newBuilder()
-                        .setData(ByteArray(10).toByteString())
-                        .setSignature(ByteArray(10).toByteString())
-                        .build()
-                )
+                    validUntil = now + 60_000,
+                    timestamp = now,
+                ),
+                receivedFrom = "Device123",
+                receivedAt = now,
             ),
             isMeshRunning = true,
             orchestratorState = BleState.Active(ByteArray(10)),
-            advertiserState = BleAdvState.Idle,
+            advertiserState = BleAdvertisingState.Idle,
             scannerState = BleScanState.Scanning
         ),
-        invalidateAlert = {},
-        updateAlert = {}
+        onDelete = {},
+        onAdded = {}
     )
 }

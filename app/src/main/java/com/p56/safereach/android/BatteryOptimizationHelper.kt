@@ -1,4 +1,4 @@
-package com.p56.safereach.battery
+package com.p56.safereach.android
 
 import android.annotation.SuppressLint
 import android.content.Context

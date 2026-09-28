@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
-fun ProfileScreen() {
+fun ProfileRoute() {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val email = currentUser?.email ?: "Email"
     val username = currentUser?.email
@@ -116,7 +116,7 @@ fun ProfileContent(
 
 @Preview(showBackground = true)
 @Composable
-fun ProfileScreenPreview() {
+fun ProfileRoutePreview() {
     ProfileContent(
         username = "User",
         email = "user@example.com",
