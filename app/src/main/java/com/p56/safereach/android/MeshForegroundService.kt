@@ -57,7 +57,7 @@ class MeshForegroundService : Service() {
         scannerController = BleScanController(serviceScope, btManager, this)
         orchestrator = BleOrchestrator(serviceScope, advertiserController, scannerController)
         observeBluetoothState(btManager, advertiserController, scannerController)
-        observeAlertStateRepository()
+        observeMessageState()
         observeIncomingData()
         observeOrchestratorState()
         observeSubsystemStates(advertiserController, scannerController)
@@ -102,7 +102,7 @@ class MeshForegroundService : Service() {
         }
     }
 
-    private fun observeAlertStateRepository() {
+    private fun observeMessageState() {
         serviceScope.launch {
             alertRepository.receivedMessage.collect { wrapper ->
                 if (wrapper == null) {
