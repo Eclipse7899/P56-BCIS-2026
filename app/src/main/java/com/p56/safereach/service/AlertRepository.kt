@@ -2,12 +2,15 @@ package com.p56.safereach.service
 
 import android.util.Log
 import com.google.protobuf.InvalidProtocolBufferException
+import com.p56.safereach.android.AlertNotifier
+import com.p56.safereach.data.AlertUpsertResult
 import com.p56.safereach.data.AppDatabase
 import com.p56.safereach.data.toDomain
 import com.p56.safereach.data.toEntity
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.ReceivedMessage
 import com.p56.safereach.model.SignedMessage
+import com.p56.safereach.model.isActive
 import com.p56.safereach.model.toDomain
 import com.p56.safereach.proto.MessageDataDto
 import com.p56.safereach.util.ApplicationScope
@@ -26,6 +29,7 @@ private const val TAG = "AlertRepository"
 class AlertRepository @Inject constructor(
     private val signingManager: SigningManager,
     private val database: AppDatabase,
+    private val alertNotifier: AlertNotifier,
     @param:ApplicationScope
     private val scope: CoroutineScope,
 ) {
@@ -57,8 +61,8 @@ class AlertRepository @Inject constructor(
             }
         }
         scope.launch {
-            database.alertDao().observeActive().collect { entities ->
-                activeAlertsState.value = entities.map { it.toDomain() }
+            database.alertDao().observeAll().collect { entities ->
+                activeAlertsState.value = entities.map { it.toDomain() }.filter { it.isActive() }
             }
         }
     }
@@ -72,15 +76,22 @@ class AlertRepository @Inject constructor(
         }
         try {
             val innerData = MessageDataDto.parseFrom(signedMessage.payload)
-            innerData.msgList.forEach { alert ->
-                Log.d(TAG, "Upserting alert: ${alert.id}")
-                database.alertDao().upsertIfNewer(alert.toDomain().toEntity())
-            }
+            innerData.msgList
+                .map{ it.toDomain() }
+                .forEach { addAlert(it) }
             database.signedMessageDao().upsert(
                 signedMessage.toEntity(timestamp = innerData.timestamp)
             )
         } catch (_: InvalidProtocolBufferException) {
             Log.w(TAG, "Failed to parse message data")
+        }
+    }
+
+    private suspend fun addAlert(alert: Alert) {
+        Log.d(TAG, "Upserting alert: ${alert.id}")
+        val result = database.alertDao().upsertIfNewer(alert.toEntity())
+        if (result != AlertUpsertResult.IGNORED && alert.isActive()) {
+            alertNotifier.notify(alert)
         }
     }
 

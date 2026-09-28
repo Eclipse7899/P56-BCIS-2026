@@ -37,3 +37,6 @@ data class Alert(
     val expiresAt: Long,
     val invalidated: Boolean,
 )
+
+fun Alert.isActive(now: Long = System.currentTimeMillis()): Boolean =
+    !invalidated && expiresAt > now
