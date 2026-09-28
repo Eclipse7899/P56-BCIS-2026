@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -104,7 +106,7 @@ fun HomeScreen(
             }
             alerts.forEach { alert ->
                 when (val shape = alert.shape) {
-                    is Shape.Circle -> {
+                    is Shape.Circle -> key(alert.id) {
                         val point = Point.fromLngLat(
                             shape.center.longitude,
                             shape.center.latitude
@@ -127,20 +129,18 @@ fun HomeScreen(
                             64,
                             TurfConstants.UNIT_METERS
                         )
-                        val geoJson = GeoJSONData(polygonCircle)
-                        val geoSourceState = GeoJsonSourceState()
-                        geoSourceState.data = geoJson
+                        val geoSourceState = remember { GeoJsonSourceState() }
+                        geoSourceState.data = GeoJSONData(polygonCircle)
                         FillLayer(
                             sourceState = geoSourceState,
-                            layerId = "physical-circle-layer"
+                            layerId = "alert-circle-${alert.id}"
                         ) {
                             fillColor = ColorValue(color)
                             fillOutlineColor = ColorValue(borderColor)
                         }
                     }
-
-                    is Shape.Polygon -> TODO()
-                    null -> TODO()
+                    is Shape.Polygon -> Unit
+                    null -> Unit
                 }
             }
         }
