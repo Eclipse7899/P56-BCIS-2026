@@ -24,27 +24,51 @@ SafeReach follows strict naming conventions for Kotlin and TypeScript to ensure 
 
 #### Kotlin
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| **Classes** | PascalCase | `class UserRepository` |
-| **Interfaces** | PascalCase | `interface DataSource` |
-| **Enums** | PascalCase (class), UPPERCASE (values) | `enum class AppDestinations { HOME, FAVORITES }` |
-| **Functions** | camelCase | `fun getUserData()` |
-| **Variables** | camelCase | `val userName`, `var isVisible` |
-| **Constants** | UPPERCASE_WITH_UNDERSCORES | `const val MAX_RETRIES = 3` |
-| **Packages** | lowercase, no special characters | `com.p56.safereach.ui.theme` |
+| Element        | Convention                             | Example                                          |
+|----------------|----------------------------------------|--------------------------------------------------|
+| **Classes**    | PascalCase                             | `class UserRepository`                           |
+| **Interfaces** | PascalCase                             | `interface DataSource`                           |
+| **Enums**      | PascalCase (class), UPPERCASE (values) | `enum class AppDestinations { HOME, PROFILE, SETTINGS, DEBUG }` |
+| **Functions**  | camelCase                              | `fun getUserData()`                              |
+| **Variables**  | camelCase                              | `val userName`, `var isVisible`                  |
+| **Constants**  | UPPERCASE_WITH_UNDERSCORES             | `const val MAX_RETRIES = 3`                      |
+| **Packages**   | lowercase, no special characters       | `com.p56.safereach.ui.theme`                     |
+
+#### Project-specific conventions
+
+Beyond the general style rules above, SafeReach uses the following suffixes so that a
+type's role is obvious from its name:
+
+| Suffix / pattern        | Meaning                                                        | Examples                                                  |
+|-------------------------|----------------------------------------------------------------|-----------------------------------------------------------|
+| `*Dto`                  | Protobuf wire type in `com.p56.safereach.proto` (generated)    | `AlertDto`, `SignedMessageDto`, `MessageDataDto`          |
+| *(no suffix)*           | Domain model in `com.p56.safereach.model`                      | `Alert`, `Shape`, `SignedMessage`, `ReceivedMessage`, `AlertBatch` |
+| `toDomain()`            | Mapper into a domain model (from proto **or** Room entity)     | `model/ProtoMappers.kt`, `data/AlertEntity.kt`            |
+| `toEntity()`            | Mapper from a domain model into a Room entity                  | `Alert.toEntity()`                                        |
+| `toDto()`               | Mapper from a domain model into a Protobuf wire type           | `Alert.toDto()`                                           |
+| `*Entity` / `*Dao`      | Room entity / data-access object                               | `AlertEntity`, `AlertDao`                                 |
+| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager` |
+| `*Service`              | Reserved for real `android.app.Service` subclasses             | `MeshForegroundService`, `FirebaseAlertMessagingService`  |
+| `*Command`              | Desired-state input to a state machine in `*/fsm`              | `BleCommand`, `BleScanCommand`, `BleAdvertisingCommand`   |
+| `*State` / `*Event`     | Observed condition / transition trigger of a state machine     | `BleState`, `BleScanState`, `BleAdvertisingEvent`         |
+| `*Controller` / `*Adapter` | State-machine owner / Android platform gateway              | `BleScanController`, `BleBeaconScanAdapter`               |
+| `*Route` / `*Screen` / `*Content` | Compose stateful entry / screen / stateless body    | `HomeRoute`, `HomeScreen`, `ProfileRoute`                 |
+
+Note: `SignedMessage.receivedFrom` and `receivedAt` are also populated for locally
+authored messages (for example the debug flow uses `receivedFrom = "Debug"`), so they mean
+"origin/observation metadata", not strictly "arrived over the network".
 
 #### TypeScript
 
-| Element | Convention | Example |
-|---------|-----------|---------|
-| **Classes** | PascalCase | `class UserService` |
-| **Interfaces** | PascalCase | `interface User` |
-| **Enums** | PascalCase (class), UPPERCASE (values) | `enum Status { ACTIVE, INACTIVE }` |
-| **Functions** | camelCase | `function getUserData()` |
-| **Variables** | camelCase | `const userName = ""` |
-| **Constants** | UPPERCASE_WITH_UNDERSCORES | `const MAX_RETRIES = 3` |
-| **Namespaces** | lowercase, kebab-case for files | `user-service.ts` |
+| Element        | Convention                             | Example                            |
+|----------------|----------------------------------------|------------------------------------|
+| **Classes**    | PascalCase                             | `class UserService`                |
+| **Interfaces** | PascalCase                             | `interface User`                   |
+| **Enums**      | PascalCase (class), UPPERCASE (values) | `enum Status { ACTIVE, INACTIVE }` |
+| **Functions**  | camelCase                              | `function getUserData()`           |
+| **Variables**  | camelCase                              | `const userName = ""`              |
+| **Constants**  | UPPERCASE_WITH_UNDERSCORES             | `const MAX_RETRIES = 3`            |
+| **Namespaces** | lowercase, kebab-case for files        | `user-service.ts`                  |
 
 ### Formatting Standards
 
@@ -268,10 +292,13 @@ Examples:
 
 ```bash
 # Before committing
-./gradlew ktlintFormat  # Format Kotlin code
-./gradlew ktlint       # Run linting
 ./gradlew test         # Run unit tests
+./gradlew assembleDebug  # Confirm the app still builds
 ```
+
+> Note: ktlint formatting is a project goal but is **not currently configured** in the
+> Gradle build (there is no `ktlint` plugin/task). Until it is added, format Kotlin with
+> Android Studio's "Reformat Code" action rather than a Gradle task.
 
 ### Pull Request Workflow
 
@@ -371,8 +398,9 @@ Examples:
 
 #### Tools
 
-- **Kotlin:** KLint
-- **TypeScript:** Prettier + ESLint
+- **Kotlin:** ktlint (see status note below)
+- **Kotlin / Android:** Android Lint (`./gradlew lint`)
+- **TypeScript (planned):** Prettier + ESLint
 
 #### What Gets Checked
 
@@ -385,11 +413,15 @@ Examples:
 #### Running Linting
 
 ```bash
-# Kotlin
-./gradlew ktlint          # Check
-./gradlew ktlintFormat    # Auto-fix
+# Kotlin - Android Lint (available today)
+./gradlew lint
 
-# TypeScript (Firebase Functions)
+# ktlint - NOT YET CONFIGURED in this repo; planned, but no ktlint Gradle task exists yet.
+# Once the plugin is added, the intended commands are:
+#   ./gradlew ktlint          # Check
+#   ./gradlew ktlintFormat    # Auto-fix
+
+# TypeScript (Firebase Functions) - if/when these exist
 npm run lint              # Check
 npm run lint:fix          # Auto-fix
 ```
@@ -548,12 +580,12 @@ The pipeline automatically runs on every push and pull request:
 
 ### Failure Handling
 
-| Status | Action |
-|--------|--------|
-| **Lint Fails** | PR blocked, fix and push again |
-| **Tests Fail** | PR blocked, fix tests and push |
+| Status          | Action                                |
+|-----------------|---------------------------------------|
+| **Lint Fails**  | PR blocked, fix and push again        |
+| **Tests Fail**  | PR blocked, fix tests and push        |
 | **Build Fails** | PR blocked, debug build configuration |
-| **All Pass** | PR ready for review and merge |
+| **All Pass**    | PR ready for review and merge         |
 
 ### Branch-Specific Rules
 
@@ -587,7 +619,7 @@ gh run list
 
 ## Definition of Done
 
-A feature is **only considered complete** when ALL of the following criteria are met:
+A feature is **only considered complete** when ALL the following criteria are met:
 
 ### Development Phase
 - **Code Implemented** - Feature fully developed and functional
@@ -627,7 +659,7 @@ A feature is **only considered complete** when ALL of the following criteria are
 ### Before Creating PR
 
 - [ ] Code is formatted (Ctrl+Alt+L or Cmd+Option+L)
-- [ ] Linting passes (`./gradlew ktlint`)
+- [ ] Linting passes (`./gradlew lint`; ktlint once it is configured)
 - [ ] Unit tests pass (`./gradlew test`)
 - [ ] Integration tests pass (`./gradlew connectedAndroidTest`)
 - [ ] Commits follow conventional commit format
