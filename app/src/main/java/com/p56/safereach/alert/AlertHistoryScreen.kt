@@ -13,26 +13,18 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.p56.safereach.Alert
-import com.p56.safereach.AlertStateRepository
 import com.p56.safereach.ui.theme.SafeReachTheme
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.runtime.remember
+import com.p56.safereach.proto.Alert
 
 @Composable
 fun AlertHistoryScreen(
+    alerts: List<Alert> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    val alertHistory by AlertStateRepository.alertHistory
-        .collectAsStateWithLifecycle()
     Column(modifier = modifier
         .fillMaxSize()
         .padding(16.dp)
@@ -43,7 +35,7 @@ fun AlertHistoryScreen(
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(16.dp))
-        if (alertHistory.isEmpty()){
+        if (alerts.isEmpty()){
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center
@@ -64,7 +56,7 @@ fun AlertHistoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(alertHistory) {alert -> PreviousAlertCard(alert = alert)
+                items(alerts) {alert -> PreviousAlertCard(alert = alert)
                 }
             }
         }
@@ -75,12 +67,6 @@ fun AlertHistoryScreen(
 private fun PreviousAlertCard(
     alert: Alert
 ) {
-    val formattedTime = remember(alert.timestamp){
-        SimpleDateFormat(
-            "dd/MM/yyyy HH:mm",
-            Locale.getDefault()
-        ).format(Date(alert.timestamp))
-    }
     Card(
         modifier = Modifier.fillMaxWidth()
     ){
@@ -106,11 +92,6 @@ private fun PreviousAlertCard(
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Time: $formattedTime",
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
@@ -119,27 +100,6 @@ private fun PreviousAlertCard(
 @Composable
 fun AlertHistoryScreenPreview(){
     SafeReachTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ){
-            Text(
-                text = "Alert History",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "No Previous Alerts",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Previous disaster alerts will appear here.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
+        AlertHistoryScreen(alerts = emptyList())
     }
 }

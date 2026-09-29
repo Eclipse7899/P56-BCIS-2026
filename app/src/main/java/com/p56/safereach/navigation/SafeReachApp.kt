@@ -127,9 +127,8 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                     )
                 }
                 when (currentDestination) {
-                    AppDestinations.HOME -> HomeScreen()
-                    AppDestinations.ALERTS -> AlertHistoryScreen()
                     AppDestinations.HOME -> HomeRoute()
+                    AppDestinations.ALERTS -> AlertHistoryScreen()
                     AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
                         val vm = hiltViewModel<DebugViewModel>()

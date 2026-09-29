@@ -47,7 +47,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
-import com.p56.safereach.Alert
 
 
 @Composable
@@ -95,111 +94,7 @@ fun HomeScreen(
             )
         }
     }
-
-    Column(modifier = modifier) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            MapboxMap(
-                Modifier
-                    .fillMaxSize()
-                    .padding(4.dp)
-                    .clip(shape = RoundedCornerShape(24.dp)),
-                mapViewportState = mapViewportState,
-                ) {
-                MapEffect(Unit) { mapView ->
-                    mapView.location.updateSettings {
-                        locationPuck = createDefault2DPuck(withBearing = true)
-                        enabled = true
-                        puckBearing = PuckBearing.HEADING
-                        puckBearingEnabled = true
-                    }
-                    mapViewportState.transitionToFollowPuckState()
-                }
-                when (val alert = alert) {
-                    null -> {}
-                    else -> {
-                        when (alert.shape) {
-                            is Shape.Circle -> {
-                                val point = Point.fromLngLat(
-                                    alert.shape.center.longitude,
-                                    alert.shape.center.latitude
-                                )
-                                val color = when (alert.severity) {
-                                    Severity.LOW -> alertShapeFillColorSeverityLow
-                                    Severity.MEDIUM -> alertShapeFillColorSeverityMedium
-                                    Severity.HIGH -> alertShapeFillColorSeverityHigh
-                                }
-                                val borderColor = when (alert.severity) {
-                                    Severity.LOW -> alertShapeBorderColorSeverityLow
-                                    Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
-                                    Severity.HIGH -> alertShapeBorderColorSeverityHigh
-                                }
-                                val polygonCircle = TurfTransformation.circle(
-                                    point,
-                                    alert.shape.radius,
-                                    64,
-                                    TurfConstants.UNIT_METERS
-                                )
-                                val geoJson = GeoJSONData(polygonCircle)
-                                val geoSourceState = GeoJsonSourceState()
-                                geoSourceState.data = geoJson
-                                FillLayer(
-                                    sourceState = geoSourceState,
-                                    layerId = "physical-circle-layer"
-                                ) {
-                                    fillColor = ColorValue(color)
-                                    fillOutlineColor = ColorValue(borderColor)
-                                }
-                            }
-
-                            is Shape.Polygon -> TODO()
-                        }
-                    }
-                }
-            }
-            alert?.let {currentAlert ->
-                ActiveAlertCard(alert = currentAlert,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(16.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActiveAlertCard(
-    alert: Alert,
-    modifier: Modifier = Modifier
-){
-    Card(modifier = Modifier.fillMaxWidth()){
-        Column(modifier = Modifier.padding(16.dp)){
-            Text(
-                text = "ACTIVE ALERT",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = alert.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = alert.description,
-                style= MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Type: ${alert.type.name}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "Severity: ${alert.severity.name}",
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold
-            )
+    Box(modifier = Modifier.fillMaxSize()) {
         MapboxMap(
             Modifier
                 .fillMaxSize()
@@ -224,16 +119,30 @@ private fun ActiveAlertCard(
                             alert.shape.circle.center.latitude
                         )
                         val color = when (alert.severity) {
-                            Severity.SEVERITY_LOW -> alertShapeFillColorSeverityLow
-                            Severity.SEVERITY_MEDIUM -> alertShapeFillColorSeverityMedium
-                            Severity.SEVERITY_HIGH -> alertShapeFillColorSeverityHigh
-                            else -> alertShapeFillColorSeverityLow
+                            Severity.SEVERITY_LOW ->
+                                alertShapeFillColorSeverityLow
+
+                            Severity.SEVERITY_MEDIUM ->
+                                alertShapeFillColorSeverityMedium
+
+                            Severity.SEVERITY_HIGH ->
+                                alertShapeFillColorSeverityHigh
+
+                            else ->
+                                alertShapeFillColorSeverityLow
                         }
                         val borderColor = when (alert.severity) {
-                            Severity.SEVERITY_LOW -> alertShapeBorderColorSeverityLow
-                            Severity.SEVERITY_MEDIUM -> alertShapeBorderColorSeverityMedium
-                            Severity.SEVERITY_HIGH -> alertShapeBorderColorSeverityHigh
-                            else -> alertShapeBorderColorSeverityLow
+                            Severity.SEVERITY_LOW ->
+                                alertShapeBorderColorSeverityLow
+
+                            Severity.SEVERITY_MEDIUM ->
+                                alertShapeBorderColorSeverityMedium
+
+                            Severity.SEVERITY_HIGH ->
+                                alertShapeBorderColorSeverityHigh
+
+                            else ->
+                                alertShapeBorderColorSeverityLow
                         }
                         val polygonCircle = TurfTransformation.circle(
                             point,
@@ -244,18 +153,76 @@ private fun ActiveAlertCard(
                         val geoJson = GeoJSONData(polygonCircle)
                         val geoSourceState = GeoJsonSourceState()
                         geoSourceState.data = geoJson
+
                         FillLayer(
                             sourceState = geoSourceState,
-                            layerId = "physical-circle-layer"
+                            layerId = "physical-circle-layer-${alert.hashCode()}"
                         ) {
                             fillColor = ColorValue(color)
                             fillOutlineColor = ColorValue(borderColor)
                         }
                     }
-                    Shape.KindCase.POLYGON -> TODO()
-                    Shape.KindCase.KIND_NOT_SET -> TODO()
+
+                    Shape.KindCase.POLYGON -> {
+                        // TODO: Add polygon alert display later.
+                    }
+
+                    Shape.KindCase.KIND_NOT_SET -> {
+                        // No alert shape available.
+                    }
+
+                    else -> {
+                        // Unknown alert shape.
+                    }
                 }
             }
+        }
+        alerts.firstOrNull()?.let { currentAlert ->
+            ActiveAlertCard(
+                alert = currentAlert,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(16.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun ActiveAlertCard(
+    alert: Alert,
+    modifier: Modifier = Modifier
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "ACTIVE ALERT",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = alert.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = alert.description,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Type: ${alert.type.name}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = "Severity: ${alert.severity.name}",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -264,8 +231,9 @@ private fun ActiveAlertCard(
 @Composable
 fun HomeScreenPreview() {
     SafeReachTheme {
-        Column(modifier = Modifier.fillMaxSize())
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp))
         {Text(text = "Home Screen Preview")}
-        HomeScreen(alerts = emptyList())
     }
 }
