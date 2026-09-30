@@ -61,16 +61,16 @@ cd P56-BCIS-2026
 
 ## Current architecture summary
 
-The app is built around a Compose UI layer, state repositories, and background services:
+The app is built around a Compose UI layer, state holders, and background services:
 
 - `MainActivity` starts the app and ensures the BLE mesh service is running.
 - `SafeReachApp` hosts the top-level navigation and screen switching.
-- `HomeScreen`, `ProfileScreen`, and `DebugScreen` render the main UI.
+- `HomeRoute`/`HomeScreen`, `ProfileRoute`, `SettingsRoute`, and `DebugRoute`/`DebugScreen` render the main UI.
 - `DebugViewModel` owns debug screen state and exposes the current mesh/alert state.
-- `AlertStateRepository` stores the active alerts keyed by id, plus the mesh metadata of the last accepted packet.
-- `MeshStatusRepository` tracks BLE service and subsystem states.
-- `MeshService` receives and broadcasts mesh messages and updates repository state.
-- `FirebaseAlertService` decodes incoming Firebase alerts and stores them in the same alert state flow.
+- `AlertRepository` stores the current signed message and the active alerts (backed by Room).
+- `MeshStatusStore` tracks the mesh service and subsystem states.
+- `MeshForegroundService` receives and advertises mesh messages and updates `MeshStatusStore`.
+- `FirebaseAlertMessagingService` decodes incoming Firebase alerts and stores them through the same `AlertRepository` path.
 
 ## Contributing
 

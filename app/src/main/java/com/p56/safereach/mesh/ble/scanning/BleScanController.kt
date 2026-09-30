@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.util.Log
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanCommand
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanEvent
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Disabled
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Failed
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 
 private sealed interface Message {
-    data class Intent(val intent: BleScanIntent) : Message
+    data class Intent(val intent: BleScanCommand) : Message
     data class Event(val event: BleScanEvent) : Message
     data class BluetoothState(val enabled: Boolean) : Message
 }
@@ -105,9 +105,9 @@ class BleScanController(
         }
     }
 
-    private fun execute(intent: BleScanIntent): BleScanEvent {
+    private fun execute(intent: BleScanCommand): BleScanEvent {
         return when (intent) {
-            BleScanIntent.Start -> {
+            BleScanCommand.Start -> {
                 when (_state.value) {
                     Idle, is Failed -> {
                         try {
@@ -125,7 +125,7 @@ class BleScanController(
                 }
             }
 
-            BleScanIntent.Stop -> {
+            BleScanCommand.Stop -> {
                 when (_state.value) {
                     is Scanning -> {
                         try {
@@ -144,7 +144,7 @@ class BleScanController(
     }
 
 
-    fun send(intent: BleScanIntent) {
+    fun send(intent: BleScanCommand) {
         messages.trySend(Message.Intent(intent))
     }
 

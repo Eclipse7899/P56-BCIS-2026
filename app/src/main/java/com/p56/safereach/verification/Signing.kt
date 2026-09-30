@@ -1,7 +1,5 @@
 package com.p56.safereach.verification
 
-import com.google.protobuf.ByteString
-import com.p56.safereach.proto.SignedMessage
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.KeyFactory
 import java.security.PrivateKey
@@ -20,26 +18,9 @@ fun setupCrypto() {
     Security.insertProviderAt(BouncyCastleProvider(), 1)
 }
 
-fun verify(
-    signed: SignedMessage,
-    publicKey: PublicKey
-): Boolean {
-    val verifier = Signature.getInstance(ED25519, BC)
-    verifier.initVerify(publicKey)
-    verifier.update(signed.data.toByteArray())
 
-    return verifier.verify(signed.signature.toByteArray())
-}
-
-fun sign(data: ByteArray, privateKey: PrivateKey): SignedMessage {
-    val signer = Signature.getInstance(ED25519, BC)
-    signer.initSign(privateKey)
-    signer.update(data)
-
-    return SignedMessage.newBuilder()
-        .setData(ByteString.copyFrom(data))
-        .setSignature(ByteString.copyFrom(signer.sign()))
-        .build()
+fun getSigner(): Signature {
+    return Signature.getInstance(ED25519, BC)
 }
 
 fun String.toEd25519PublicKey(): PublicKey {

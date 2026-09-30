@@ -29,15 +29,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
-import com.p56.safereach.battery.BatteryOptimizationBanner
-import com.p56.safereach.battery.BatteryOptimizationHelper
-import com.p56.safereach.bluetooth.BluetoothDisabledBanner
-import com.p56.safereach.bluetooth.BluetoothHelper
+import com.p56.safereach.android.BatteryOptimizationHelper
+import com.p56.safereach.android.BluetoothHelper
 import com.p56.safereach.debug.DebugRoute
 import com.p56.safereach.debug.DebugViewModel
 import com.p56.safereach.home.HomeRoute
 import com.p56.safereach.mesh.ble.fsm.BleState
-import com.p56.safereach.profile.ProfileScreen
+import com.p56.safereach.profile.ProfileRoute
+import com.p56.safereach.settings.SettingsRoute
+import com.p56.safereach.ui.BatteryOptimizationBanner
+import com.p56.safereach.ui.BluetoothDisabledBanner
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.alert.AlertHistoryScreen
 
@@ -128,6 +129,8 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                 }
                 when (currentDestination) {
                     AppDestinations.HOME -> HomeRoute()
+                    AppDestinations.PROFILE -> ProfileRoute()
+                    AppDestinations.SETTINGS -> SettingsRoute()
                     AppDestinations.ALERTS -> AlertHistoryScreen()
                     AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
@@ -155,5 +158,6 @@ enum class AppDestinations(
     HOME("Home", R.drawable.ic_home),
     ALERTS("Alerts", R.drawable.ic_warning),
     PROFILE("Profile", R.drawable.ic_account_box),
+    SETTINGS("Settings", R.drawable.ic_settings),
     DEBUG("Debug", R.drawable.ic_debug),
 }
