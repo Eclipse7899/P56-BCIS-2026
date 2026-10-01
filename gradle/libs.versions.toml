@@ -29,6 +29,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mapbox-sdk = { group = "com.mapbox.maps", name = "android-ndk27", version.ref = "mapbox-ndk"}
 mapbox-compose = { group = "com.mapbox.extension", name = "maps-compose-ndk27", version.ref = "mapbox-ndk"}
