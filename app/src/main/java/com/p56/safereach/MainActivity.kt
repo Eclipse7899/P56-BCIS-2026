@@ -13,9 +13,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.p56.safereach.android.MeshForegroundService
 import com.p56.safereach.auth.MainScreen
 import com.p56.safereach.mesh.ble.BlePermissions
-import com.p56.safereach.service.MeshService
 import com.p56.safereach.ui.theme.SafeReachTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
     private fun hasBlePermissions(): Boolean = BlePermissions.hasBlePermissions(this)
 
     private fun startBleService() {
-        val intent = Intent(this, MeshService::class.java)
+        val intent = Intent(this, MeshForegroundService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
 

@@ -23,32 +23,32 @@ implemented.
 ```text
                              Internet
                                 |
-                         Firebase Cloud Messaging
+                        Firebase Cloud Messaging
                                 |
-                    FirebaseAlertService (Android service)
+              FirebaseAlertMessagingService (Android service)
                                 |
                                 v
-                   AlertStateRepository (StateFlow)
+                     AlertRepository (StateFlow + Room)
                                 |
               +-----------------+-----------------+
               |                                   |
               v                                   v
-       Compose UI / Mapbox                 MeshService (foreground)
+       Compose UI / Mapbox             MeshForegroundService (foreground)
                                                   |
                                           BleOrchestrator
                                    +--------------+--------------+
                                    |                             |
-                            BleScanController             BleAdvController
+                            BleScanController          BleAdvertisingController
                                    |                             |
-                           BleBeaconScanAdapter          BleBeaconAdvAdapter
+                          BleBeaconScanAdapter          BleBeaconAdvAdapter
                                    |                             |
-                  Android BLE scan PendingIntent       Android BLE advertising set
+                  Android BLE scan PendingIntent     Android BLE advertising set
                                    |                             |
-                        BleScanReceiver       <---- BLE service-data broadcast ---->
+                        BleScanReceiver      <---- BLE service-data broadcast ---->
                                    |
-                            BleResultQueue
+                          BleScanResultQueue
                                    |
-                            MeshService
+                        MeshForegroundService
 ```
 
 Every device runs the same software. A device with a current alert scans and advertises
@@ -59,115 +59,165 @@ peer connection, socket, GATT session, or explicit route table.
 
 ```text
 Android entry points
-  App, MainActivity, FirebaseAlertService, MeshService, BleScanReceiver
+  SafeReachApplication, MainActivity, FirebaseAlertMessagingService,
+  MeshForegroundService, BleScanReceiver
         |
 Domain and wire models
-  Alert, Shape, MeshPacket<T>, SignedMessage, MeshMeta<T>
+  Alert, Shape, SignedMessage, ReceivedMessage(AlertBatch), proto *Dto
         |
 State boundary
-  AlertStateRepository, MeshStatusRepository
+  AlertRepository, MeshStatusStore
         |
 Transport coordination
   BleOrchestrator
         |
 Transport state machines and Android adapters
-  BleScanController -> BleBeaconScanAdapter
-  BleAdvController  -> BleBeaconAdvAdapter
+  BleScanController      -> BleBeaconScanAdapter
+  BleAdvertisingController -> BleBeaconAdvAdapter
         |
 Android Bluetooth LE APIs
 ```
 
-The Compose UI does not call Bluetooth APIs directly. It observes repositories through
-`DebugViewModel` and `SafeReachApp`. `MainActivity` is responsible for requesting runtime
-permissions and starting `MeshService`; the service owns the mesh for its lifetime.
+The Compose UI does not call Bluetooth APIs directly. It observes `AlertRepository` and
+`MeshStatusStore` through `DebugViewModel`, `HomeViewModel`, and `SafeReachAppViewModel`.
+`MainActivity` is responsible for requesting runtime permissions and starting
+`MeshForegroundService`; the service owns the mesh for its lifetime.
 
-## Mesh lifecycle
+## Android entry points and lifecycle
 
-1. `MainActivity.onCreate` calls `ensureBleServiceRunning`.
-2. `BlePermissions` determines the API-specific Bluetooth, location, and notification
-   permissions. If they are granted, the activity starts `MeshService` as a foreground
-   service; otherwise it requests them.
-3. `MeshService.onCreate` creates one `BleAdvController`, one `BleScanController`, and one
-   `BleOrchestrator` on a supervisor-backed background scope.
-4. The service registers `BleStateReceiver`, seeds both controllers with the current Bluetooth
-   enabled state, and starts collecting their state flows.
-5. `onStartCommand` requests `BleIntent.Passive` and calls `startForeground`. The service
+1. `SafeReachApplication` (`App.kt`) is the `@HiltAndroidApp` application class.
+2. `MainActivity.onCreate` calls `ensureBleServiceRunning`.
+3. `BlePermissions` determines the API-specific Bluetooth, location, and notification
+   permissions. If they are granted, the activity starts `MeshForegroundService` as a
+   foreground service; otherwise it requests them via `requiredRuntimePermissions()`.
+4. `MainActivity` renders `MainScreen` (the authentication gate), which switches to
+   `SafeReachApp` once the user is signed in.
+5. `MeshForegroundService.onCreate` creates one `BleAdvertisingController`, one
+   `BleScanController`, and one `BleOrchestrator` on a supervisor-backed background
+   scope. It registers `BleStateReceiver`, seeds both controllers with the current
+   Bluetooth state, and starts collecting their state flows into `MeshStatusStore`.
+6. `onStartCommand` requests `BleCommand.Passive` and calls `startForeground`. The service
    returns `START_STICKY`, so Android may recreate it after process pressure.
-6. The service observes `AlertStateRepository.meshMeta`:
+7. The service observes `AlertRepository.receivedMessage`:
    * `null` means passive mode: scan, do not advertise.
-   * a signed message means active mode: scan and advertise the encoded packet.
-7. `onDestroy` marks repository state as stopped and requests `BleIntent.Off`.
+   * a message means active mode: scan and advertise the encoded signed message.
+8. `onDestroy` marks runtime state stopped and requests `BleCommand.Off`.
 
-The manifest declares `MeshService` as a non-exported foreground service of type
+The manifest declares `MeshForegroundService` as a non-exported foreground service of type
 `connectedDevice`. The ongoing low-importance notification communicates whether the mesh
 is active, passive, disabled, or failed.
+
+## State and persistence
+
+`AlertRepository` (`service/AlertRepository.kt`) is the single source of truth for alerts.
+It is a plain `@Singleton` held by Hilt (not an Android `Service`) and exposes:
+
+* `receivedMessage: StateFlow<ReceivedMessage?>` — the current stored signed message,
+  rebuilt from the latest row of the `signed_messages` table.
+* `activeAlerts: StateFlow<List<Alert>>` — the alerts currently shown on the map, rebuilt
+  from the `alerts` table.
+
+`addSigned(signedMessage)` is the single ingestion entry point: it verifies the Ed25519
+signature, upserts each contained alert (if newer), and stores the signed message.
+`removeSigned()` clears the stored message. Both FCM and BLE ingress go through
+`addSigned`, so both paths are signature-checked.
+
+`MeshStatusStore` (`service/MeshStatusStore.kt`) is a plain `@Singleton` runtime status
+holder (not an Android `Service`) with `isServiceRunning`, `orchestratorState: BleState`,
+`advertiserState: BleAdvertisingState`, and `scannerState: BleScanState`.
+
+Persistence is Room via `AppDatabase` (`data/`):
+
+* `alerts` — `AlertEntity`, with `Shape` serialized through `ShapeTypeConverters`.
+* `signed_messages` — `SignedMessageEntity`.
+* Access is through `AlertDao` and `SignedMessageDao`; `AppDatabase` is provided by
+  `DatabaseModule` (Hilt). The database uses destructive migration.
+
+Protobuf wire types live in the generated `com.p56.safereach.proto` package (suffixed
+`*Dto`); domain models in `com.p56.safereach.model` are unsuffixed. Mapping is explicit in
+`model/ProtoMappers.kt` (proto ↔ domain: `toDomain()` / `toDto()`) and `data/AlertEntity.kt`
++ `data/SignedMessageEntity.kt` (entity ↔ domain: `toDomain()` / `toEntity()`).
 
 ## Orchestrator and state machines
 
 `BleOrchestrator` is a desired-state reconciler. It does not perform Bluetooth I/O. It
-combines the desired `BleIntent` with the scanner and advertiser states, derives a public
+combines the desired `BleCommand` with the scanner and advertiser states, derives a public
 `BleState`, and sends only the commands needed to converge the controllers.
 
 ```text
-BleIntent.Off
+BleCommand.Off
   scanner Scanning -> Stop
   advertiser Advertising -> Stop
   resulting state: Off when both are Idle
 
-BleIntent.Passive
+BleCommand.Passive
   scanner Idle -> Start
   advertiser Advertising -> Stop
   resulting state: Passive when scanner is Scanning and advertiser is Idle
 
-BleIntent.Active(payload)
+BleCommand.Active(payload)
   scanner Idle -> Start
-  advertiser Idle -> Start(payload)
-  advertiser Advertising + changed payload -> update(payload)
+  advertiser Idle/Failed -> Start(payload)
+  advertiser Advertising -> Start(payload) (replaces the advertising data)
   resulting state: Active(payload) when both are running
 ```
 
 Any disabled child produces `BleState.Disabled`; any failed child produces
-`BleState.Failed`. A Bluetooth state broadcast moves both controllers to `Disabled` when
-Bluetooth is off and allows them to return to `Idle` when it is on. Controller commands and
-callbacks are serialized through coroutine channels. Advertising operations are additionally
-serialized with a `Mutex` and bounded by `BLE_ADVERTISING_TIMEOUT` (2 seconds).
+`BleState.Failed`. A Bluetooth state broadcast (`BleStateReceiver`) moves both controllers
+to `Disabled` when Bluetooth is off and allows them to return to `Idle` when it is on.
+Controller commands and callbacks are serialized through coroutine channels. Advertising
+operations are additionally serialized with a `Mutex` and bounded by
+`Constants.BLE_ADVERTISING_TIMEOUT` (2 seconds).
 
 ### Scan path
 
 `BleBeaconScanAdapter` starts a filtered BLE scan using:
 
-* the SafeReach service UUID
+* the first SafeReach service UUID
   `d5013063-3e8b-44f9-b051-040d01d97ac4`;
-* non-legacy scanning on all supported LE PHYs;
-* balanced scan mode and aggressive matching;
-* a `PendingIntent` delivered to `BleScanReceiver`.
+* non-legacy scanning on all supported LE PHYs, non-legacy scan mode `BALANCED`, match
+  mode `AGGRESSIVE`, no report delay;
+* a `PendingIntent` delivered to `BleScanReceiver` with action
+  `Constants.BLE_SCAN_INTENT_ACTION`.
 
-`BleScanReceiver` extracts service data for the SafeReach UUID, records the current time
-and Bluetooth device address, and puts a `BleScanResult` on the process-wide
-`BleResultQueue`. the scanner controller does not process packet contents; `MeshService` is
-the consumer and validation boundary.
+`BleScanReceiver` reassembles the payload by concatenating the service data of all six
+SafeReach UUIDs in order, records the current time and Bluetooth device address, and puts a
+`BleScanResult(receivedAt, receivedFrom, payload)` on the process-wide
+`BleScanResultQueue.channel`. The scanner controller does not process packet contents;
+`MeshForegroundService` is the consumer and validation boundary.
 
 ### Advertisement path
 
-`BleBeaconAdvAdapter` uses a non-connectable extended advertising set. It advertises the
-same SafeReach service UUID and places the payload in service data. The primary PHY is
-coded LE, the secondary PHY is LE 1M, the interval is high, and transmit power is high.
-The device name and transmit power are not included.
+`BleBeaconAdvAdapter` uses a non-connectable, non-scannable, non-legacy extended
+advertising set. It advertises the first SafeReach service UUID and places the payload in
+the service-data fields. The primary and secondary PHY are both coded LE, the interval is
+medium, and transmit power is high; the device name and transmit-power level are not
+included.
 
-Advertising is payload-replaceable: when an alert changes, the existing advertising set is
-updated instead of starting another set. Payload-size and platform capability failures are
-reported through `BleAdvFail` and become an orchestrator failure state.
+The payload is split into `Constants.MAX_DATA_PAYLOAD` (220-byte) fragments, one per
+SafeReach service-data slot. A payload that needs more fragments than there are
+`Constants.SERVICE_UUIDS` (6) fails with `BleAdvertisingFail.DataTooLarge`. Advertising is
+payload-replaceable: when the alert changes, the existing advertising set is updated
+instead of starting another set. Platform capability and size failures are reported through
+`BleAdvertisingFail` and become an orchestrator failure state.
 
 ## Wire format and forwarding
 
-The BLE service-data bytes have this logical structure:
+The BLE advertisement carries a ProtoBuf-encoded `SignedMessageDto`. There is no separate
+transport envelope in the current implementation.
 
 ```text
-MeshPacket<SignedMessage>
-  hopCount: Long
-  data: SignedMessage
-    data: ByteArray       // ProtoBuf-encoded Alert
-    signature: ByteArray  // Ed25519 signature over data
+SignedMessageDto
+  data: bytes         // ProtoBuf-encoded MessageDataDto
+  signature: bytes    // Ed25519 signature over data
+
+MessageDataDto
+  msg: repeated AlertDto   // field 2
+  valid_until: uint64      // field 3
+  timestamp: uint64        // field 4
+
+AlertDto
+  id, timestamp, title, description, type, severity, shape, version, expires_at, invalidated
 ```
 
 `Alert` contains a timestamp, version, expiry time, invalidation flag, title, description,
@@ -175,63 +225,52 @@ type, severity, and geographic shape (circle or polygon). The version identifies
 alert; the timestamp is display-only alert metadata. A node removes a non-invalidated alert
 when its expiry time is reached. Immediate invalidation is represented by a higher-version
 alert with `invalidated = true`, which remains in the message flow long enough to be relayed.
-`MeshMeta` is local metadata and is not transmitted; it records when the device received the
-packet, the source Bluetooth address, the hop count, and the signed payload.
 
 ### Outgoing alert
 
 The debug flow currently creates an alert by:
 
-1. ProtoBuf-encoding `Alert`;
-2. signing those bytes with `SigningManager`;
-3. storing `MeshMeta(hopCount = 0, receivedFrom = null, ...)` in
-   `AlertStateRepository`;
-4. causing `MeshService` to encode `MeshPacket(hopCount = 1, data = signedMessage)`;
-5. sending those bytes to `BleOrchestrator` as `BleIntent.Active`.
+1. wrapping one `Alert` in an `AlertBatch`;
+2. ProtoBuf-encoding it (`AlertBatch.toDto()`);
+3. signing those bytes with `SigningManager`;
+4. storing a `SignedMessage` in `AlertRepository` (`addSigned`);
+5. causing `MeshForegroundService` to encode the `SignedMessageDto` and send it to
+   `BleOrchestrator` as `BleCommand.Active`.
 
-FCM also stores a received signed message with hop count 0, so it enters the same
-repository-to-advertisement path.
+FCM also stores a received signed message, so it enters the same repository-to-advertisement
+path.
 
 ### Incoming and forwarding path
 
 ```text
 BLE advertisement
   -> BleScanReceiver
-  -> BleResultQueue
-  -> MeshService
-  -> ProtoBuf decode MeshPacket<SignedMessage>
-  -> Ed25519 verification of SignedMessage.data
-  -> ProtoBuf decode Alert
-  -> compare Alert.version with current alert
-  -> update AlertStateRepository if newer
-  -> repository observer increments hopCount and re-advertises
+  -> BleScanResultQueue
+  -> MeshForegroundService
+  -> ProtoBuf decode SignedMessageDto
+  -> Ed25519 verification of SignedMessage.payload (in AlertRepository.addSigned)
+  -> ProtoBuf decode MessageDataDto
+  -> upsert each Alert if newer
+  -> update AlertRepository
+  -> repository observer re-advertises the stored message
 ```
 
-Invalid or unverifiable BLE packets are logged and discarded. A received alert replaces
-the current alert only when its version is newer; older or duplicate packets do not trigger
-a new advertisement. Because the repository stores only one current alert and one message,
-this is a latest-alert relay rather than a queue of independent messages.
-
-Alerts with an expiry time are removed locally when the deadline is reached. This does not
-need a new network message because every node receives the same expiry deadline. An immediate
-invalidation is different: it is a signed, higher-version alert update and is advertised
-through the normal repository message flow so neighboring nodes remove it as well.
+Invalid or unverifiable packets are logged and discarded. A received alert replaces a
+stored alert only when its version is newer; older or duplicate packets do not become the
+active message. Because the repository stores one current message (and its alerts), this is
+a latest-message relay rather than a queue of independent messages.
 
 ## Security and trust boundaries
 
-`SigningManager` loads a bundled public Ed25519 key from `res/raw/public_key.pem`.
-Debug builds may also load a locally generated private key from debug resources; release
-builds deliberately cannot sign. The Gradle `generateSigningKeys` task creates the pair
-and warns that the private key must not be committed.
+`SigningManager` loads a bundled public Ed25519 key from `res/raw/public_key.pem`. Debug
+builds may also load a locally generated private key from debug resources; release builds
+deliberately cannot sign. The Gradle `generateSigningKeysDebug` task creates the pair and
+warns that the private key must not be committed.
 
-For BLE ingress, the trust boundary is `MeshService`: it verifies the signature before
-decoding and applying the alert. Bluetooth addresses are metadata only and are not an
-identity or authentication mechanism. BLE transport is broadcast and non-connectable;
-confidentiality and sender identity are not provided by the transport itself.
-
-The current FCM handler decodes the `SignedMessage` and alert and writes them to the
-repository, but does not call `SigningManager.verify`. Treat this as a deliberate
-implementation gap to resolve before relying on FCM as a trusted alert source.
+For both ingress paths the trust boundary is `AlertRepository.addSigned`: it verifies the
+signature before decoding and applying alerts. Bluetooth addresses are metadata only and
+are not an identity or authentication mechanism. BLE transport is broadcast and
+non-connectable; confidentiality and sender identity are not provided by the transport.
 
 ## Permissions and operating constraints
 
@@ -245,62 +284,70 @@ Required permissions vary by Android version:
 
 The user must keep Bluetooth enabled. Android scan behavior also depends on device
 location settings and battery optimization. The UI exposes Bluetooth-disabled and battery
-optimization banners, but `LocationStateReceiver` currently observes provider changes
-without updating mesh state.
+optimization banners. `LocationStateReceiver` currently observes provider changes without
+updating mesh state.
 
-## Repository and UI data flow
+## UI data flow
 
 ```text
-AlertStateRepository.activeAlerts/meshMeta
+AlertRepository.receivedMessage / activeAlerts
   -> DebugViewModel.uiState
   -> DebugScreen
 
-MeshStatusRepository
+MeshStatusStore
   -> DebugViewModel.uiState
   -> DebugScreen
   -> SafeReachApp (Bluetooth-disabled banner)
 
-AlertStateRepository.activeAlerts
+AlertRepository.activeAlerts
   -> HomeViewModel
   -> HomeScreen
   -> Mapbox map and alert shape rendering
+
+MeshStatusStore.orchestratorState
+  -> SafeReachAppViewModel
+  -> SafeReachApp
 ```
 
-Repositories are process-local `StateFlow` singletons owned by Hilt: each one is a
-`@Singleton` class with an `@Inject` constructor, so services, activities, and view models
+Repositories and stores are process-local `StateFlow` singletons owned by Hilt: each one is
+a `@Singleton` class with an `@Inject` constructor, so services, activities, and view models
 receive the same instance through constructor or field injection instead of reaching into a
-static object. They are not a durable database: alerts and mesh status are lost when the
-process is recreated. Firebase authentication, Mapbox rendering, and navigation are
-application concerns around the mesh, not mesh transport components.
+static object. Alerts are backed by Room and survive process recreation; mesh status is
+runtime-only. Firebase authentication, Mapbox rendering, and navigation are application
+concerns around the mesh, not mesh transport components.
 
 ## Source map
 
-| Responsibility                               | Main files                                                                                |
-|----------------------------------------------|-------------------------------------------------------------------------------------------|
-| Android startup and permissions              | `MainActivity.kt`, `App.kt`, `mesh/ble/BlePermissions.kt`, `AndroidManifest.xml`          |
-| Mesh service lifecycle and packet processing | `mesh/MeshService.kt`                                                                     |
-| Desired-state coordination                   | `mesh/ble/BleOrchestrator.kt`, `mesh/ble/fsm/*`                                           |
-| BLE scanning                                 | `mesh/ble/scanning/BleScanController.kt`, `BleBeaconScanAdapter.kt`, `BleScanReceiver.kt` |
-| BLE advertising                              | `mesh/ble/advertisement/BleAdvController.kt`, `BleBeaconAdvAdapter.kt`                    |
-| Cross-component handoff                      | `mesh/BleResultQueue.kt`                                                                  |
-| Mesh and alert state                         | `mesh/MeshStatusRepository.kt`, `AlertStateRepository.kt`                                 |
-| Wire and domain models                       | `Alert.kt`, `Constants.kt`                                                                |
-| Signing and verification                     | `verification/Signing.kt`, `verification/SigningManager.kt`                               |
-| Cloud ingress                                | `FirebaseAlertService.kt`                                                                 |
-| Mesh diagnostics                             | `debug/DebugViewModel.kt`, `debug/DebugScreen.kt`                                         |
-| Planned, not implemented                     | `mesh/wifi/WifiCoordinator.kt`                                                            |
+| Responsibility                               | Main files                                                                                          |
+|----------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| Android startup and permissions              | `MainActivity.kt`, `App.kt`, `mesh/ble/BlePermissions.kt`, `AndroidManifest.xml`                     |
+| Mesh service lifecycle and packet processing | `android/MeshForegroundService.kt`                                                                   |
+| Desired-state coordination                   | `mesh/ble/BleOrchestrator.kt`, `mesh/ble/fsm/*`                                                      |
+| BLE scanning                                 | `mesh/ble/scanning/BleScanController.kt`, `BleBeaconScanAdapter.kt`, `BleScanReceiver.kt`            |
+| BLE advertising                              | `mesh/ble/advertisement/BleAdvertisingController.kt`, `BleBeaconAdvAdapter.kt`                       |
+| Cross-component handoff                      | `mesh/BleScanResultQueue.kt`                                                                         |
+| Alert and mesh runtime state                 | `service/AlertRepository.kt`, `service/MeshStatusStore.kt`                                           |
+| Persistence (Room)                           | `data/AppDatabase.kt`, `AlertDao.kt`, `SignedMessageDao.kt`, `DatabaseModule.kt`                     |
+| Domain and wire mapping                      | `model/*.kt`, `model/ProtoMappers.kt`, `data/AlertEntity.kt`, `data/SignedMessageEntity.kt`          |
+| Constants                                    | `Constants.kt`                                                                                       |
+| Signing and verification                     | `verification/Signing.kt`, `verification/SigningManager.kt`                                          |
+| Cloud ingress                                | `android/FirebaseAlertMessagingService.kt`                                                           |
+| Offline maps                                 | `service/OfflineRegionManager.kt`, `map/OfflineRegionViewModel.kt`, `map/OfflineRegionPanel.kt`       |
+| UI shell and navigation                      | `auth/MainScreen.kt`, `navigation/SafeReachApp.kt`                                                   |
+| Mesh diagnostics                             | `debug/DebugViewModel.kt`, `debug/DebugScreen.kt`                                                    |
+| Planned, not implemented                     | `mesh/wifi/WifiCoordinator.kt`                                                                       |
 
 ## Invariants for future changes
 
 1. Keep BLE API calls inside the adapters and keep state transitions inside the controllers.
-2. Send orchestrator intents rather than manipulating controllers from UI code.
-3. Preserve the SafeReach service UUID and ProtoBuf field numbers when changing the wire
-   format; changing either breaks interoperability with existing devices.
+2. Send orchestrator commands rather than manipulating controllers from UI code.
+3. Preserve the SafeReach service UUIDs, the fragment-slot ordering, and ProtoBuf field
+   numbers when changing the wire format; changing them breaks interoperability with
+   existing devices.
 4. Verify signatures before accepting locally broadcast data.
-5. Treat `MeshMeta` as local observation metadata, not part of the wire protocol.
-6. Preserve version-based latest-alert behavior and expiry/invalidation semantics when
+5. Preserve version-based latest-alert behavior and expiry/invalidation semantics when
    adding transports or storage.
-7. Any new transport should feed the same validated message path and repository state,
+6. Any new transport should feed the same validated message path (`AlertRepository.addSigned`)
    rather than duplicating alert application logic.
 
 ## Known limitations and extension points
@@ -308,12 +355,10 @@ application concerns around the mesh, not mesh transport components.
 The current implementation is intentionally small and has important boundaries:
 
 * Wi-Fi transport is not implemented.
-* There is no explicit maximum hop count, packet expiry, message identifier, or
-  deduplication set. Timestamp comparison limits repeated updates but is not a complete
-  routing protocol.
-* There is no durable queue or persistence across process death.
-* BLE payload size is constrained by Android advertising capabilities.
-* FCM and BLE currently have different signature-validation behavior.
+* There is no explicit hop count, packet expiry, message identifier, or deduplication set.
+  Version comparison limits repeated updates but is not a complete routing protocol.
+* BLE payload size is constrained by Android advertising capabilities and the six
+  service-data fragment slots.
 * `LocationStateReceiver` does not currently feed location state into the orchestrator.
 * Release builds can verify messages but cannot originate newly signed debug alerts.
 

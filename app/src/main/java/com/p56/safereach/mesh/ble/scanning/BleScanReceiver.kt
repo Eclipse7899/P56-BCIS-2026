@@ -9,8 +9,8 @@ import android.content.Intent
 import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
-import com.p56.safereach.Constants.SERVICE_UUID_MAP
-import com.p56.safereach.mesh.BleResultQueue
+import com.p56.safereach.Constants.SERVICE_UUIDS
+import com.p56.safereach.mesh.BleScanResultQueue
 
 private const val TAG = "BleScanReceiver"
 
@@ -18,7 +18,7 @@ class BleScanReceiver : BroadcastReceiver() {
 
     fun defrag(record: ScanRecord): ByteArray {
         val fragments = mutableListOf<ByteArray>()
-        for (uuid in SERVICE_UUID_MAP) {
+        for (uuid in SERVICE_UUIDS) {
             Log.d(TAG, "Checking for service data with UUID: $uuid")
             val fragment = record.getServiceData(ParcelUuid(uuid))
             if (fragment != null) {
@@ -54,10 +54,10 @@ class BleScanReceiver : BroadcastReceiver() {
             val bleResult = BleScanResult(
                 receivedAt = System.currentTimeMillis(),
                 receivedFrom = result.device.address,
-                data = data
+                payload = data
             )
             Log.d(TAG, "Sending scan result to queue: $bleResult")
-            BleResultQueue.channel.trySend(bleResult)
+            BleScanResultQueue.channel.trySend(bleResult)
         }
     }
 }

@@ -21,7 +21,7 @@ jobs:
 
       - name: Add public key file
         env:
-          SECRET_KEY: ${{ secrets.PublicKey }}
+          SECRET_KEY: ${{ secrets.PUBLIC_KEY }}
         run: |
           mkdir -p app/src/main/res/raw
           echo "$SECRET_KEY" > app/src/main/res/raw/public_key.pem

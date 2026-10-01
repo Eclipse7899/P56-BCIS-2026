@@ -16,7 +16,7 @@ object Constants {
     val BLE_SERVICE_UUID_PART_6: UUID =
         UUID.fromString("d5013063-3e8b-44f9-b051-040d01d97ac9")
 
-    val SERVICE_UUID_MAP = listOf(
+    val SERVICE_UUIDS = listOf(
         BLE_SERVICE_UUID_START,
         BLE_SERVICE_UUID_PART_2,
         BLE_SERVICE_UUID_PART_3,
@@ -25,14 +25,9 @@ object Constants {
         BLE_SERVICE_UUID_PART_6
     )
 
-    const val EXPIRY_TICK_MARGIN_MS = 1L
-
-
     const val MAX_DATA_PAYLOAD = 220
 
     const val BLE_ADVERTISING_TIMEOUT: Long = 2000
-
-    const val MAX_ADVERTISING_ALERTS = 3
 
     const val BLE_SCAN_INTENT_ACTION = "com.p56.safereach.BLE_SCAN_RESULT"
 

@@ -1,4 +1,3 @@
-import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.google.protobuf.gradle.id
 import com.google.protobuf.gradle.proto
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -151,7 +150,10 @@ dependencies {
     implementation(libs.hilt)
     implementation(libs.hilt.compose)
     implementation(libs.bouncycastle)
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
     ksp(libs.hilt.compiler)
+    ksp(libs.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

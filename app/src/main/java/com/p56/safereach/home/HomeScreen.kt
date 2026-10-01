@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -28,9 +30,9 @@ import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfTransformation
-import com.p56.safereach.proto.Alert
-import com.p56.safereach.proto.Severity
-import com.p56.safereach.proto.Shape
+import com.p56.safereach.model.Alert
+import com.p56.safereach.model.Severity
+import com.p56.safereach.model.Shape
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityHigh
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityLow
@@ -52,7 +54,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val mapViewportState = rememberMapViewportState {
-        MapPreferences.getSavedCameraOptions(context)?.let { cameraOptions ->
+        MapCameraPreferences.getSavedCameraOptions(context)?.let { cameraOptions ->
             setCameraOptions(cameraOptions)
         }
     }
@@ -60,7 +62,7 @@ fun HomeScreen(
     LaunchedEffect(mapViewportState.cameraState) {
         val camera = mapViewportState.cameraState ?: return@LaunchedEffect
         val center = camera.center
-        MapPreferences.saveCameraPosition(
+        MapCameraPreferences.saveCameraPosition(
             context = context,
             latitude = center.latitude(),
             longitude = center.longitude(),
@@ -74,7 +76,7 @@ fun HomeScreen(
         onDispose {
             val camera = mapViewportState.cameraState ?: return@onDispose
             val center = camera.center
-            MapPreferences.saveCameraPosition(
+            MapCameraPreferences.saveCameraPosition(
                 context = context,
                 latitude = center.latitude(),
                 longitude = center.longitude(),
@@ -103,43 +105,42 @@ fun HomeScreen(
                 mapViewportState.transitionToFollowPuckState()
             }
             alerts.forEach { alert ->
-                when (alert.shape.kindCase) {
-                    Shape.KindCase.CIRCLE -> {
+                when (val shape = alert.shape) {
+                    is Shape.Circle -> key(alert.id) {
                         val point = Point.fromLngLat(
-                            alert.shape.circle.center.longitude,
-                            alert.shape.circle.center.latitude
+                            shape.center.longitude,
+                            shape.center.latitude
                         )
                         val color = when (alert.severity) {
-                            Severity.SEVERITY_LOW -> alertShapeFillColorSeverityLow
-                            Severity.SEVERITY_MEDIUM -> alertShapeFillColorSeverityMedium
-                            Severity.SEVERITY_HIGH -> alertShapeFillColorSeverityHigh
-                            else -> alertShapeFillColorSeverityLow
+                            Severity.LOW -> alertShapeFillColorSeverityLow
+                            Severity.MEDIUM -> alertShapeFillColorSeverityMedium
+                            Severity.HIGH -> alertShapeFillColorSeverityHigh
+                            Severity.UNKNOWN -> alertShapeFillColorSeverityLow
                         }
                         val borderColor = when (alert.severity) {
-                            Severity.SEVERITY_LOW -> alertShapeBorderColorSeverityLow
-                            Severity.SEVERITY_MEDIUM -> alertShapeBorderColorSeverityMedium
-                            Severity.SEVERITY_HIGH -> alertShapeBorderColorSeverityHigh
-                            else -> alertShapeBorderColorSeverityLow
+                            Severity.LOW -> alertShapeBorderColorSeverityLow
+                            Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
+                            Severity.HIGH -> alertShapeBorderColorSeverityHigh
+                            Severity.UNKNOWN -> alertShapeBorderColorSeverityLow
                         }
                         val polygonCircle = TurfTransformation.circle(
                             point,
-                            alert.shape.circle.radius,
+                            shape.radius,
                             64,
                             TurfConstants.UNIT_METERS
                         )
-                        val geoJson = GeoJSONData(polygonCircle)
-                        val geoSourceState = GeoJsonSourceState()
-                        geoSourceState.data = geoJson
+                        val geoSourceState = remember { GeoJsonSourceState() }
+                        geoSourceState.data = GeoJSONData(polygonCircle)
                         FillLayer(
                             sourceState = geoSourceState,
-                            layerId = "physical-circle-layer"
+                            layerId = "alert-circle-${alert.id}"
                         ) {
                             fillColor = ColorValue(color)
                             fillOutlineColor = ColorValue(borderColor)
                         }
                     }
-                    Shape.KindCase.POLYGON -> TODO()
-                    Shape.KindCase.KIND_NOT_SET -> TODO()
+                    is Shape.Polygon -> Unit
+                    null -> Unit
                 }
             }
         }
