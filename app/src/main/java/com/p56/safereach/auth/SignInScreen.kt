@@ -56,6 +56,7 @@ fun SignInScreen(
     var loading by rememberSaveable { mutableStateOf(false) }
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var signInError by rememberSaveable { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     Column(
@@ -99,7 +100,8 @@ fun SignInScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it
-                                emailError = null},
+                                emailError = null
+                                signInError = null},
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -111,7 +113,9 @@ fun SignInScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it
+                                passwordError = null
+                                signInError = null},
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Password") },
                 singleLine = true,
@@ -132,6 +136,16 @@ fun SignInScreen(
                     }
                 }
             )
+            if (signInError != null) {
+                Text(
+                    text = signInError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                )
+            }
             TextButton(
                 shape = MaterialTheme.shapes.extraSmall,
                 onClick = { onForgotPasswordClick() }
@@ -149,34 +163,22 @@ fun SignInScreen(
                 onClick = {
                     emailError = null
                     passwordError = null
-                    when {
-                        !isValidEmail(email) -> {
-                            emailError = "Email does not exist."
-                            return@Button
-                        }
-                        password.length < 8 -> {
-                            passwordError = "Password is incorrect."
-                            return@Button
-                        }
-                    }
-                    // TODO: Firebase Authentication
                     loading = true
-                    val auth = FirebaseAuth.getInstance()
-                    auth.signInWithEmailAndPassword(email.trim(), password)
+                    signInError = null
+                    FirebaseAuth.getInstance()
+                        .signInWithEmailAndPassword(email.trim(), password)
                         .addOnCompleteListener { task ->
                             loading = false
                             if (task.isSuccessful) {
+                                signInError = null
+
                                 Toast.makeText(
                                     context,
                                     "Sign in successful",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Sign in failed",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                signInError = "Email or password is incorrect."
                             }
                         }
                 }
@@ -220,5 +222,6 @@ fun SignInScreenPreview() {
     SignInScreen(
         context = LocalContext.current,
         onForgotPasswordClick = {},
-    ) {}
+        onRegisterClick = {}
+    )
 }
