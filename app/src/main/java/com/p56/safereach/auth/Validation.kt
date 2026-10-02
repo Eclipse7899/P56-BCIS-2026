@@ -9,5 +9,11 @@ fun isValidEmail(email: String): Boolean {
 }
 
 fun isValidPassword(password: String): Boolean {
-    return password.length >= 8
+    val hasMinLength = password.length >= 8
+    val hasNumber = password.any { it.isDigit() }
+    val hasCapitalLetter = password.any { it.isUpperCase() }
+
+    return hasMinLength &&
+            hasNumber &&
+            hasCapitalLetter
 }
