@@ -233,7 +233,7 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             val buttonDisabled =
-                loading || email.isBlank() || password.isBlank() || confirmPassword.isBlank()
+                loading || email.isBlank() || password.isBlank() || confirmPassword.isBlank() || !isValidPassword(password) || password != confirmPassword
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !buttonDisabled,
@@ -249,7 +249,7 @@ fun RegisterScreen(
                             return@Button
                         }
                         !isValidPassword(password) -> {
-                            passwordError = "Password must be at least 8 characters."
+                            passwordError = "Password must meet all the requirements."
                             return@Button
                         }
                         confirmPassword.isBlank() -> {
@@ -261,7 +261,6 @@ fun RegisterScreen(
                             return@Button
                         }
                     }
-                    //TODO: Firebase Authentication
                     loading = true
                     val auth = FirebaseAuth.getInstance()
                     auth.createUserWithEmailAndPassword(email.trim(), password)

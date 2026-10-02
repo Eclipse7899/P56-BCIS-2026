@@ -13,6 +13,7 @@ import com.p56.safereach.model.Alert
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import com.p56.safereach.profile.NotificationPreferences
 
 @Singleton
 class AlertNotifier @Inject constructor(
@@ -20,6 +21,10 @@ class AlertNotifier @Inject constructor(
 ) {
 
     fun notify(alert: Alert) {
+        if (!NotificationPreferences.areNotificationsEnabled(context)) {
+            return
+        }
+
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         ensureChannel(manager)
 

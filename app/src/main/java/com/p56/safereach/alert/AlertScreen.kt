@@ -11,20 +11,22 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.p56.safereach.AlertStateRepository
-import com.p56.safereach.Shape
-import androidx.compose.runtime.remember
+import com.p56.safereach.model.Alert
+import com.p56.safereach.model.AlertType
+import com.p56.safereach.model.LatLong
+import com.p56.safereach.model.Severity
+import com.p56.safereach.model.Shape
+import com.p56.safereach.ui.theme.SafeReachTheme
 
 @Composable
-fun AlertScreen() {
-    //TODO: Mesh Implementation
-    val alert by AlertStateRepository.alert.collectAsState()
+fun AlertScreen(
+    alert: Alert? = null,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = Modifier.fillMaxSize()
         .padding(16.dp),
         verticalArrangement = Arrangement.Top) {
@@ -49,84 +51,85 @@ fun AlertScreen() {
                 }
             }
         } else {
-            val currentAlert = alert!!
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            ActiveAlertDetails(alert = alert)
+        }
+    }
+}
+
+@Composable
+private fun ActiveAlertDetails(
+    alert: Alert
+) {
+    Card(modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "ACTIVE ALERT",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = alert.title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = alert.description,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Type: ${alert.type.displayName}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Severity: ${alert.severity.displayName}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Location",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            when (val shape = alert.shape) {
+                is Shape.Circle -> {
+                    Text(text = "Alert radius: ${shape.radius.toInt()} metres")
+                    Text(text = "Latitude: ${shape.center.latitude}")
+                    Text(text = "Longitude: ${shape.center.longitude}")
+                }
+                is Shape.Polygon -> {
                     Text(
-                        text = "ACTIVE ALERT",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
+                        text = "Alert area: ${shape.points.size} points"
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                null -> {
                     Text(
-                        text = currentAlert.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = currentAlert.description,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Type : ${currentAlert.type.name}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Severity: ${currentAlert.severity.name}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Location",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    when (val shape = currentAlert.shape){
-                        is Shape.Circle -> {
-                            Text(
-                                text = "Alert radius: ${shape.radius.toInt()} metres"
-                            )
-                            Text(
-                                text = "Latitude: ${shape.center.longitude}"
-                            )
-                        }
-                        is Shape.Polygon -> {
-                            Text(
-                                text = "Alert area: ${shape.points.size} points"
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Time",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    val formattedTime = remember(currentAlert.timestamp) {
-                        java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()
-                        ).format(
-                            java.util.Date(currentAlert.timestamp)
-                        )
-                    }
-                    Text(
-                        text = formattedTime,
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "No location information available."
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Timestamp: ${alert.timestamp}",
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun AlertScreenPreview(){
-    AlertScreen()
+fun AlertScreenPreview() {
+    SafeReachTheme {
+        AlertScreen()
+    }
 }

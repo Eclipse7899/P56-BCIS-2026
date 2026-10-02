@@ -121,34 +121,12 @@ fun HomeScreen(
                             shape.center.latitude
                         )
                         val color = when (alert.severity) {
-                            Severity.SEVERITY_LOW ->
-                                alertShapeFillColorSeverityLow
-
-                            Severity.SEVERITY_MEDIUM ->
-                                alertShapeFillColorSeverityMedium
-
-                            Severity.SEVERITY_HIGH ->
-                                alertShapeFillColorSeverityHigh
-
-                            else ->
-                                alertShapeFillColorSeverityLow
                             Severity.LOW -> alertShapeFillColorSeverityLow
                             Severity.MEDIUM -> alertShapeFillColorSeverityMedium
                             Severity.HIGH -> alertShapeFillColorSeverityHigh
                             Severity.UNKNOWN -> alertShapeFillColorSeverityLow
                         }
                         val borderColor = when (alert.severity) {
-                            Severity.SEVERITY_LOW ->
-                                alertShapeBorderColorSeverityLow
-
-                            Severity.SEVERITY_MEDIUM ->
-                                alertShapeBorderColorSeverityMedium
-
-                            Severity.SEVERITY_HIGH ->
-                                alertShapeBorderColorSeverityHigh
-
-                            else ->
-                                alertShapeBorderColorSeverityLow
                             Severity.LOW -> alertShapeBorderColorSeverityLow
                             Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
                             Severity.HIGH -> alertShapeBorderColorSeverityHigh
@@ -160,35 +138,22 @@ fun HomeScreen(
                             64,
                             TurfConstants.UNIT_METERS
                         )
-                        val geoJson = GeoJSONData(polygonCircle)
-                        val geoSourceState = GeoJsonSourceState()
-                        geoSourceState.data = geoJson
-
                         val geoSourceState = remember { GeoJsonSourceState() }
                         geoSourceState.data = GeoJSONData(polygonCircle)
                         FillLayer(
                             sourceState = geoSourceState,
-                            layerId = "physical-circle-layer-${alert.hashCode()}"
                             layerId = "alert-circle-${alert.id}"
                         ) {
                             fillColor = ColorValue(color)
                             fillOutlineColor = ColorValue(borderColor)
                         }
                     }
-
-                    Shape.KindCase.POLYGON -> {
-                        // TODO: Add polygon alert display later.
+                    is Shape.Polygon -> {
+                    //TODO: Add polygon alert display later.
                     }
-
-                    Shape.KindCase.KIND_NOT_SET -> {
+                    null -> {
                         // No alert shape available.
                     }
-
-                    else -> {
-                        // Unknown alert shape.
-                    }
-                    is Shape.Polygon -> Unit
-                    null -> Unit
                 }
             }
         }

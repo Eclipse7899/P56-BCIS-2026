@@ -40,7 +40,7 @@ import com.p56.safereach.settings.SettingsRoute
 import com.p56.safereach.ui.BatteryOptimizationBanner
 import com.p56.safereach.ui.BluetoothDisabledBanner
 import com.p56.safereach.ui.theme.SafeReachTheme
-import com.p56.safereach.alert.AlertHistoryScreen
+import com.p56.safereach.alert.AlertHistoryRoute
 
 @Composable
 fun SafeReachApp() {
@@ -129,10 +129,9 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                 }
                 when (currentDestination) {
                     AppDestinations.HOME -> HomeRoute()
+                    AppDestinations.ALERTS -> AlertHistoryRoute()
                     AppDestinations.PROFILE -> ProfileRoute()
                     AppDestinations.SETTINGS -> SettingsRoute()
-                    AppDestinations.ALERTS -> AlertHistoryScreen()
-                    AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
                         val vm = hiltViewModel<DebugViewModel>()
                         DebugRoute(viewModel = vm)

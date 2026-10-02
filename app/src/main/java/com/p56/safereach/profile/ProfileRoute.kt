@@ -24,6 +24,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.p56.safereach.ui.theme.ThemePreferences
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @Composable
 fun ProfileRoute() {
@@ -47,11 +52,19 @@ fun ProfileContent(
     email: String,
     onSignOut: () -> Unit
 ) {
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var darkModeEnabled by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var notificationsEnabled by remember {
+        mutableStateOf(
+            NotificationPreferences.areNotificationsEnabled(context)
+        )
+    }
+    val darkModeEnabled by ThemePreferences.darkModeEnabled
+        .collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
         Text(
@@ -59,7 +72,6 @@ fun ProfileContent(
             text = "Your Profile",
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.padding(32.dp))
         Text(
             text = "Username",
             style = MaterialTheme.typography.labelLarge,
@@ -117,16 +129,17 @@ fun ProfileContent(
             }
             Switch(
                 checked = notificationsEnabled,
-                onCheckedChange = {
-                    notificationsEnabled = it
-                    // TODO: Connect to the notification system.
+                onCheckedChange = { enabled ->
+                    notificationsEnabled = enabled
+                    NotificationPreferences.setNotificationsEnabled(
+                        context,
+                        enabled)
                 }
             )
         }
         Spacer(modifier = Modifier.height(20.dp))
         HorizontalDivider()
         Spacer(modifier = Modifier.height(20.dp))
-        //
         Text(
             text = "Appearance",
             style = MaterialTheme.typography.titleMedium,
@@ -154,9 +167,8 @@ fun ProfileContent(
             }
             Switch(
                 checked = darkModeEnabled,
-                onCheckedChange = {
-                    darkModeEnabled = it
-                    //TODO: Connect to the app theme
+                onCheckedChange = { enabled ->
+                    ThemePreferences.setDarkMode(enabled)
                 }
             )
         }
@@ -179,7 +191,7 @@ fun ProfileContent(
             text = "Disaster monitoring and emergency response application.",
             style = MaterialTheme.typography.bodyMedium
         )
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = onSignOut
@@ -188,6 +200,7 @@ fun ProfileContent(
                 fontWeight = FontWeight.Bold
             )
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
