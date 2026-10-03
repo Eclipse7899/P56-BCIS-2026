@@ -1,4 +1,4 @@
-package com.p56.safereach.map
+package com.p56.safereach.ui.map
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -74,13 +74,6 @@ fun OfflineRegionPanel(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                text = "Offline map area",
-                style = MaterialTheme.typography.titleSmall
-            )
-
-            OfflineAreaSummary(state = state)
-
             when (val download = state.downloadState) {
                 is OfflineDownloadState.Downloading -> {
                     LinearProgressIndicator(
@@ -144,6 +137,8 @@ fun OfflineRegionPanel(
                     Text(if (state.sizeKm == null) "Set offline area" else "Change area")
                 }
             }
+
+            OfflineAreaSummary(state = state)
 
             TextButton(
                 onClick = { confirmClear = true },

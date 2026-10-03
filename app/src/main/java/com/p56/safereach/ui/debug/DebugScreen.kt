@@ -1,4 +1,4 @@
-package com.p56.safereach.debug
+package com.p56.safereach.ui.debug
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke

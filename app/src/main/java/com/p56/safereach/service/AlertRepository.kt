@@ -42,6 +42,10 @@ class AlertRepository @Inject constructor(
 
     val activeAlerts: StateFlow<List<Alert>> = activeAlertsState.asStateFlow()
 
+    private val allAlertsState = MutableStateFlow<List<Alert>>(emptyList())
+
+    val allAlerts: StateFlow<List<Alert>> = allAlertsState.asStateFlow()
+
     init {
         scope.launch {
             database.signedMessageDao().observeLatest().collect { entity ->
@@ -62,7 +66,9 @@ class AlertRepository @Inject constructor(
         }
         scope.launch {
             database.alertDao().observeAll().collect { entities ->
-                activeAlertsState.value = entities.map { it.toDomain() }.filter { it.isActive() }
+                val alerts = entities.map {it.toDomain()}
+                allAlertsState.value = alerts
+                activeAlertsState.value = alerts.filter { it.isActive() }
             }
         }
     }

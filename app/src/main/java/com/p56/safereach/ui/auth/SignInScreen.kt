@@ -1,4 +1,4 @@
-package com.p56.safereach.auth
+package com.p56.safereach.ui.auth
 
 import android.content.Context
 import android.widget.Toast
@@ -54,6 +54,9 @@ fun SignInScreen(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var loading by rememberSaveable { mutableStateOf(false) }
+    var emailError by rememberSaveable { mutableStateOf<String?>(null) }
+    var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var signInError by rememberSaveable { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     Column(
@@ -96,23 +99,31 @@ fun SignInScreen(
         ) {
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it
+                                emailError = null
+                                signInError = null},
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text("Email") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                isError = emailError != null,
+                supportingText = { emailError?.let { Text(it) } }
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it
+                                passwordError = null
+                                signInError = null},
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Password") },
                 singleLine = true,
                 placeholder = { Text("Password") },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = passwordError != null,
+                supportingText = { passwordError?.let { Text (it) } },
                 trailingIcon = {
                     val painter = if (passwordVisible)
                         painterResource(id = R.drawable.ic_visibility_24px)
@@ -125,6 +136,16 @@ fun SignInScreen(
                     }
                 }
             )
+            if (signInError != null) {
+                Text(
+                    text = signInError!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                )
+            }
             TextButton(
                 shape = MaterialTheme.shapes.extraSmall,
                 onClick = { onForgotPasswordClick() }
@@ -140,23 +161,24 @@ fun SignInScreen(
                 shape = MaterialTheme.shapes.extraLarge,
                 contentPadding = PaddingValues(vertical = 12.dp),
                 onClick = {
+                    emailError = null
+                    passwordError = null
                     loading = true
-                    val auth = FirebaseAuth.getInstance()
-                    auth.signInWithEmailAndPassword(email, password)
+                    signInError = null
+                    FirebaseAuth.getInstance()
+                        .signInWithEmailAndPassword(email.trim(), password)
                         .addOnCompleteListener { task ->
                             loading = false
                             if (task.isSuccessful) {
+                                signInError = null
+
                                 Toast.makeText(
                                     context,
                                     "Sign in successful",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Sign in failed",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                signInError = "Email or password is incorrect."
                             }
                         }
                 }
@@ -187,7 +209,7 @@ fun SignInScreen(
                 }
             ) {
                 Text(
-                    text = "Don't have an profile? Register Now"
+                    text = "Don't have a profile? Register Now"
                 )
             }
         }

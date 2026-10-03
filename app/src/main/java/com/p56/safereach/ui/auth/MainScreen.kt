@@ -1,4 +1,4 @@
-package com.p56.safereach.auth
+package com.p56.safereach.ui.auth
 
 import android.content.Context
 import androidx.compose.runtime.Composable
@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.google.firebase.auth.FirebaseAuth
-import com.p56.safereach.navigation.SafeReachApp
+import com.p56.safereach.ui.navigation.SafeReachApp
 
 @Composable
 fun MainScreen(context: Context) {

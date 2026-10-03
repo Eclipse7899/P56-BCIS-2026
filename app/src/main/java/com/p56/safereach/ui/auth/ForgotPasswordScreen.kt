@@ -1,4 +1,4 @@
-package com.p56.safereach.auth
+package com.p56.safereach.ui.auth
 
 import android.content.Context
 import android.widget.Toast
@@ -100,6 +100,14 @@ fun ForgotPasswordScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !loading && email.isNotBlank(),
                 onClick = {
+                    if (!isValidEmail(email)) {
+                        Toast.makeText(
+                            context,
+                            "Please enter a valid email address",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
                     loading = true
                     FirebaseAuth.getInstance()
                         .sendPasswordResetEmail(email.trim())
@@ -108,7 +116,7 @@ fun ForgotPasswordScreen(
                             if (task.isSuccessful) {
                                 Toast.makeText(
                                     context,
-                                    "Password reset link sent",
+                                    "Password reset link sent. Please check your email.",
                                     Toast.LENGTH_LONG
                                 )
                                     .show()

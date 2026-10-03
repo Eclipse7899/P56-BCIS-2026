@@ -1,4 +1,4 @@
-package com.p56.safereach.auth
+package com.p56.safereach.ui.auth
 
 import android.content.Context
 import android.widget.Toast
@@ -44,6 +44,48 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.p56.safereach.R
+import androidx.compose.foundation.layout.Row
+
+@Composable
+private fun PasswordRequirements(password: String) {
+    val hasMinLength = password.length >= 8
+    val hasNumber = password.any{it.isDigit()}
+    val hasCapitalLetter = password.any{it.isUpperCase()}
+    Column(modifier = Modifier.padding(
+        start = 8.dp,
+        top = 4.dp,
+        bottom = 4.dp
+    )){
+        PasswordRequirement(
+            met = hasMinLength,
+            text = "Password must be at least 8 characters"
+        )
+        PasswordRequirement(
+            met = hasNumber,
+            text = "Password must contain a number"
+        )
+        PasswordRequirement(
+            met = hasCapitalLetter,
+            text = "Password must contain a capital letter"
+        )
+    }
+}
+
+@Composable
+private fun PasswordRequirement(
+    met: Boolean,
+    text: String
+){
+    Row{Text(
+        text = if (met) "✓ $text" else "✕ $text",
+        color = if (met){
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.error
+        },
+        fontWeight = FontWeight.Bold
+    )}
+}
 
 @Composable
 fun RegisterScreen(
@@ -57,6 +99,9 @@ fun RegisterScreen(
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var confirmPasswordVisible by rememberSaveable { mutableStateOf(false) }
     var loading by rememberSaveable { mutableStateOf(false) }
+    var emailError by rememberSaveable { mutableStateOf<String?>(null) }
+    var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
     val focusManager = LocalFocusManager.current
     Column(
         modifier = Modifier
@@ -97,17 +142,23 @@ fun RegisterScreen(
         ) {
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it
+                                emailError = null },
                 label = { Text("Email") },
                 placeholder = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                isError = emailError != null,
+                supportingText = {
+                    emailError?.let { Text(it) }
+                }
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it
+                                passwordError = null},
                 label = { Text("Password") },
                 placeholder = { Text("Password") },
                 modifier = Modifier.fillMaxWidth(),
@@ -118,6 +169,10 @@ fun RegisterScreen(
                     PasswordVisualTransformation()
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = passwordError != null,
+                supportingText = {
+                    passwordError?.let { Text(it) }
+                },
                 trailingIcon = {
                     val painter = if (passwordVisible) {
                         painterResource(id = R.drawable.ic_visibility_24px)
@@ -136,10 +191,12 @@ fun RegisterScreen(
                     }
                 }
             )
+            PasswordRequirements(password)
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = { confirmPassword = it
+                                confirmPasswordError = null},
                 label = { Text("Confirm Password") },
                 placeholder = { Text("Confirm Password") },
                 modifier = Modifier.fillMaxWidth(),
@@ -151,6 +208,10 @@ fun RegisterScreen(
                         PasswordVisualTransformation()
                     },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = confirmPasswordError != null,
+                supportingText = {
+                    confirmPasswordError?.let { Text(it) }
+                },
                 trailingIcon = {
                     val painter = if (confirmPasswordVisible) {
                         painterResource(id = R.drawable.ic_visibility_24px)
@@ -171,24 +232,33 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             val buttonDisabled =
-                loading || email.isBlank() || password.isBlank() || confirmPassword.isBlank()
+                loading || email.isBlank() || password.isBlank() || confirmPassword.isBlank() || !isValidPassword(password) || password != confirmPassword
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !buttonDisabled,
                 shape = MaterialTheme.shapes.extraLarge,
                 contentPadding = PaddingValues(vertical = 12.dp),
                 onClick = {
-                    if (password != confirmPassword) {
-                        Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (password.length < 6) {
-                        Toast.makeText(
-                            context,
-                            "Password must be at least 6 characters",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        return@Button
+                    emailError = null
+                    passwordError = null
+                    confirmPasswordError = null
+                    when{
+                        !isValidEmail(email) -> {
+                            emailError = "Please enter a valid email address."
+                            return@Button
+                        }
+                        !isValidPassword(password) -> {
+                            passwordError = "Password must meet all the requirements."
+                            return@Button
+                        }
+                        confirmPassword.isBlank() -> {
+                            confirmPasswordError = "Please confirm your password."
+                            return@Button
+                        }
+                        password != confirmPassword -> {
+                            confirmPasswordError = "Passwords do not match."
+                            return@Button
+                        }
                     }
                     loading = true
                     val auth = FirebaseAuth.getInstance()
@@ -235,15 +305,15 @@ fun RegisterScreen(
                 onClick = { onBackToSignIn() })
             {
                 Text(
-                    text = "Already have an profile? Sign In"
+                    text = "Already have a profile? Sign In"
                 )
             }
         }
     }
 }
 
-@Composable
 @Preview(showBackground = true)
+@Composable
 fun RegisterScreenPreview() {
     RegisterScreen(
         context = LocalContext.current,
