@@ -30,7 +30,7 @@ import com.p56.safereach.ui.theme.ThemePreferences
 
 @Composable
 fun PreferencesScreen() {
-    var notificationsEnabled by rememberSaveable { mutableStateOf(true) }
+    val notificationsEnabled by NotificationPreferences.notificationsEnabled.collectAsStateWithLifecycle()
     val darkMode by ThemePreferences.darkMode.collectAsStateWithLifecycle()
     Column(modifier = Modifier.padding(24.dp)) {
         Text(
@@ -62,8 +62,7 @@ fun PreferencesScreen() {
             Switch(
                 checked = notificationsEnabled,
                 onCheckedChange = {
-                    notificationsEnabled = it
-                    // TODO - Connect to the app's notification system.
+                    NotificationPreferences.setNotificationsEnabled(it)
                 }
             )
         }

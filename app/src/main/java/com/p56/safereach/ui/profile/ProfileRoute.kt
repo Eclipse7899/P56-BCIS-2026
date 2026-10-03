@@ -290,44 +290,47 @@ private fun OfflineAreaPicker(
                 )
             }
         }
-        Card(
+        Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(12.dp)
-                .fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                .align(Alignment.BottomCenter)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ){
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
             ) {
-                Text(
-                    text = "Set offline area",
-                    style = MaterialTheme.typography.titleSmall
+                OfflineAreaSummary(
+                    state = state,
+                    modifier = Modifier.padding(12.dp)
                 )
-                Text(
-                    text = "Pan and zoom to frame the area to keep offline.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onConfirm) {
-                        Text("Done")
-                    }
-                    TextButton(onClick = onCancel) {
-                        Text("Cancel")
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Set offline area",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = "Pan and zoom to frame the area to keep offline.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onConfirm) {
+                            Text("Done")
+                        }
+                        TextButton(onClick = onCancel) {
+                            Text("Cancel")
+                        }
                     }
                 }
             }
-        }
-        Card(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(12.dp)
-                .fillMaxWidth()
-        ) {
-            OfflineAreaSummary(
-                state = state,
-                modifier = Modifier.padding(12.dp)
-            )
         }
     }
 }
