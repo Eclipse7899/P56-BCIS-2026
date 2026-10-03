@@ -1,4 +1,4 @@
-package com.p56.safereach.debug
+package com.p56.safereach.ui.debug
 
 import android.util.Log
 import androidx.lifecycle.ViewModel

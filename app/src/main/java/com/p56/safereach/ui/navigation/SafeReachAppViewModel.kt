@@ -1,4 +1,4 @@
-package com.p56.safereach.navigation
+package com.p56.safereach.ui.navigation
 
 import androidx.lifecycle.ViewModel
 import com.p56.safereach.mesh.ble.fsm.BleState

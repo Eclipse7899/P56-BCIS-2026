@@ -13,7 +13,7 @@ import com.p56.safereach.model.Alert
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import com.p56.safereach.profile.NotificationPreferences
+import com.p56.safereach.ui.profile.NotificationPreferences
 
 @Singleton
 class AlertNotifier @Inject constructor(

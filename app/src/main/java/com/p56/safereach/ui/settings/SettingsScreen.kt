@@ -1,4 +1,4 @@
-package com.p56.safereach.settings
+package com.p56.safereach.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,11 +30,11 @@ import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.MapboxMap
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.toCameraOptions
-import com.p56.safereach.home.MapCameraPreferences
-import com.p56.safereach.map.OfflineAreaSummary
-import com.p56.safereach.map.OfflineRegionPanel
-import com.p56.safereach.map.OfflineRegionUiState
-import com.p56.safereach.map.OfflineRegionViewModel
+import com.p56.safereach.ui.home.MapCameraPreferences
+import com.p56.safereach.ui.map.OfflineAreaSummary
+import com.p56.safereach.ui.map.OfflineRegionPanel
+import com.p56.safereach.ui.map.OfflineRegionUiState
+import com.p56.safereach.ui.map.OfflineRegionViewModel
 
 private const val MIN_SELECTION_ZOOM = 11.0
 

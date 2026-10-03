@@ -1,4 +1,4 @@
-package com.p56.safereach.alert
+package com.p56.safereach.ui.alert
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

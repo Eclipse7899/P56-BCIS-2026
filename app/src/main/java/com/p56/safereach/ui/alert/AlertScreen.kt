@@ -1,4 +1,4 @@
-package com.p56.safereach.alert
+package com.p56.safereach.ui.alert
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,9 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.p56.safereach.model.Alert
-import com.p56.safereach.model.AlertType
-import com.p56.safereach.model.LatLong
-import com.p56.safereach.model.Severity
 import com.p56.safereach.model.Shape
 import com.p56.safereach.ui.theme.SafeReachTheme
 

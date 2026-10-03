@@ -1,4 +1,4 @@
-package com.p56.safereach.profile
+package com.p56.safereach.ui.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

@@ -1,4 +1,4 @@
-package com.p56.safereach.profile
+package com.p56.safereach.ui.profile
 
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable

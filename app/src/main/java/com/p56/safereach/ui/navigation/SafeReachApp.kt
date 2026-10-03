@@ -1,4 +1,4 @@
-package com.p56.safereach.navigation
+package com.p56.safereach.ui.navigation
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -31,16 +31,16 @@ import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
 import com.p56.safereach.android.BatteryOptimizationHelper
 import com.p56.safereach.android.BluetoothHelper
-import com.p56.safereach.debug.DebugRoute
-import com.p56.safereach.debug.DebugViewModel
-import com.p56.safereach.home.HomeRoute
+import com.p56.safereach.ui.debug.DebugRoute
+import com.p56.safereach.ui.debug.DebugViewModel
+import com.p56.safereach.ui.home.HomeRoute
 import com.p56.safereach.mesh.ble.fsm.BleState
-import com.p56.safereach.profile.ProfileRoute
-import com.p56.safereach.settings.SettingsRoute
+import com.p56.safereach.ui.profile.ProfileRoute
+import com.p56.safereach.ui.settings.SettingsRoute
 import com.p56.safereach.ui.BatteryOptimizationBanner
 import com.p56.safereach.ui.BluetoothDisabledBanner
 import com.p56.safereach.ui.theme.SafeReachTheme
-import com.p56.safereach.alert.AlertHistoryRoute
+import com.p56.safereach.ui.alert.AlertHistoryRoute
 
 @Composable
 fun SafeReachApp() {

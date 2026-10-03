@@ -1,4 +1,4 @@
-package com.p56.safereach.home
+package com.p56.safereach.ui.home
 
 import android.content.Context
 import androidx.core.content.edit

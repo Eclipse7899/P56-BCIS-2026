@@ -1,4 +1,4 @@
-package com.p56.safereach.profile
+package com.p56.safereach.ui.profile
 
 import android.content.Context
 

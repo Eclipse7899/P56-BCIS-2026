@@ -1,4 +1,4 @@
-package com.p56.safereach.auth
+package com.p56.safereach.ui.auth
 
 import android.content.Context
 import android.widget.Toast

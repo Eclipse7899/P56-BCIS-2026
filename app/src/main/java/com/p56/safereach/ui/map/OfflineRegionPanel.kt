@@ -1,4 +1,4 @@
-package com.p56.safereach.map
+package com.p56.safereach.ui.map
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

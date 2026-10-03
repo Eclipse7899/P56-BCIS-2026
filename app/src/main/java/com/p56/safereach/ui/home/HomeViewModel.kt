@@ -1,4 +1,4 @@
-package com.p56.safereach.alert
+package com.p56.safereach.ui.home
 
 import androidx.lifecycle.ViewModel
 import com.p56.safereach.model.Alert
@@ -8,9 +8,9 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 
 @HiltViewModel
-class AlertHistoryViewModel @Inject constructor(
-    alertRepository: AlertRepository
+class HomeViewModel @Inject constructor(
+    alertRepository: AlertRepository,
 ) : ViewModel() {
 
-    val alerts: StateFlow<List<Alert>> = alertRepository.allAlerts
+    val activeAlerts: StateFlow<List<Alert>> = alertRepository.activeAlerts
 }

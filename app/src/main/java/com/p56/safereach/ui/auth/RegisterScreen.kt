@@ -1,4 +1,4 @@
-package com.p56.safereach.auth
+package com.p56.safereach.ui.auth
 
 import android.content.Context
 import android.widget.Toast
@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.p56.safereach.R
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Text
 
 @Composable
 private fun PasswordRequirements(password: String) {
