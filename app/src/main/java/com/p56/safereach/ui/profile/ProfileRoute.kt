@@ -215,7 +215,7 @@ fun ProfileContent(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "Settings",
+            text = "Offline Maps",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
