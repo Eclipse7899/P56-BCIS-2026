@@ -65,7 +65,7 @@ The app is built around a Compose UI layer, state holders, and background servic
 
 - `MainActivity` starts the app and ensures the BLE mesh service is running.
 - `SafeReachApp` hosts the top-level navigation and screen switching.
-- `HomeRoute`/`HomeScreen`, `ProfileRoute`, `SettingsRoute`, and `DebugRoute`/`DebugScreen` render the main UI.
+- `HomeRoute`/`HomeScreen`, `ProfileRoute` (profile, preferences, and offline settings), and `DebugRoute`/`DebugScreen` render the main UI.
 - `DebugViewModel` owns debug screen state and exposes the current mesh/alert state.
 - `AlertRepository` stores the current signed message and the active alerts (backed by Room).
 - `MeshStatusStore` tracks the mesh service and subsystem states.

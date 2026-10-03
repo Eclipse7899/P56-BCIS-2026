@@ -31,16 +31,15 @@ import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
 import com.p56.safereach.android.BatteryOptimizationHelper
 import com.p56.safereach.android.BluetoothHelper
+import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.ui.BatteryOptimizationBanner
+import com.p56.safereach.ui.BluetoothDisabledBanner
+import com.p56.safereach.ui.alert.AlertHistoryRoute
 import com.p56.safereach.ui.debug.DebugRoute
 import com.p56.safereach.ui.debug.DebugViewModel
 import com.p56.safereach.ui.home.HomeRoute
-import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.ui.profile.ProfileRoute
-import com.p56.safereach.ui.settings.SettingsRoute
-import com.p56.safereach.ui.BatteryOptimizationBanner
-import com.p56.safereach.ui.BluetoothDisabledBanner
 import com.p56.safereach.ui.theme.SafeReachTheme
-import com.p56.safereach.ui.alert.AlertHistoryRoute
 
 @Composable
 fun SafeReachApp() {
@@ -131,7 +130,6 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                     AppDestinations.HOME -> HomeRoute()
                     AppDestinations.ALERTS -> AlertHistoryRoute()
                     AppDestinations.PROFILE -> ProfileRoute()
-                    AppDestinations.SETTINGS -> SettingsRoute()
                     AppDestinations.DEBUG -> {
                         val vm = hiltViewModel<DebugViewModel>()
                         DebugRoute(viewModel = vm)
@@ -157,6 +155,5 @@ enum class AppDestinations(
     HOME("Home", R.drawable.ic_home),
     ALERTS("Alerts", R.drawable.ic_warning),
     PROFILE("Profile", R.drawable.ic_account_box),
-    SETTINGS("Settings", R.drawable.ic_settings),
     DEBUG("Debug", R.drawable.ic_debug),
 }

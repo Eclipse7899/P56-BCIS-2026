@@ -1,18 +1,26 @@
 package com.p56.safereach.ui.home
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -40,15 +48,6 @@ import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityMedium
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityHigh
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityLow
 import com.p56.safereach.ui.theme.alertShapeFillColorSeverityMedium
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.font.FontWeight
 
 
 @Composable
@@ -61,9 +60,8 @@ fun HomeRoute(viewModel: HomeViewModel = hiltViewModel()) {
 fun HomeScreen(
     alerts: List<Alert>,
 ) {
-    val context = LocalContext.current
     val mapViewportState = rememberMapViewportState {
-        MapCameraPreferences.getSavedCameraOptions(context)?.let { cameraOptions ->
+        MapCameraPreferences.getSavedCameraOptions()?.let { cameraOptions ->
             setCameraOptions(cameraOptions)
         }
     }
@@ -72,7 +70,6 @@ fun HomeScreen(
         val camera = mapViewportState.cameraState ?: return@LaunchedEffect
         val center = camera.center
         MapCameraPreferences.saveCameraPosition(
-            context = context,
             latitude = center.latitude(),
             longitude = center.longitude(),
             zoom = camera.zoom,
@@ -86,7 +83,6 @@ fun HomeScreen(
             val camera = mapViewportState.cameraState ?: return@onDispose
             val center = camera.center
             MapCameraPreferences.saveCameraPosition(
-                context = context,
                 latitude = center.latitude(),
                 longitude = center.longitude(),
                 zoom = camera.zoom,

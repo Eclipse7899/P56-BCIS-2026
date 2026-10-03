@@ -10,10 +10,10 @@ import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.MainActivity
 import com.p56.safereach.R
 import com.p56.safereach.model.Alert
+import com.p56.safereach.ui.profile.NotificationPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import com.p56.safereach.ui.profile.NotificationPreferences
 
 @Singleton
 class AlertNotifier @Inject constructor(
@@ -21,7 +21,7 @@ class AlertNotifier @Inject constructor(
 ) {
 
     fun notify(alert: Alert) {
-        if (!NotificationPreferences.areNotificationsEnabled(context)) {
+        if (!NotificationPreferences.areNotificationsEnabled()) {
             return
         }
 
