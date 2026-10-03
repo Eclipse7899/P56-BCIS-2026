@@ -51,7 +51,7 @@ import com.p56.safereach.ui.theme.ThemePreferences
 private const val MIN_SELECTION_ZOOM = 11.0
 
 @Composable
-fun ProfileRoute(viewModel: OfflineRegionViewModel = hiltViewModel()) {
+fun ProfileScreen(viewModel: OfflineRegionViewModel = hiltViewModel()) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val email = currentUser?.email ?: "Email"
     val username = currentUser?.email

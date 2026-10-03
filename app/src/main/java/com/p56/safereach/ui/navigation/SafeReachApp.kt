@@ -38,7 +38,7 @@ import com.p56.safereach.ui.alert.AlertHistoryRoute
 import com.p56.safereach.ui.debug.DebugRoute
 import com.p56.safereach.ui.debug.DebugViewModel
 import com.p56.safereach.ui.home.HomeRoute
-import com.p56.safereach.ui.profile.ProfileRoute
+import com.p56.safereach.ui.profile.ProfileScreen
 import com.p56.safereach.ui.theme.SafeReachTheme
 
 @Composable
@@ -129,7 +129,7 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                 when (currentDestination) {
                     AppDestinations.HOME -> HomeRoute()
                     AppDestinations.ALERTS -> AlertHistoryRoute()
-                    AppDestinations.PROFILE -> ProfileRoute()
+                    AppDestinations.PROFILE -> ProfileScreen()
                     AppDestinations.DEBUG -> {
                         val vm = hiltViewModel<DebugViewModel>()
                         DebugRoute(viewModel = vm)
