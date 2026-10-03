@@ -91,7 +91,7 @@ fun AlertHistoryScreen(
             ) {
                 items(
                     items = alerts,
-                    key = { alert -> alert.id}) {alert -> PreviousAlertCard(alert = alert)
+                    key = { alert -> alert.id}) {alert -> AlertCard(alert = alert)
                 }
             }
         }
@@ -99,7 +99,7 @@ fun AlertHistoryScreen(
 }
 
 @Composable
-private fun PreviousAlertCard(
+fun AlertCard(
     alert: Alert
 ) {
     val accentColor = severityColor(alert.severity)
@@ -259,14 +259,14 @@ fun AlertHistoryScreenPreview(){
 
 @Preview(showBackground = true)
 @Composable
-private fun PreviousAlertCardPreview() {
+private fun AlertCardPreview() {
     val now = System.currentTimeMillis()
     SafeReachTheme {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            PreviousAlertCard(
+            AlertCard(
                 alert = Alert(
                     id = "1",
                     timestamp = now - 45 * 60_000,
@@ -281,7 +281,7 @@ private fun PreviousAlertCardPreview() {
                     invalidated = false
                 )
             )
-            PreviousAlertCard(
+            AlertCard(
                 alert = Alert(
                     id = "2",
                     timestamp = now - 5 * 3_600_000,
@@ -296,7 +296,7 @@ private fun PreviousAlertCardPreview() {
                     invalidated = false
                 )
             )
-            PreviousAlertCard(
+            AlertCard(
                 alert = Alert(
                     id = "3",
                     timestamp = now - 32 * 86_400_000,
