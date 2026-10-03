@@ -22,7 +22,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.model.Alert
-import java.text.SimpleDateFormat
+import java.text.DateFormat.getDateInstance
 import java.util.Date
 
 @Composable
@@ -82,9 +82,7 @@ fun AlertHistoryScreen(
 private fun PreviousAlertCard(
     alert: Alert
 ) {
-    val formattedTime = SimpleDateFormat(
-        "dd/MM/yyyy HH:mm"
-    ).format(Date(alert.timestamp))
+    val formattedTime = getDateInstance().format(Date(alert.timestamp))
     Card(
         modifier = Modifier.fillMaxWidth()
     ){

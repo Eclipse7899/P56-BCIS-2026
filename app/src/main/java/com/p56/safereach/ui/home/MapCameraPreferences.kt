@@ -32,11 +32,6 @@ object MapCameraPreferences {
             }
     }
 
-    fun hasSavedPosition(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.contains(KEY_LAT) && prefs.contains(KEY_LON)
-    }
-
     fun getSavedCameraOptions(context: Context): CameraOptions? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         if (!prefs.contains(KEY_LAT) || !prefs.contains(KEY_LON)) {

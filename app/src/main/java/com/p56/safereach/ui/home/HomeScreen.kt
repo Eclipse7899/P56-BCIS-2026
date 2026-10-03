@@ -60,7 +60,6 @@ fun HomeRoute(viewModel: HomeViewModel = hiltViewModel()) {
 @Composable
 fun HomeScreen(
     alerts: List<Alert>,
-    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val mapViewportState = rememberMapViewportState {
@@ -172,7 +171,7 @@ fun HomeScreen(
 @Composable
 private fun ActiveAlertCard(
     alert: Alert,
-    modifier: Modifier = Modifier
+    modifier: Modifier
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {

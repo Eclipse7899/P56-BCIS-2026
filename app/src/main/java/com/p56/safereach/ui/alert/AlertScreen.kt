@@ -22,7 +22,6 @@ import com.p56.safereach.ui.theme.SafeReachTheme
 @Composable
 fun AlertScreen(
     alert: Alert? = null,
-    modifier: Modifier = Modifier
 ) {
     Column(modifier = Modifier.fillMaxSize()
         .padding(16.dp),

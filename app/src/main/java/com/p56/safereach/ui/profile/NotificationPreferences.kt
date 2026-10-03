@@ -1,6 +1,7 @@
 package com.p56.safereach.ui.profile
 
 import android.content.Context
+import androidx.core.content.edit
 
 object NotificationPreferences {
 
@@ -27,8 +28,8 @@ object NotificationPreferences {
             PREFS_NAME,
             Context.MODE_PRIVATE
         )
-        preferences.edit()
-            .putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled)
-            .apply()
+        preferences.edit {
+            putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled)
+        }
     }
 }
