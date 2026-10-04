@@ -5,13 +5,13 @@
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
-        "venv",
+        "node_modules",
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
       ],
-      "runtime": "python314"
+      "runtime": "nodejs24"
     }
   ]
 }

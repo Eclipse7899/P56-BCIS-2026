@@ -128,6 +128,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore) { exclude(group = "com.google.firebase", module = "protolite-well-known-types")
+    }
     implementation(libs.mapbox.sdk)
     implementation(libs.mapbox.compose)
     implementation(libs.mapbox.turf)
