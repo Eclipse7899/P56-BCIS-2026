@@ -1,18 +1,24 @@
-const {onDocumentCreated} = require("firebase-functions/v2/firestore");
-const {getMessaging} = require("firebase-admin/messaging");
-const {region} = require("./region");
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {getMessaging, Message} from "firebase-admin/messaging";
+import {region} from "../region";
 
-module.exports = onDocumentCreated(
+interface AlertRecord {
+  title?: string;
+  description?: string;
+  severity?: string;
+}
+
+export const onAlertCreated = onDocumentCreated(
   {
     document: "alerts/{alertId}",
-    region: region,
+    region,
     database: "default",
   },
   async (event) => {
-    const alert = event.data.data();
+    const alert = (event.data?.data() ?? {}) as AlertRecord;
     const alertId = event.params.alertId;
 
-    const message = {
+    const message: Message = {
       notification: {
         title: alert.title || "New Alert",
         body: alert.description || "",

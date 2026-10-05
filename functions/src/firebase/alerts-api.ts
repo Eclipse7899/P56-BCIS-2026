@@ -1,13 +1,13 @@
-const {onRequest} = require("firebase-functions/v2/https");
-const {db} = require("./init");
-const {region} = require("./region");
+import {onRequest} from "firebase-functions/v2/https";
+import {db} from "../db";
+import {region} from "../region";
 
-module.exports = onRequest({region: region}, async (req, res) => {
+export const alertsApi = onRequest({region}, async (req, res) => {
   if (req.method === "GET" && req.path === "/alerts") {
-    const requestedCount = parseInt(req.query.count, 10);
-    const count = Number.isInteger(requestedCount)
-      ? Math.min(Math.max(requestedCount, 1), 100)
-      : 50;
+    const requestedCount = parseInt(String(req.query.count), 10);
+    const count = Number.isInteger(requestedCount) ?
+      Math.min(Math.max(requestedCount, 1), 100) :
+      50;
 
     const snapshot = await db
       .collection("alerts")
