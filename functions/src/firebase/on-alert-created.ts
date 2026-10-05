@@ -1,30 +1,26 @@
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {getMessaging, Message} from "firebase-admin/messaging";
-import {region} from "../region";
 import {defineString} from "firebase-functions/params";
 import {createPrivateKey, sign} from "crypto";
 import {AlertDto, MessageDataDto, SignedMessageDto} from "../models";
-import {alertDocSchema} from "../alert-schema";
+import {alertFromFirestore} from "../alert-schema";
 
 const signingKey = defineString("SIGNING_KEY");
-
-const privateKey = createPrivateKey({
-  key: signingKey.value(),
-  format: "pem",
-});
 
 export const onAlertCreated = onDocumentCreated(
   {
     document: "alerts/{alertId}",
-    region: region.value(),
+    region: "australia-southeast1",
     database: "default",
   },
   async (event) => {
-    const alertId = event.params.alertId;
-    const alert = alertDocSchema.parse({
-      ...(event.data?.data() ?? {}),
-      id: alertId,
+    const privateKey = createPrivateKey({
+      key: signingKey.value(),
+      format: "pem",
     });
+
+    const alertId = event.params.alertId;
+    const alert = alertFromFirestore(event.data?.data() ?? {}, alertId);
 
     const alertDto = AlertDto.fromJson(alert);
     const messageDataDto: MessageDataDto = {
