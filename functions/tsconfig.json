@@ -6,7 +6,7 @@
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "outDir": "lib",
-    "rootDir": "src",
+    "rootDir": ".",
     "sourceMap": true,
     "strict": true,
     "target": "es2017"
