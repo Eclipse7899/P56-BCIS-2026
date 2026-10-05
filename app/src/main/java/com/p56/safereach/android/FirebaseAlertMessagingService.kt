@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import okio.ByteString.Companion.decodeBase64
 
 private const val TAG = "FirebaseAlertService"
 
@@ -50,7 +51,16 @@ class FirebaseAlertMessagingService : FirebaseMessagingService() {
     ) {
         remoteMessage.data[ALERT_TOPIC]?.let { encoded ->
             try {
-                val dto = SignedMessageDto.parseFrom(encoded.hexToByteArray())
+                Log.d(TAG, "Received alert: $encoded")
+                val decoded = encoded.decodeBase64()
+                if (decoded == null) {
+                    Log.w(
+                        TAG,
+                        "Failed to decode incoming alert - invalid base64 string"
+                    )
+                    return
+                }
+                val dto = SignedMessageDto.parseFrom(decoded.asByteBuffer())
                 val signed = dto.toDomain("Firebase", System.currentTimeMillis())
                 serviceScope.launch {
                     alertRepository.addSigned(signed)
