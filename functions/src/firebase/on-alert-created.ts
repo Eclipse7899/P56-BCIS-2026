@@ -1,31 +1,55 @@
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {getMessaging, Message} from "firebase-admin/messaging";
 import {region} from "../region";
+import {defineString} from "firebase-functions/params";
+import {createPrivateKey, sign} from "crypto";
+import {AlertDto, MessageDataDto, SignedMessageDto} from "../models";
+import {alertDocSchema} from "../alert-schema";
 
-interface AlertRecord {
-  title?: string;
-  description?: string;
-  severity?: string;
-}
+const signingKey = defineString("SIGNING_KEY");
+
+const privateKey = createPrivateKey({
+  key: signingKey.value(),
+  format: "pem",
+});
 
 export const onAlertCreated = onDocumentCreated(
   {
     document: "alerts/{alertId}",
-    region,
+    region: region.value(),
     database: "default",
   },
   async (event) => {
-    const alert = (event.data?.data() ?? {}) as AlertRecord;
     const alertId = event.params.alertId;
+    const alert = alertDocSchema.parse({
+      ...(event.data?.data() ?? {}),
+      id: alertId,
+    });
+
+    const alertDto = AlertDto.fromJson(alert);
+    const messageDataDto: MessageDataDto = {
+      msg: [alertDto],
+      validUntil: alertDto.expiresAt,
+      timestamp: BigInt(Date.now()),
+    };
+
+    const serializedAlert = MessageDataDto.toBinary(messageDataDto);
+    const alertSignature = sign(undefined, serializedAlert, privateKey);
+
+    const signed: SignedMessageDto = {
+      data: serializedAlert,
+      signature: alertSignature,
+    };
+
+    const serializedMessage = SignedMessageDto.toBinary(signed);
+    const base64 = Buffer.from(serializedMessage).toString("base64");
 
     const message: Message = {
-      notification: {
-        title: alert.title || "New Alert",
-        body: alert.description || "",
+      android: {
+        priority: "high",
       },
       data: {
-        alertId: alertId,
-        severity: alert.severity || "",
+        alerts: base64,
       },
       topic: "alerts",
     };
