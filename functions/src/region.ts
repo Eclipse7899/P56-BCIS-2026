@@ -1,3 +1,3 @@
-import { defineString } from "firebase-functions/params";
+import {defineString} from "firebase-functions/params";
 
-export const region = defineString('DEFAULT_REGION');
+export const region = defineString("DEFAULT_REGION");
