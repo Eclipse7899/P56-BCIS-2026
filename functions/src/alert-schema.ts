@@ -1,3 +1,4 @@
+import {Timestamp} from "firebase-admin/firestore";
 import {z} from "zod";
 import {AlertTypeDto, SeverityDto} from "./models";
 
@@ -40,3 +41,39 @@ export const alertDocSchema = z.strictObject({
 });
 
 export type AlertDoc = z.infer<typeof alertDocSchema>;
+
+function toEpochMillis(value: unknown, field: string): number {
+  if (value instanceof Timestamp) {
+    return value.toMillis();
+  }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  throw new Error(
+    `Expected a Firestore Timestamp or epoch millis for "${field}"`
+  );
+}
+
+export function alertFromFirestore(
+  data: Record<string, unknown>,
+  id: string
+): AlertDoc {
+  return alertDocSchema.parse({
+    ...data,
+    id,
+    timestamp: toEpochMillis(data.timestamp, "timestamp"),
+    version: toEpochMillis(data.version, "version"),
+    expiresAt: toEpochMillis(data.expiresAt, "expiresAt"),
+  });
+}
+
+export function alertToFirestore(alert: AlertDoc): Record<string, unknown> {
+  return {
+    ...alert,
+    timestamp: Timestamp.fromMillis(alert.timestamp),
+    expiresAt: Timestamp.fromMillis(alert.expiresAt),
+  };
+}

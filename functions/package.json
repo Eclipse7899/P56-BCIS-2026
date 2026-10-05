@@ -16,6 +16,7 @@
   },
   "main": "lib/src/index.js",
   "dependencies": {
+    "@protobuf-ts/runtime": "^2.11.1",
     "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.0",
     "protobufjs": "^8.8.0",

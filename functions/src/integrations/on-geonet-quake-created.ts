@@ -1,17 +1,8 @@
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {db} from "../db";
-import {region} from "../region";
-import {AlertDoc, alertDocSchema} from "../alert-schema";
+import {AlertDoc, alertDocSchema, alertToFirestore} from "../alert-schema";
+import {geonetDocSchema} from "../geonet-schema";
 import {AlertTypeDto, SeverityDto} from "../models";
-
-interface GeonetRecord {
-  magnitude: number | string;
-  depth: number | string;
-  locality: string;
-  latitude: number | string;
-  longitude: number | string;
-  time: string;
-}
 
 const locationPrefix = /^\d+\s*km\s+\w+\s+of\s+/i;
 
@@ -34,23 +25,20 @@ function radiusMetresForMagnitude(magnitude: number): number {
 export const onGeonetQuakeCreated = onDocumentCreated(
   {
     document: "geonet/{geonetId}",
-    region: region.value(),
+    region: "australia-southeast1",
     database: "default",
   },
   async (event) => {
-    const geonet = event.data?.data() as GeonetRecord | undefined;
+    const geonet = geonetDocSchema.parse(event.data?.data() ?? {});
     const geonetId = event.params.geonetId;
 
-    if (!geonet) {
-      return;
-    }
-
-    const magnitude = Number(geonet.magnitude);
-    const depth = Math.round(Number(geonet.depth));
-    const place = String(geonet.locality).replace(locationPrefix, "");
-    const description =
-      `M ${magnitude.toFixed(1)} earthquake ${depth}km deep near ${place}`;
-    const timestamp = new Date(geonet.time).getTime();
+    const magnitude = geonet.magnitude;
+    const depth = Math.round(geonet.depth);
+    const place = geonet.locality?.replace(locationPrefix, "");
+    const description = place ?
+      `M ${magnitude.toFixed(1)} earthquake ${depth}km deep near ${place}` :
+      `M ${magnitude.toFixed(1)} earthquake ${depth}km deep`;
+    const timestamp = geonet.time;
 
     const alert: AlertDoc = alertDocSchema.parse({
       id: geonetId,
@@ -62,8 +50,8 @@ export const onGeonetQuakeCreated = onDocumentCreated(
       shape: {
         circle: {
           center: {
-            latitude: Number(geonet.latitude),
-            longitude: Number(geonet.longitude),
+            latitude: geonet.latitude,
+            longitude: geonet.longitude,
           },
           radius: radiusMetresForMagnitude(magnitude),
         },
@@ -73,7 +61,10 @@ export const onGeonetQuakeCreated = onDocumentCreated(
       invalidated: false,
     });
 
-    await db.collection("alerts").doc(geonetId).set(alert);
+    await db
+      .collection("alerts")
+      .doc(geonetId)
+      .set(alertToFirestore(alert));
     console.log(`Created alert for GeoNet event ${geonetId}`);
   }
 );

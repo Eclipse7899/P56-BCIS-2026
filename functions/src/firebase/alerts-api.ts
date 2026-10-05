@@ -1,10 +1,9 @@
 import {onRequest} from "firebase-functions/v2/https";
 import {db} from "../db";
-import {region} from "../region";
-import {alertDocSchema} from "../alert-schema";
+import {alertFromFirestore} from "../alert-schema";
 
 export const alertsApi = onRequest(
-  {region: region.value()},
+  {region: "australia-southeast1"},
   async (req, res) => {
     if (req.method === "GET" && req.path === "/alerts") {
       const requestedCount = parseInt(String(req.query.count), 10);
@@ -19,7 +18,7 @@ export const alertsApi = onRequest(
         .get();
 
       const messages = snapshot.docs.map(
-        (doc) => alertDocSchema.parse({...doc.data(), id: doc.id})
+        (doc) => alertFromFirestore(doc.data(), doc.id)
       );
 
       res.json({messages});
