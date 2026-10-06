@@ -3,8 +3,21 @@ name: Dev Branch Pull Request Check
 on:
   push:
     branches: [ "development" ]
+    paths-ignore:
+      - '.idea/**'
+      - '**/*.md'
+      - 'functions/**'
+      - 'firebase.json'
+      - '.firebaserc'
   pull_request:
     branches: [ "development" ]
+    paths-ignore:
+      - '.idea/**'
+      - '**/*.md'
+      - 'functions/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/firebase.yml'
   workflow_dispatch:
 
 jobs:
