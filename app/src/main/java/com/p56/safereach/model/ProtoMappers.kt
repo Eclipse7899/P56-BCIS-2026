@@ -8,19 +8,19 @@ import com.p56.safereach.proto.ShapeDto
 import com.p56.safereach.proto.SignedMessageDto
 
 fun LatLongDto.toDomain(): LatLong = LatLong(
-    latitude = latitude,
-    longitude = longitude,
+    latitude = latitude.toDouble(),
+    longitude = longitude.toDouble(),
 )
 
 fun LatLong.toDto(): LatLongDto = LatLongDto.newBuilder()
-    .setLatitude(latitude)
-    .setLongitude(longitude)
+    .setLatitude(latitude.toFloat())
+    .setLongitude(longitude.toFloat())
     .build()
 
 fun ShapeDto.toDomain(): Shape? = when (kindCase) {
     ShapeDto.KindCase.CIRCLE -> Shape.Circle(
         center = circle.center.toDomain(),
-        radius = circle.radius,
+        radius = circle.radius.toDouble(),
     )
 
     ShapeDto.KindCase.POLYGON -> Shape.Polygon(
@@ -36,7 +36,7 @@ fun Shape.toDto(): ShapeDto {
         is Shape.Circle -> builder.setCircle(
             ShapeDto.CircleDto.newBuilder()
                 .setCenter(center.toDto())
-                .setRadius(radius)
+                .setRadius(radius.toFloat())
                 .build()
         )
 

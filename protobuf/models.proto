@@ -6,8 +6,8 @@ option java_package = "com.p56.safereach.proto";
 option java_multiple_files = true;
 
 message LatLongDto {
-  double latitude = 1;
-  double longitude = 2;
+  float latitude = 1;
+  float longitude = 2;
 }
 
 message ShapeDto {
@@ -18,7 +18,7 @@ message ShapeDto {
 
   message CircleDto {
     LatLongDto center = 1;
-    double radius = 2;
+    float radius = 2;
   }
 
   message PolygonDto {
