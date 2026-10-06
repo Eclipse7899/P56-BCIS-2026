@@ -21,11 +21,10 @@ import com.p56.safereach.mesh.ble.fsm.BleCommand
 import com.p56.safereach.mesh.ble.fsm.BleState
 import com.p56.safereach.mesh.ble.scanning.BleScanController
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
-import com.p56.safereach.model.toDomain
 import com.p56.safereach.model.toDto
-import com.p56.safereach.proto.SignedMessageDto
 import com.p56.safereach.service.AlertRepository
 import com.p56.safereach.service.MeshStatusStore
+import com.p56.safereach.util.msgFromMesh
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -119,15 +118,15 @@ class MeshForegroundService : Service() {
     private fun observeIncomingData() {
         serviceScope.launch {
             for (packet in BleScanResultQueue.channel) {
-                try {
-                    val dto = SignedMessageDto.parseFrom(packet.payload)
-                    val model = dto.toDomain(packet.receivedFrom, packet.receivedAt)
-                    Log.d(TAG, "Received alert: $model")
-                    alertRepository.addSigned(model)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to decode incoming mesh packet", e)
-                    continue
-                }
+                Log.d(TAG, "Received packet: $packet")
+                msgFromMesh(packet.payload, packet.receivedFrom, packet.receivedAt)
+                    .onFailure {
+                        Log.w(TAG, "Failed to decode incoming mesh packet", it)
+                        continue
+                    }.onSuccess { signedMessage ->
+                        Log.d(TAG, "Decoded incoming mesh packet: $signedMessage")
+                        alertRepository.addSigned(signedMessage)
+                    }
             }
         }
     }

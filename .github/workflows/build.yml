@@ -3,6 +3,12 @@ name: Test and Build main branch
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - '.idea/**'
+      - '**/*.md'
+      - 'functions/**'
+      - 'firebase.json'
+      - '.firebaserc'
   workflow_dispatch:
 
 jobs:
