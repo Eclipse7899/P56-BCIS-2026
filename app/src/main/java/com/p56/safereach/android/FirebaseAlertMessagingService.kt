@@ -5,16 +5,14 @@ import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.p56.safereach.model.toDomain
-import com.p56.safereach.proto.SignedMessageDto
 import com.p56.safereach.service.AlertRepository
+import com.p56.safereach.util.msgFromFirebase
 import dagger.hilt.android.AndroidEntryPoint
 import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import okio.ByteString.Companion.decodeBase64
 
 private const val TAG = "FirebaseAlertService"
 
@@ -49,29 +47,20 @@ class FirebaseAlertMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(
         remoteMessage: RemoteMessage
     ) {
-        remoteMessage.data[ALERT_TOPIC]?.let { encoded ->
-            try {
-                Log.d(TAG, "Received alert: $encoded")
-                val decoded = encoded.decodeBase64()
-                if (decoded == null) {
+        remoteMessage.data[ALERT_TOPIC]?.let { data ->
+            Log.d(TAG, "Received alert: $data")
+            msgFromFirebase(data)
+                .onFailure {
                     Log.w(
                         TAG,
-                        "Failed to decode incoming alert - invalid base64 string"
+                        "Failed to decode incoming alert - invalid base64 string",
+                        it
                     )
-                    return
+                }.onSuccess { signedMessage ->
+                    serviceScope.launch {
+                        alertRepository.addSigned(signedMessage)
+                    }
                 }
-                val dto = SignedMessageDto.parseFrom(decoded.asByteBuffer())
-                val signed = dto.toDomain("Firebase", System.currentTimeMillis())
-                serviceScope.launch {
-                    alertRepository.addSigned(signed)
-                }
-            } catch (e: IllegalArgumentException) {
-                Log.w(
-                    TAG,
-                    "Failed to decode incoming alert - invalid hex string",
-                    e
-                )
-            }
         }
     }
 }
