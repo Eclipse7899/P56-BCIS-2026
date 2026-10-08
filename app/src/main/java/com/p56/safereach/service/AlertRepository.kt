@@ -93,6 +93,10 @@ class AlertRepository @Inject constructor(
         }
     }
 
+    suspend fun syncAlerts(alerts: List<Alert>) {
+        alerts.forEach { addAlert(it) }
+    }
+
     private suspend fun addAlert(alert: Alert) {
         Log.d(TAG, "Upserting alert: ${alert.id}")
         val result = database.alertDao().upsertIfNewer(alert.toEntity())

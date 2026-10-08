@@ -56,7 +56,7 @@ cd P56-BCIS-2026
 - **Language:** Kotlin
 - **UI Framework:** Jetpack Compose + Material 3
 - **Architecture:** Compose UI with ViewModels, repositories, and Hilt
-- **Realtime communication:** Firebase Cloud Messaging and BLE mesh service
+- **Realtime communication:** Firebase Cloud Messaging, the alerts HTTP API, and the BLE mesh service
 - **Mapping:** Mapbox SDK + Compose map extension
 
 ## Current architecture summary
@@ -71,6 +71,7 @@ The app is built around a Compose UI layer, state holders, and background servic
 - `MeshStatusStore` tracks the mesh service and subsystem states.
 - `MeshForegroundService` receives and advertises mesh messages and updates `MeshStatusStore`.
 - `FirebaseAlertMessagingService` decodes incoming Firebase alerts and stores them through the same `AlertRepository` path.
+- `AlertSyncManager` pulls alerts from the `alertsApi` Cloud Function on app launch and applies them through `AlertRepository`.
 
 ## Contributing
 

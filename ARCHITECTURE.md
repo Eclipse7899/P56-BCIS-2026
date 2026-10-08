@@ -7,9 +7,12 @@ start with the diagrams, then use the file map and invariants when changing code
 ## System scope
 
 SafeReach is an Android application for receiving and displaying disaster alerts. It has
-two alert ingress paths:
+three alert ingress paths:
 
-* **Firebase Cloud Messaging (FCM):** an Internet-connected fallback or origin path.
+* **Firebase Cloud Messaging (FCM):** an Internet-connected push path for newly signed
+  alerts.
+* **Alerts HTTP API:** an Internet-connected pull path that bootstraps the local database on
+  launch from the `alertsApi` Cloud Function.
 * **Bluetooth Low Energy (BLE):** the local, store-and-forward mesh path between nearby
   Android devices.
 
@@ -22,12 +25,17 @@ implemented.
 
 ```text
                              Internet
-                                |
-                        Firebase Cloud Messaging
-                                |
-              FirebaseAlertMessagingService (Android service)
-                                |
-                                v
+                         +-------+--------+
+                         |                |
+                 Firebase Cloud     Alerts HTTP API
+                   Messaging      (alertsApi function)
+                         |                |
+              FirebaseAlert   AlertSyncManager
+             MessagingService  (runs on app launch)
+                         |                |
+                         +-------+--------+
+                                 |
+                                 v
                      AlertRepository (StateFlow + Room)
                                 |
               +-----------------+-----------------+
@@ -85,7 +93,9 @@ The Compose UI does not call Bluetooth APIs directly. It observes `AlertReposito
 
 ## Android entry points and lifecycle
 
-1. `SafeReachApplication` (`App.kt`) is the `@HiltAndroidApp` application class.
+1. `SafeReachApplication` (`App.kt`) is the `@HiltAndroidApp` application class. Its
+   `onCreate` initializes preferences, then launches `AlertSyncManager.sync()` on the
+   application scope to refresh the local alerts from the alerts HTTP API.
 2. `MainActivity.onCreate` calls `ensureBleServiceRunning`.
 3. `BlePermissions` determines the API-specific Bluetooth, location, and notification
    permissions. If they are granted, the activity starts `MeshForegroundService` as a
@@ -117,10 +127,15 @@ It is a plain `@Singleton` held by Hilt (not an Android `Service`) and exposes:
 * `activeAlerts: StateFlow<List<Alert>>` — the alerts currently shown on the map, rebuilt
   from the `alerts` table.
 
-`addSigned(signedMessage)` is the single ingestion entry point: it verifies the Ed25519
-signature, upserts each contained alert (if newer), and stores the signed message.
-`removeSigned()` clears the stored message. Both FCM and BLE ingress go through
-`addSigned`, so both paths are signature-checked.
+`addSigned(signedMessage)` is the single ingestion entry point for signed messages: it
+verifies the Ed25519 signature, upserts each contained alert (if newer), and stores the
+signed message. `removeSigned()` clears the stored message. Both FCM and BLE ingress go
+through `addSigned`, so both paths are signature-checked.
+
+`syncAlerts(alerts)` applies unsigned alerts pulled from the alerts HTTP API. Because the API
+returns documents from our own Cloud Function over HTTPS, this path does not run the Ed25519
+verification that `addSigned` performs; it still applies version-based upserts and notifies
+for newly active alerts.
 
 `MeshStatusStore` (`service/MeshStatusStore.kt`) is a plain `@Singleton` runtime status
 holder (not an Android `Service`) with `isServiceRunning`, `orchestratorState: BleState`,
@@ -267,10 +282,15 @@ builds may also load a locally generated private key from debug resources; relea
 deliberately cannot sign. The Gradle `generateSigningKeysDebug` task creates the pair and
 warns that the private key must not be committed.
 
-For both ingress paths the trust boundary is `AlertRepository.addSigned`: it verifies the
-signature before decoding and applying alerts. Bluetooth addresses are metadata only and
-are not an identity or authentication mechanism. BLE transport is broadcast and
+For the FCM and BLE ingress paths the trust boundary is `AlertRepository.addSigned`: it
+verifies the signature before decoding and applying alerts. Bluetooth addresses are metadata
+only and are not an identity or authentication mechanism. BLE transport is broadcast and
 non-connectable; confidentiality and sender identity are not provided by the transport.
+
+The alerts HTTP API is a separate pull path. Its responses are accepted without a signature
+because they arrive over HTTPS from the `alertsApi` Cloud Function, which reads the trusted
+`alerts` Firestore collection. `AlertRepository.syncAlerts` therefore bypasses the Ed25519
+check used by `addSigned`; it is the trust boundary to revisit if that assumption changes.
 
 ## Permissions and operating constraints
 
@@ -331,7 +351,8 @@ concerns around the mesh, not mesh transport components.
 | Domain and wire mapping                      | `model/*.kt`, `model/ProtoMappers.kt`, `data/AlertEntity.kt`, `data/SignedMessageEntity.kt`          |
 | Constants                                    | `Constants.kt`                                                                                       |
 | Signing and verification                     | `verification/Signing.kt`, `verification/SigningManager.kt`                                          |
-| Cloud ingress                                | `android/FirebaseAlertMessagingService.kt`                                                           |
+| Cloud ingress (push)                         | `android/FirebaseAlertMessagingService.kt`                                                           |
+| Cloud ingress (pull)                         | `data/remote/AlertApiClient.kt`, `service/AlertSyncManager.kt`                                       |
 | Offline maps                                 | `service/OfflineRegionManager.kt`, `map/OfflineRegionViewModel.kt`, `map/OfflineRegionPanel.kt`       |
 | UI shell and navigation                      | `auth/MainScreen.kt`, `navigation/SafeReachApp.kt`                                                   |
 | Mesh diagnostics                             | `debug/DebugViewModel.kt`, `debug/DebugScreen.kt`                                                    |
@@ -348,7 +369,8 @@ concerns around the mesh, not mesh transport components.
 5. Preserve version-based latest-alert behavior and expiry/invalidation semantics when
    adding transports or storage.
 6. Any new transport should feed the same validated message path (`AlertRepository.addSigned`)
-   rather than duplicating alert application logic.
+   rather than duplicating alert application logic. The alerts HTTP API is a deliberate
+   exception: it is a trusted HTTPS pull path applied through `AlertRepository.syncAlerts`.
 
 ## Known limitations and extension points
 
@@ -360,6 +382,8 @@ The current implementation is intentionally small and has important boundaries:
 * BLE payload size is constrained by Android advertising capabilities and the six
   service-data fragment slots.
 * `LocationStateReceiver` does not currently feed location state into the orchestrator.
+* Alerts synced from the HTTP API do not populate `AlertRepository.receivedMessage`, so they
+  are shown on the map but are not re-advertised over the BLE mesh.
 * Release builds can verify messages but cannot originate newly signed debug alerts.
 
 These are architecture decisions or gaps, not assumptions to hide in a new transport.
