@@ -13,6 +13,7 @@ data class SignedMessageEntity(
     val signature: ByteArray,
     val receivedFrom: String,
     val receivedAt: Long,
+    val cleared: Boolean,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -35,6 +36,7 @@ fun SignedMessageEntity.toDomain(): SignedMessage = SignedMessage(
     signature = signature,
     receivedFrom = receivedFrom,
     receivedAt = receivedAt,
+    cleared = cleared,
 )
 
 fun SignedMessage.toEntity(
@@ -45,4 +47,5 @@ fun SignedMessage.toEntity(
     signature = signature,
     receivedFrom = receivedFrom,
     receivedAt = receivedAt,
+    cleared = cleared,
 )

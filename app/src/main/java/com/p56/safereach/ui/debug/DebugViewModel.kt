@@ -68,7 +68,8 @@ class DebugViewModel @Inject constructor(
                 payload = data.toDto().toByteArray(),
                 signature = ByteArray(0),
                 receivedAt = System.currentTimeMillis(),
-                receivedFrom = "Debug"
+                receivedFrom = "Debug",
+                cleared = false,
             )
             alertRepository.addSigned(message)
         }
@@ -77,7 +78,7 @@ class DebugViewModel @Inject constructor(
     fun deleteAlert() {
         viewModelScope.launch {
             Log.d("DebugViewModel", "Deleting message")
-            alertRepository.removeSigned()
+            alertRepository.clearSigned()
         }
     }
 }

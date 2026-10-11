@@ -77,18 +77,18 @@ class AlertRepository @Inject constructor(
     suspend fun addSigned(
         signedMessage: SignedMessage,
     ) {
-        if (!BuildConfig.DEBUG) {
-            if (!signingManager.verify(signedMessage.payload, signedMessage.signature)) {
-                Log.w(TAG, "Failed to verify alert")
-                return
-            }
+        //Do NOT verify in debug mode
+        val isDebug = BuildConfig.DEBUG
+        if (!isDebug && !signingManager.verify(signedMessage.payload, signedMessage.signature)) {
+            Log.w(TAG, "Failed to verify alert")
+            return
         }
         try {
             val innerData = MessageDataDto.parseFrom(signedMessage.payload)
             innerData.msgList
                 .map{ it.toDomain() }
                 .forEach { addAlert(it) }
-            database.signedMessageDao().upsert(
+            database.signedMessageDao().upsertIfNewer(
                 signedMessage.toEntity(timestamp = innerData.timestamp)
             )
         } catch (_: InvalidProtocolBufferException) {
@@ -108,7 +108,7 @@ class AlertRepository @Inject constructor(
         }
     }
 
-    suspend fun removeSigned() {
+    suspend fun clearSigned() {
         database.signedMessageDao().clear()
     }
 }

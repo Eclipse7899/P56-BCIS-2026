@@ -350,7 +350,7 @@ fun GenerateAlertDebugCard(
                     )
                     val version = System.currentTimeMillis()
                     val alert = Alert(
-                        id = "debug-$version",
+                        id = "debug",
                         timestamp = version,
                         title = title.ifBlank { "" },
                         description = description.ifBlank { "" },
@@ -688,7 +688,8 @@ fun DebugScreenPreview() {
                     ByteArray(10),
                     ByteArray(10),
                     "Debug",
-                    1
+                    1,
+                    false
                 ),
                 batch = AlertBatch(
                     alerts = listOf(
