@@ -1,4 +1,4 @@
-package com.p56.safereach.android
+package com.p56.safereach.android.permissions
 
 import android.annotation.SuppressLint
 import android.content.Context

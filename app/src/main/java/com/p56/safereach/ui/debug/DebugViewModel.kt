@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
-import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.AlertBatch
@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 data class DebugUiState(
     val receivedMessage: ReceivedMessage? = null,
     val isMeshRunning: Boolean = false,
-    val orchestratorState: BleState = BleState.Off,
+    val orchestratorState: AggregateBleState = AggregateBleState.Off,
     val advertiserState: BleAdvertisingState = BleAdvertisingState.Idle,
     val scannerState: BleScanState = BleScanState.Idle,
 )
@@ -39,11 +39,10 @@ class DebugViewModel @Inject constructor(
     val uiState: StateFlow<DebugUiState> = combine(
         alertRepository.receivedMessage,
         meshStatusStore.isServiceRunning,
-        meshStatusStore.orchestratorState,
+        meshStatusStore.bleOrchestratorState,
         meshStatusStore.advertiserState,
         meshStatusStore.scannerState,
     ) { receivedMessage, isMeshRunning, orchestratorState, advertiserState, scannerState ->
-        Log.d("DebugViewModel", "Received message: $receivedMessage")
         DebugUiState(
             receivedMessage = receivedMessage,
             isMeshRunning = isMeshRunning,

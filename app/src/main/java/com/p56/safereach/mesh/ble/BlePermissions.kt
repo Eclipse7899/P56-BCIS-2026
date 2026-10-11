@@ -26,6 +26,24 @@ object BlePermissions {
         return permissions
     }
 
+    fun requiredConnectedDevicePermissions(): Set<String> {
+        val permissions = mutableSetOf<String>()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions += Manifest.permission.BLUETOOTH_SCAN
+            permissions += Manifest.permission.BLUETOOTH_CONNECT
+            permissions += Manifest.permission.BLUETOOTH_ADVERTISE
+        }
+        return permissions
+    }
+
+    fun requiredLocationPermissions(): Set<String> {
+        val permissions = mutableSetOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            permissions += Manifest.permission.ACCESS_COARSE_LOCATION
+        }
+        return permissions
+    }
+
     fun requiredScanPermissions(): Set<String> {
         val permissions = mutableSetOf<String>()
         permissions += Manifest.permission.ACCESS_FINE_LOCATION
@@ -52,14 +70,37 @@ object BlePermissions {
     }
 
     fun missingBlePermissions(context: Context): List<String> {
-        return requiredBlePermissions().filter { permission ->
-            ContextCompat.checkSelfPermission(context, permission) !=
-                    PackageManager.PERMISSION_GRANTED
-        }
+        return missingPermissions(context, requiredBlePermissions())
     }
 
     fun hasBlePermissions(context: Context): Boolean {
         return missingBlePermissions(context).isEmpty()
+    }
+
+    fun missingConnectedDevicePermissions(context: Context): List<String> {
+        return missingPermissions(context, requiredConnectedDevicePermissions())
+    }
+
+    fun hasConnectedDevicePermissions(context: Context): Boolean {
+        return missingConnectedDevicePermissions(context).isEmpty()
+    }
+
+    fun missingLocationPermissions(context: Context): List<String> {
+        return missingPermissions(context, requiredLocationPermissions())
+    }
+
+    fun hasLocationPermissions(context: Context): Boolean {
+        return missingLocationPermissions(context).isEmpty()
+    }
+
+    private fun missingPermissions(
+        context: Context,
+        permissions: Collection<String>,
+    ): List<String> {
+        return permissions.filter { permission ->
+            ContextCompat.checkSelfPermission(context, permission) !=
+                    PackageManager.PERMISSION_GRANTED
+        }
     }
 }
 

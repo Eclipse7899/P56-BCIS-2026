@@ -1,7 +1,11 @@
 package com.p56.safereach.ui.navigation
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -29,11 +33,18 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
-import com.p56.safereach.android.BatteryOptimizationHelper
-import com.p56.safereach.android.BluetoothHelper
-import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.android.permissions.AppSettingsHelper
+import com.p56.safereach.android.permissions.BatteryOptimizationHelper
+import com.p56.safereach.android.permissions.BluetoothHelper
+import com.p56.safereach.android.MeshForegroundService
+import com.p56.safereach.android.permissions.NotificationPermissionHelper
+import com.p56.safereach.mesh.ble.BlePermissions
+import com.p56.safereach.mesh.ble.fsm.BluetoothState
 import com.p56.safereach.ui.BatteryOptimizationBanner
 import com.p56.safereach.ui.BluetoothDisabledBanner
+import com.p56.safereach.ui.ConnectedDevicesPermissionBanner
+import com.p56.safereach.ui.LocationPermissionBanner
+import com.p56.safereach.ui.NotificationPermissionBanner
 import com.p56.safereach.ui.alert.AlertHistoryRoute
 import com.p56.safereach.ui.debug.DebugRoute
 import com.p56.safereach.ui.debug.DebugViewModel
@@ -44,20 +55,89 @@ import com.p56.safereach.ui.theme.SafeReachTheme
 @Composable
 fun SafeReachApp() {
     val viewModel: SafeReachAppViewModel = hiltViewModel()
-    val orchestratorState by viewModel.orchestratorState.collectAsStateWithLifecycle()
-    SafeReachAppContent(orchestratorState = orchestratorState)
+    val bluetoothState by viewModel.bluetoothState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var notificationsEnabled by remember {
+        mutableStateOf(NotificationPermissionHelper.areNotificationsEnabled(context))
+    }
+    var connectedDevicePermissionGranted by remember {
+        mutableStateOf(BlePermissions.hasConnectedDevicePermissions(context))
+    }
+    var locationPermissionGranted by remember {
+        mutableStateOf(BlePermissions.hasLocationPermissions(context))
+    }
+
+    val connectedDevicePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        connectedDevicePermissionGranted = BlePermissions.hasConnectedDevicePermissions(context)
+        startMeshServiceIfPermissionsGranted(context)
+    }
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        locationPermissionGranted = BlePermissions.hasLocationPermissions(context)
+        startMeshServiceIfPermissionsGranted(context)
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsEnabled =
+                    NotificationPermissionHelper.areNotificationsEnabled(context)
+                connectedDevicePermissionGranted =
+                    BlePermissions.hasConnectedDevicePermissions(context)
+                locationPermissionGranted =
+                    BlePermissions.hasLocationPermissions(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    SafeReachAppContent(
+        bluetoothState = bluetoothState,
+        notificationsEnabled = notificationsEnabled,
+        connectedDevicePermissionGranted = connectedDevicePermissionGranted,
+        locationPermissionGranted = locationPermissionGranted,
+        onEnableNotifications = {
+            NotificationPermissionHelper.openNotificationSettings(context)
+        },
+        onGrantConnectedDevicePermission = {
+            requestPermissionsOrOpenSettings(
+                context = context,
+                permissions = BlePermissions.missingConnectedDevicePermissions(context),
+                onRequest = connectedDevicePermissionLauncher::launch
+            )
+        },
+        onGrantLocationPermission = {
+            requestPermissionsOrOpenSettings(
+                context = context,
+                permissions = BlePermissions.missingLocationPermissions(context),
+                onRequest = locationPermissionLauncher::launch
+            )
+        },
+    )
 }
 
 @Composable
-fun SafeReachAppContent(orchestratorState: BleState) {
+fun SafeReachAppContent(
+    bluetoothState: BluetoothState,
+    notificationsEnabled: Boolean = true,
+    connectedDevicePermissionGranted: Boolean = true,
+    locationPermissionGranted: Boolean = true,
+    onEnableNotifications: () -> Unit = {},
+    onGrantConnectedDevicePermission: () -> Unit = {},
+    onGrantLocationPermission: () -> Unit = {},
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var isBatteryOptimizationOn by remember {
         mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationEnabled(context))
-    }
-    val isBluetoothEnabled = when (orchestratorState) {
-        BleState.Disabled -> false
-        else -> true
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -103,6 +183,24 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
+                if (!notificationsEnabled) {
+                    NotificationPermissionBanner(
+                        modifier = Modifier.padding(8.dp),
+                        onEnableClick = onEnableNotifications
+                    )
+                }
+                if (!connectedDevicePermissionGranted) {
+                    ConnectedDevicesPermissionBanner(
+                        modifier = Modifier.padding(8.dp),
+                        onGrantClick = onGrantConnectedDevicePermission
+                    )
+                }
+                if (!locationPermissionGranted) {
+                    LocationPermissionBanner(
+                        modifier = Modifier.padding(8.dp),
+                        onGrantClick = onGrantLocationPermission
+                    )
+                }
                 if (isBatteryOptimizationOn) {
                     BatteryOptimizationBanner(
                         modifier = Modifier.padding(8.dp),
@@ -111,7 +209,7 @@ fun SafeReachAppContent(orchestratorState: BleState) {
                         }
                     )
                 }
-                if (!isBluetoothEnabled) {
+                if (bluetoothState == BluetoothState.Disabled) {
                     BluetoothDisabledBanner(
                         modifier = Modifier.padding(8.dp),
                         onEnableClick = {
@@ -140,11 +238,45 @@ fun SafeReachAppContent(orchestratorState: BleState) {
     }
 }
 
+/**
+ * Kicks off the mesh foreground service once every BLE permission it needs is granted.
+ * Called after the permission banners grant access so the mesh starts without the user
+ * having to relaunch the app.
+ */
+private fun startMeshServiceIfPermissionsGranted(context: Context) {
+    if (BlePermissions.hasBlePermissions(context)) {
+        MeshForegroundService.start(context)
+    }
+}
+
+/**
+ * Requests the given permissions when the system can still prompt for them. If the
+ * user previously chose "don't ask again", the request would silently do nothing, so
+ * we send them to the app settings screen instead where they can grant it manually.
+ */
+private fun requestPermissionsOrOpenSettings(
+    context: Context,
+    permissions: List<String>,
+    onRequest: (Array<String>) -> Unit,
+) {
+    if (permissions.isEmpty()) {
+        return
+    }
+    val activity = context as? Activity
+    val canRequest = activity != null &&
+        permissions.any { ActivityCompat.shouldShowRequestPermissionRationale(activity, it) }
+    if (canRequest) {
+        onRequest(permissions.toTypedArray())
+    } else {
+        AppSettingsHelper.openAppDetailsSettings(context)
+    }
+}
+
 @PreviewScreenSizes
 @Composable
 private fun SafeReachAppPreview() {
     SafeReachTheme {
-        SafeReachAppContent(orchestratorState = BleState.Passive)
+        SafeReachAppContent(bluetoothState = BluetoothState.Enabled)
     }
 }
 

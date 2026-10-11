@@ -11,3 +11,13 @@ sealed interface BleAdvertisingFail {
     data object Timeout : BleAdvertisingFail
 }
 
+val BleAdvertisingFail.isRetryable: Boolean
+    get() = when (this) {
+        BleAdvertisingFail.MissingPermissions,
+        BleAdvertisingFail.DataTooLarge,
+        BleAdvertisingFail.FeatureUnsupported,
+        BleAdvertisingFail.AlreadyStarted -> false
+
+        else -> true
+    }
+

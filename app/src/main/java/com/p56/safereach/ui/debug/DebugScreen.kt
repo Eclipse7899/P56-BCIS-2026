@@ -53,7 +53,7 @@ import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
-import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.AlertBatch
@@ -378,7 +378,7 @@ fun GenerateAlertDebugCard(
 @Composable
 fun MeshStatusCollapsibleCard(
     isMeshRunning: Boolean,
-    orchestratorState: BleState,
+    orchestratorState: AggregateBleState,
     advertiserState: BleAdvertisingState,
     scannerState: BleScanState,
 ) {
@@ -407,18 +407,22 @@ fun MeshStatusCollapsibleCard(
                 indentation = 0
             ) {
                 val orchestratorStatusText = when (orchestratorState) {
-                    is BleState.Active -> "Active"
-                    BleState.Passive -> "Passive"
-                    BleState.Off -> "Off"
-                    BleState.Failed -> "Failed"
-                    BleState.Disabled -> "Disabled"
+                    is AggregateBleState.Active -> "Active"
+                    AggregateBleState.Passive -> "Passive"
+                    AggregateBleState.Off -> "Off"
+                    AggregateBleState.PartialFail -> "Partial failure"
+                    AggregateBleState.CompleteFail -> "Failed"
+                    AggregateBleState.Unknown -> "Unknown"
+                    AggregateBleState.Disabled -> "Disabled"
                 }
                 val orchestratorStatusColor = when (orchestratorState) {
-                    is BleState.Active -> StatusSuccess
-                    BleState.Passive -> StatusInfo
-                    BleState.Off -> StatusNeutral
-                    BleState.Failed -> StatusError
-                    BleState.Disabled -> StatusError
+                    is AggregateBleState.Active -> StatusSuccess
+                    AggregateBleState.Passive -> StatusInfo
+                    AggregateBleState.Off -> StatusNeutral
+                    AggregateBleState.PartialFail -> StatusError
+                    AggregateBleState.CompleteFail -> StatusError
+                    AggregateBleState.Unknown -> StatusNeutral
+                    AggregateBleState.Disabled -> StatusError
                 }
 
                 CollapsibleTreeNode(
@@ -429,7 +433,7 @@ fun MeshStatusCollapsibleCard(
                     onToggle = { isOrchestratorExpanded = !isOrchestratorExpanded },
                     indentation = 16
                 ) {
-                    if (orchestratorState is BleState.Active) {
+                    if (orchestratorState is AggregateBleState.Active) {
                         Text(
                             text = "Payload: ${orchestratorState.payload.size} bytes",
                             style = MaterialTheme.typography.bodySmall,
@@ -440,14 +444,16 @@ fun MeshStatusCollapsibleCard(
                     val advertiserStatusText = when (advertiserState) {
                         is BleAdvertisingState.Advertising -> "Advertising"
                         BleAdvertisingState.Idle -> "Idle"
-                        BleAdvertisingState.Disabled -> "Disabled"
-                        is BleAdvertisingState.Failed -> "Failed (${advertiserState.error})"
+                        is BleAdvertisingState.Starting -> "Starting"
+                        BleAdvertisingState.Stopping -> "Stopping"
+                        is BleAdvertisingState.Retrying -> "Retrying (${advertiserState.error})"
                     }
                     val advertiserStatusColor = when (advertiserState) {
                         is BleAdvertisingState.Advertising -> StatusSuccess
                         BleAdvertisingState.Idle -> StatusNeutral
-                        BleAdvertisingState.Disabled -> StatusError
-                        is BleAdvertisingState.Failed -> StatusError
+                        is BleAdvertisingState.Starting -> StatusInfo
+                        BleAdvertisingState.Stopping -> StatusInfo
+                        is BleAdvertisingState.Retrying -> StatusError
                     }
 
                     CollapsibleTreeNode(
@@ -469,7 +475,7 @@ fun MeshStatusCollapsibleCard(
                                     bottom = 2.dp
                                 )
                             )
-                        } else if (advertiserState is BleAdvertisingState.Failed) {
+                        } else if (advertiserState is BleAdvertisingState.Retrying) {
                             Text(
                                 text = "Error: ${advertiserState.error}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -485,16 +491,16 @@ fun MeshStatusCollapsibleCard(
 
                     Spacer(modifier = Modifier.height(4.dp))
                     val scannerStatusText = when (scannerState) {
+                        is BleScanState.Starting -> "Starting"
                         is BleScanState.Scanning -> "Scanning"
                         BleScanState.Idle -> "Idle"
-                        BleScanState.Disabled -> "Disabled"
-                        BleScanState.Failed -> "Failed"
+                        BleScanState.Stopping -> "Stopping"
+                        is BleScanState.Retrying -> "Retrying: ${scannerState.error}, attempt ${scannerState.attempt}"
                     }
                     val scannerStatusColor = when (scannerState) {
-                        is BleScanState.Scanning -> StatusSuccess
-                        BleScanState.Idle -> StatusNeutral
-                        BleScanState.Disabled -> StatusError
-                        BleScanState.Failed -> StatusError
+                        is BleScanState.Starting, is BleScanState.Scanning -> StatusSuccess
+                        BleScanState.Idle, BleScanState.Stopping -> StatusNeutral
+                        is BleScanState.Retrying -> StatusError
                     }
 
                     CollapsibleTreeNode(
@@ -709,7 +715,7 @@ fun DebugScreenPreview() {
                 receivedAt = now,
             ),
             isMeshRunning = true,
-            orchestratorState = BleState.Active(ByteArray(10)),
+            orchestratorState = AggregateBleState.Active(ByteArray(10)),
             advertiserState = BleAdvertisingState.Idle,
             scannerState = BleScanState.Scanning
         ),
