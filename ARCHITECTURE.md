@@ -20,6 +20,24 @@ The application is Kotlin/Compose, uses Hilt for injection, and supports Android
 The mesh is currently **BLE-only in production code**: no Wi-Fi transport, routing
 protocol, or Wi-Fi failover is implemented.
 
+## Cloud backend
+
+The `functions/` package is a TypeScript Firebase Cloud Functions codebase (Node 24) that
+owns alert authoring and delivery:
+
+* `fetchGeonetData` runs every 15 minutes (Pacific/Auckland) and pulls earthquake events
+  from the GeoNet API into the `geonet` collection.
+* `onGeonetQuakeCreated` converts a GeoNet event into an `alerts` document (an Earthquake
+  Warning, severity derived from magnitude, a circular shape, and a one-hour expiry).
+* `onAlertCreated` reads the `SIGNING_KEY` secret, signs the alert's `MessageDataDto` with
+  Ed25519, and broadcasts the base64 `SignedMessageDto` over FCM to the `alerts` topic.
+* `alertsApi` is an HTTPS `onRequest` endpoint that returns recent alerts from the `alerts`
+  collection as JSON; the app polls it on launch through `AlertSyncManager`.
+
+The proto field numbers here are the wire contract the Android clients decode (see the wire
+format section), so changes must stay in sync across `protobuf/models.proto`, the generated
+Kotlin types, and `functions/src/models.ts`.
+
 ## Runtime topology
 
 ```text
@@ -86,7 +104,8 @@ Android Bluetooth LE APIs
 ```
 
 The Compose UI does not call Bluetooth APIs directly. It observes `AlertRepository` and
-`MeshStatusStore` through `DebugViewModel`, `HomeViewModel`, and `SafeReachAppViewModel`.
+`MeshStatusStore` through `DebugViewModel`, `HomeViewModel`, `AlertHistoryViewModel`, and
+`SafeReachAppViewModel`.
 `MainActivity` is responsible for requesting runtime permissions and starting
 `MeshForegroundService`; the service owns the mesh for its lifetime.
 
@@ -123,8 +142,9 @@ It is a plain `@Singleton` held by Hilt (not an Android `Service`) and exposes:
 
 * `receivedMessage: StateFlow<ReceivedMessage?>` — the current stored signed message,
   rebuilt from the latest row of the `signed_messages` table.
-* `activeAlerts: StateFlow<List<Alert>>` — the alerts currently shown on the map, rebuilt
-  from the `alerts` table.
+* `activeAlerts: StateFlow<List<Alert>>` — the currently active alerts shown on the map,
+  rebuilt from the `alerts` table and filtered by `Alert.isActive()`.
+* `allAlerts: StateFlow<List<Alert>>` — every stored alert, used by the alert history.
 
 `addSigned(signedMessage)` is the single ingestion entry point for signed messages: it
 verifies the Ed25519 signature, upserts each contained alert (if newer), and stores the
@@ -139,7 +159,9 @@ enforce verification.
 `syncAlerts(alerts)` applies unsigned alerts pulled from the alerts HTTP API. Because the API
 returns documents from our own Cloud Function over HTTPS, this path does not run the Ed25519
 verification that `addSigned` performs; it still applies version-based upserts and notifies
-for newly active alerts.
+for newly active alerts. Whenever `addAlert` inserts or updates an alert that is active,
+`AlertRepository` asks `AlertNotifier` to post the system notification (subject to the
+in-app notification preference).
 
 `MeshStatusStore` (`service/MeshStatusStore.kt`) is a plain `@Singleton` runtime status
 holder (not an Android `Service`) with `isServiceRunning`, `bleOrchestratorState:
@@ -150,7 +172,8 @@ Persistence is Room via `AppDatabase` (`data/`):
 * `alerts` — `AlertEntity`, with `Shape` serialized through `ShapeTypeConverters`.
 * `signed_messages` — `SignedMessageEntity`.
 * Access is through `AlertDao` and `SignedMessageDao`; `AppDatabase` is provided by
-  `DatabaseModule` (Hilt). The database uses destructive migration.
+  `DatabaseModule` (Hilt). The database is currently version 5 and uses destructive
+  migration.
 
 Protobuf wire types live in the generated `com.p56.safereach.proto` package (suffixed
 `*Dto`); domain models in `com.p56.safereach.model` are unsuffixed. Mapping is explicit in
@@ -252,13 +275,16 @@ The debug flow currently creates an alert by:
 
 1. wrapping one `Alert` in an `AlertBatch`;
 2. ProtoBuf-encoding it (`AlertBatch.toDto()`);
-3. signing those bytes with `SigningManager`;
-4. storing a `SignedMessage` in `AlertRepository` (`addSigned`);
+3. wrapping the bytes in a `SignedMessage` with an empty signature and
+   `receivedFrom = "Debug"` (a debug build holds no private key, and `addSigned` bypasses
+   verification when `BuildConfig.DEBUG` is true);
+4. storing it in `AlertRepository` (`addSigned`);
 5. causing `MeshForegroundService` to encode the `SignedMessageDto` and send it to
    `BleOrchestrator` as `BleIntent.Active`.
 
-FCM also stores a received signed message, so it enters the same repository-to-advertisement
-path.
+Authentic alerts are signed on the backend instead: `onAlertCreated` signs the encoded
+`MessageDataDto` and pushes the `SignedMessageDto` over FCM, which stores it through the
+same repository-to-advertisement path.
 
 ### Incoming and forwarding path
 
@@ -288,6 +314,10 @@ to verify incoming messages. Release builds cannot originate newly signed alerts
 app; locally authored debug alerts are created without a real signature and rely on the
 debug verification bypass described above.)
 
+Authentic alerts are signed server-side: the `onAlertCreated` Cloud Function signs each
+alert with the private key supplied through the `SIGNING_KEY` secret before broadcasting it,
+and the app verifies that signature with the matching bundled public key.
+
 For the FCM and BLE ingress paths the trust boundary is `AlertRepository.addSigned`: in
 release builds it verifies the signature before decoding and applying alerts. Debug builds
 skip that verification (see `addSigned` above), so a debug build is not a trustworthy
@@ -311,9 +341,10 @@ Required permissions vary by Android version:
   `AndroidManifest.xml`.
 
 The user must keep Bluetooth enabled. Android scan behavior also depends on device
-location settings and battery optimization. The UI exposes Bluetooth-disabled and battery
-optimization banners. `LocationStateReceiver` currently observes provider changes without
-updating mesh state.
+location settings and battery optimization, so the manifest also declares
+`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. The UI exposes notification, connected-device,
+location-permission, battery-optimization, and Bluetooth-disabled banners, and re-checks the
+notification and permission banners whenever the app resumes.
 
 ## UI data flow
 
@@ -331,6 +362,14 @@ AlertRepository.activeAlerts
   -> HomeViewModel
   -> HomeScreen
   -> Mapbox map and alert shape rendering
+
+AlertRepository.allAlerts
+  -> AlertHistoryViewModel
+  -> AlertHistoryScreen
+
+AlertRepository.addAlert(new active alert)
+  -> AlertNotifier
+  -> system notification
 
 MeshStatusStore.bleOrchestratorState
   -> SafeReachAppViewModel
@@ -361,7 +400,13 @@ concerns around the mesh, not mesh transport components.
 | Signing and verification                     | `verification/Signing.kt`, `verification/SigningManager.kt`                                          |
 | Cloud ingress (push)                         | `android/FirebaseAlertMessagingService.kt`                                                           |
 | Cloud ingress (pull)                         | `data/remote/AlertApiClient.kt`, `service/AlertSyncManager.kt`                                       |
+| Notifications                                | `android/AlertNotifier.kt`, `ui/profile/NotificationPreferences.kt`                                  |
+| Authentication                               | `ui/auth/MainScreen.kt`, `SignInScreen.kt`, `RegisterScreen.kt`, `ForgotPasswordScreen.kt`          |
+| Alert history                                | `ui/alert/AlertHistoryScreen.kt`, `ui/alert/AlertHistoryViewModel.kt`                                |
+| User preferences                             | `ui/theme/ThemePreferences.kt`, `ui/home/MapCameraPreferences.kt`                                    |
 | Offline maps                                 | `service/OfflineRegionManager.kt`, `map/OfflineRegionViewModel.kt`, `map/OfflineRegionPanel.kt`       |
+| Retry policy                                 | `mesh/ble/RetryBackoff.kt`                                                                           |
+| Cloud functions (backend)                    | `functions/src/index.ts`, `firebase/alerts-api.ts`, `firebase/on-alert-created.ts`, `integrations/*` |
 | UI shell and navigation                      | `auth/MainScreen.kt`, `navigation/SafeReachApp.kt`                                                   |
 | Mesh diagnostics                             | `debug/DebugViewModel.kt`, `debug/DebugScreen.kt`                                                    |
 
@@ -388,7 +433,8 @@ The current implementation is intentionally small and has important boundaries:
   Version comparison limits repeated updates but is not a complete routing protocol.
 * BLE payload size is constrained by Android advertising capabilities and the six
   service-data fragment slots.
-* `LocationStateReceiver` does not currently feed location state into the orchestrator.
+* Polygon-shaped alerts are stored and listed but are not drawn on the Home map; only
+  circles are rendered there.
 * Alerts synced from the HTTP API do not populate `AlertRepository.receivedMessage`, so they
   are shown on the map but are not re-advertised over the BLE mesh.
 * Release builds can verify messages but cannot originate newly signed debug alerts.
