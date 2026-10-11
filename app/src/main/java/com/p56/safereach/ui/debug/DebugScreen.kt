@@ -219,6 +219,14 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Signed Message", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
+            val formattedSignedTimestamp = remember(wrapper) {
+                SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    .format(Date(wrapper.batch.timestamp))
+            }
+            Text(
+                text = "Timestamp: $formattedSignedTimestamp",
+                style = MaterialTheme.typography.bodySmall
+            )
             Text(
                 text = "Data: ${signed.payload.size} bytes",
                 style = MaterialTheme.typography.bodySmall
