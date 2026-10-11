@@ -58,6 +58,8 @@ message SignedMessageDto {
 }
 
 message MessageDataDto {
+  // Field number 1 is intentionally skipped (legacy gap). Renumbering the fields below
+  // would break wire compatibility with existing devices, so leave the gap in place.
   repeated AlertDto msg = 2;
   uint64 valid_until = 3;
   uint64 timestamp = 4;

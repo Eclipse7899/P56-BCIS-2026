@@ -3,7 +3,6 @@ package com.p56.safereach.ui.debug
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.components.BuildConfig
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
@@ -14,7 +13,6 @@ import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.model.toDto
 import com.p56.safereach.service.AlertRepository
 import com.p56.safereach.service.MeshStatusStore
-import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,7 +31,6 @@ data class DebugUiState(
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
-    private val signingManager: SigningManager,
     private val alertRepository: AlertRepository,
     meshStatusStore: MeshStatusStore,
 ) : ViewModel() {
@@ -69,7 +66,7 @@ class DebugViewModel @Inject constructor(
                 signature = ByteArray(0),
                 receivedAt = System.currentTimeMillis(),
                 receivedFrom = "Debug",
-                cleared = false,
+                dismissed = false,
             )
             alertRepository.addSigned(message)
         }

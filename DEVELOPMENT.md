@@ -47,10 +47,10 @@ type's role is obvious from its name:
 | `toEntity()`            | Mapper from a domain model into a Room entity                  | `Alert.toEntity()`                                        |
 | `toDto()`               | Mapper from a domain model into a Protobuf wire type           | `Alert.toDto()`                                           |
 | `*Entity` / `*Dao`      | Room entity / data-access object                               | `AlertEntity`, `AlertDao`                                 |
-| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager` |
+| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services. A stateless helper may also use `*Manager` (for example `AlertSyncManager`). | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager` |
 | `*Service`              | Reserved for real `android.app.Service` subclasses             | `MeshForegroundService`, `FirebaseAlertMessagingService`  |
-| `*Command`              | Desired-state input to a state machine in `*/fsm`              | `BleCommand`, `BleScanCommand`, `BleAdvertisingCommand`   |
-| `*State` / `*Event`     | Observed condition / transition trigger of a state machine     | `BleState`, `BleScanState`, `BleAdvertisingEvent`         |
+| `*Intent`               | Desired-state input to a state machine in `*/fsm`              | `BleIntent`, `BleScanIntent`, `BleAdvertisingIntent`      |
+| `*State` / `*Event`     | Observed condition / transition trigger of a state machine     | `AggregateBleState`, `BleScanState`, `BleAdvertisingEvent` |
 | `*Controller` / `*Adapter` | State-machine owner / Android platform gateway              | `BleScanController`, `BleBeaconScanAdapter`               |
 | `*Route` / `*Screen` / `*Content` | Compose stateful entry / screen / stateless body    | `HomeRoute`, `HomeScreen`, `ProfileRoute`                 |
 

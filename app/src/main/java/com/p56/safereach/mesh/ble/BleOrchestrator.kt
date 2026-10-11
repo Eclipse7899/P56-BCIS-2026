@@ -21,8 +21,6 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -46,8 +44,6 @@ class BleOrchestrator @Inject constructor(
         MutableStateFlow(
             Off
         )
-
-    val state: StateFlow<AggregateBleState> = _state.asStateFlow()
 
     private val desired: MutableStateFlow<BleIntent> = MutableStateFlow(
         BleIntent.Off

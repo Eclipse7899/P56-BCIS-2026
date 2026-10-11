@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface SignedMessageDao {
 
-    @Query("SELECT * FROM $TABLE_NAME WHERE id = $MESSAGE_ID AND cleared = 0")
+    @Query("SELECT * FROM $TABLE_NAME WHERE id = $MESSAGE_ID AND dismissed = 0")
     fun observeLatest(): Flow<SignedMessageEntity?>
 
     @Query("SELECT * FROM $TABLE_NAME WHERE id = $MESSAGE_ID")
@@ -27,7 +27,7 @@ interface SignedMessageDao {
         }
     }
 
-    @Query("UPDATE $TABLE_NAME SET cleared = 1 WHERE id = $MESSAGE_ID")
+    @Query("UPDATE $TABLE_NAME SET dismissed = 1 WHERE id = $MESSAGE_ID")
     suspend fun clear()
 
     companion object {

@@ -17,9 +17,8 @@ three alert ingress paths:
   Android devices.
 
 The application is Kotlin/Compose, uses Hilt for injection, and supports Android API 29+.
-The mesh is currently **BLE-only in production code**. `mesh/wifi/WifiCoordinator.kt` is
-an empty placeholder; no Wi-Fi transport, routing protocol, or Wi-Fi failover is
-implemented.
+The mesh is currently **BLE-only in production code**: no Wi-Fi transport, routing
+protocol, or Wi-Fi failover is implemented.
 
 ## Runtime topology
 
@@ -106,16 +105,16 @@ The Compose UI does not call Bluetooth APIs directly. It observes `AlertReposito
    `BleScanController`, and one `BleOrchestrator` on a supervisor-backed background
    scope. It registers `BleStateReceiver`, seeds both controllers with the current
    Bluetooth state, and starts collecting their state flows into `MeshStatusStore`.
-6. `onStartCommand` requests `BleCommand.Passive` and calls `startForeground`. The service
+6. `onStartCommand` requests `BleIntent.Passive` and calls `startForeground`. The service
    returns `START_STICKY`, so Android may recreate it after process pressure.
 7. The service observes `AlertRepository.receivedMessage`:
    * `null` means passive mode: scan, do not advertise.
    * a message means active mode: scan and advertise the encoded signed message.
-8. `onDestroy` marks runtime state stopped and requests `BleCommand.Off`.
+8. `onDestroy` marks runtime state stopped and requests `BleIntent.Off`.
 
 The manifest declares `MeshForegroundService` as a non-exported foreground service of type
 `connectedDevice`. The ongoing low-importance notification communicates whether the mesh
-is active, passive, disabled, or failed.
+is active, passive, or failed.
 
 ## State and persistence
 
@@ -129,8 +128,13 @@ It is a plain `@Singleton` held by Hilt (not an Android `Service`) and exposes:
 
 `addSigned(signedMessage)` is the single ingestion entry point for signed messages: it
 verifies the Ed25519 signature, upserts each contained alert (if newer), and stores the
-signed message. `removeSigned()` clears the stored message. Both FCM and BLE ingress go
+signed message. `clearSigned()` clears the stored message. Both FCM and BLE ingress go
 through `addSigned`, so both paths are signature-checked.
+
+Important exception: for debug convenience, `addSigned` **skips signature verification when
+`BuildConfig.DEBUG` is true** (`AlertRepository.kt`). Debug builds therefore accept forged
+signed messages and must not be treated as a trustworthy verifier; release builds always
+enforce verification.
 
 `syncAlerts(alerts)` applies unsigned alerts pulled from the alerts HTTP API. Because the API
 returns documents from our own Cloud Function over HTTPS, this path does not run the Ed25519
@@ -138,8 +142,8 @@ verification that `addSigned` performs; it still applies version-based upserts a
 for newly active alerts.
 
 `MeshStatusStore` (`service/MeshStatusStore.kt`) is a plain `@Singleton` runtime status
-holder (not an Android `Service`) with `isServiceRunning`, `orchestratorState: BleState`,
-`advertiserState: BleAdvertisingState`, and `scannerState: BleScanState`.
+holder (not an Android `Service`) with `isServiceRunning`, `bleOrchestratorState:
+AggregateBleState`, `advertiserState: BleAdvertisingState`, and `scannerState: BleScanState`.
 
 Persistence is Room via `AppDatabase` (`data/`):
 
@@ -156,32 +160,33 @@ Protobuf wire types live in the generated `com.p56.safereach.proto` package (suf
 ## Orchestrator and state machines
 
 `BleOrchestrator` is a desired-state reconciler. It does not perform Bluetooth I/O. It
-combines the desired `BleCommand` with the scanner and advertiser states, derives a public
-`BleState`, and sends only the commands needed to converge the controllers.
+combines the desired `BleIntent` with the scanner and advertiser states, derives a public
+`AggregateBleState`, and sends only the intents needed to converge the controllers.
 
 ```text
-BleCommand.Off
+BleIntent.Off
   scanner Scanning -> Stop
   advertiser Advertising -> Stop
   resulting state: Off when both are Idle
 
-BleCommand.Passive
+BleIntent.Passive
   scanner Idle -> Start
   advertiser Advertising -> Stop
   resulting state: Passive when scanner is Scanning and advertiser is Idle
 
-BleCommand.Active(payload)
+BleIntent.Active(payload)
   scanner Idle -> Start
   advertiser Idle/Failed -> Start(payload)
   advertiser Advertising -> Start(payload) (replaces the advertising data)
   resulting state: Active(payload) when both are running
 ```
 
-Any disabled child produces `BleState.Disabled`; any failed child produces
-`BleState.Failed`. A Bluetooth state broadcast (`BleStateReceiver`) moves both controllers
-to `Disabled` when Bluetooth is off and allows them to return to `Idle` when it is on.
-Controller commands and callbacks are serialized through coroutine channels. Advertising
-operations are additionally serialized with a `Mutex` and bounded by
+A child that cannot reach its desired state surfaces as `PartialFail` (one child) or
+`CompleteFail` (both children), while transitional or inconsistent child states surface as
+`Unknown`. A Bluetooth state broadcast (`BleStateReceiver`) feeds the current Bluetooth
+state to the controllers, which only start when Bluetooth is enabled and otherwise stay
+`Idle`. Controller intents and callbacks are serialized through coroutine channels.
+Advertising operations are additionally serialized with a `Mutex` and bounded by
 `Constants.BLE_ADVERTISING_TIMEOUT` (2 seconds).
 
 ### Scan path
@@ -250,7 +255,7 @@ The debug flow currently creates an alert by:
 3. signing those bytes with `SigningManager`;
 4. storing a `SignedMessage` in `AlertRepository` (`addSigned`);
 5. causing `MeshForegroundService` to encode the `SignedMessageDto` and send it to
-   `BleOrchestrator` as `BleCommand.Active`.
+   `BleOrchestrator` as `BleIntent.Active`.
 
 FCM also stores a received signed message, so it enters the same repository-to-advertisement
 path.
@@ -277,15 +282,18 @@ a latest-message relay rather than a queue of independent messages.
 
 ## Security and trust boundaries
 
-`SigningManager` loads a bundled public Ed25519 key from `res/raw/public_key.pem`. Debug
-builds may also load a locally generated private key from debug resources; release builds
-deliberately cannot sign. The Gradle `generateSigningKeysDebug` task creates the pair and
-warns that the private key must not be committed.
+`SigningManager` loads a bundled public Ed25519 key from `res/raw/public_key.pem` and uses it
+to verify incoming messages. Release builds cannot originate newly signed alerts. (The
+`Signing` helper still contains a private-key parser, but it is not currently wired into the
+app; locally authored debug alerts are created without a real signature and rely on the
+debug verification bypass described above.)
 
-For the FCM and BLE ingress paths the trust boundary is `AlertRepository.addSigned`: it
-verifies the signature before decoding and applying alerts. Bluetooth addresses are metadata
-only and are not an identity or authentication mechanism. BLE transport is broadcast and
-non-connectable; confidentiality and sender identity are not provided by the transport.
+For the FCM and BLE ingress paths the trust boundary is `AlertRepository.addSigned`: in
+release builds it verifies the signature before decoding and applying alerts. Debug builds
+skip that verification (see `addSigned` above), so a debug build is not a trustworthy
+verifier. Bluetooth addresses are metadata only and are not an identity or authentication
+mechanism. BLE transport is broadcast and non-connectable; confidentiality and sender
+identity are not provided by the transport.
 
 The alerts HTTP API is a separate pull path. Its responses are accepted without a signature
 because they arrive over HTTPS from the `alertsApi` Cloud Function, which reads the trusted
@@ -324,7 +332,7 @@ AlertRepository.activeAlerts
   -> HomeScreen
   -> Mapbox map and alert shape rendering
 
-MeshStatusStore.orchestratorState
+MeshStatusStore.bleOrchestratorState
   -> SafeReachAppViewModel
   -> SafeReachApp
 ```
@@ -356,7 +364,6 @@ concerns around the mesh, not mesh transport components.
 | Offline maps                                 | `service/OfflineRegionManager.kt`, `map/OfflineRegionViewModel.kt`, `map/OfflineRegionPanel.kt`       |
 | UI shell and navigation                      | `auth/MainScreen.kt`, `navigation/SafeReachApp.kt`                                                   |
 | Mesh diagnostics                             | `debug/DebugViewModel.kt`, `debug/DebugScreen.kt`                                                    |
-| Planned, not implemented                     | `mesh/wifi/WifiCoordinator.kt`                                                                       |
 
 ## Invariants for future changes
 

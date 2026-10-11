@@ -130,7 +130,7 @@ fun DebugScreen(
 fun AlertDebugCard(
     alert: Alert,
     wrapper: ReceivedMessage,
-    onDelete: () -> Unit = {},
+    onDelete: () -> Unit,
 ) {
     val signed = wrapper.signedMessage
     Card(
@@ -193,9 +193,9 @@ fun AlertDebugCard(
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedReceivedTime = remember(alert) {
+            val formattedReceivedTime = remember(wrapper) {
                 SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                    .format(Date(alert.timestamp))
+                    .format(Date(wrapper.receivedAt))
             }
             Text(
                 text = "Received at: $formattedReceivedTime",
@@ -413,7 +413,6 @@ fun MeshStatusCollapsibleCard(
                     AggregateBleState.PartialFail -> "Partial failure"
                     AggregateBleState.CompleteFail -> "Failed"
                     AggregateBleState.Unknown -> "Unknown"
-                    AggregateBleState.Disabled -> "Disabled"
                 }
                 val orchestratorStatusColor = when (orchestratorState) {
                     is AggregateBleState.Active -> StatusSuccess
@@ -422,7 +421,6 @@ fun MeshStatusCollapsibleCard(
                     AggregateBleState.PartialFail -> StatusError
                     AggregateBleState.CompleteFail -> StatusError
                     AggregateBleState.Unknown -> StatusNeutral
-                    AggregateBleState.Disabled -> StatusError
                 }
 
                 CollapsibleTreeNode(
@@ -510,20 +508,7 @@ fun MeshStatusCollapsibleCard(
                         isExpanded = isScannerExpanded,
                         onToggle = { isScannerExpanded = !isScannerExpanded },
                         indentation = 32
-                    ) {
-                        if (scannerState is BleScanState.Scanning) {
-                            Text(
-                                text = "Callback Active: true",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                modifier = Modifier.padding(
-                                    start = 52.dp,
-                                    top = 2.dp,
-                                    bottom = 2.dp
-                                )
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }

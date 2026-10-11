@@ -155,13 +155,6 @@ class MeshForegroundService : Service() {
                             "Scanning in the background"
                         )
                     }
-
-                    AggregateBleState.Disabled -> {
-                        updateNotification(
-                            "$APP_DISPLAY_NAME is stopped",
-                            "Bluetooth has been disabled. Mesh stopped"
-                        )
-                    }
                 }
             }
         }

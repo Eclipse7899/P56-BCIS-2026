@@ -63,6 +63,8 @@ import com.mapbox.turf.TurfConstants
 import com.mapbox.turf.TurfMeasurement
 import com.mapbox.turf.TurfTransformation
 import com.p56.safereach.model.Alert
+import com.p56.safereach.model.AlertType
+import com.p56.safereach.model.LatLong
 import com.p56.safereach.model.Severity
 import com.p56.safereach.model.Shape
 import com.p56.safereach.ui.alert.AlertCard
@@ -201,7 +203,8 @@ fun HomeScreen(
                         }
                     }
                     is Shape.Polygon -> {
-                    //TODO: Add polygon alert display later.
+                        // Polygon alerts are not rendered on the home map yet; only
+                        // circles are drawn here (AlertHistory/Debug screens show details).
                     }
                     null -> {
                         // No alert shape available.
@@ -376,10 +379,26 @@ private fun HomeAlertPanel(
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
+    val now = System.currentTimeMillis()
     SafeReachTheme {
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp))
-        {Text(text = "Home Screen Preview")}
+        HomeScreen(
+            alerts = listOf(
+                Alert(
+                    id = "preview",
+                    timestamp = now,
+                    title = "Test Alert",
+                    description = "Preview alert near San Francisco.",
+                    type = AlertType.FIRE,
+                    severity = Severity.HIGH,
+                    shape = Shape.Circle(
+                        center = LatLong(37.7749, -122.4194),
+                        radius = 100.0,
+                    ),
+                    version = now,
+                    expiresAt = now + 60_000,
+                    invalidated = false,
+                )
+            )
+        )
     }
 }

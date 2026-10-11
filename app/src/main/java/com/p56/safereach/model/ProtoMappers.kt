@@ -81,7 +81,7 @@ fun SignedMessageDto.toDomain(receivedFrom: String, receivedAt: Long): SignedMes
         signature = signature.toByteArray(),
         receivedFrom = receivedFrom,
         receivedAt = receivedAt,
-        cleared = false,
+        dismissed = false,
     )
 
 fun SignedMessage.toDto(): SignedMessageDto = SignedMessageDto.newBuilder()

@@ -204,9 +204,6 @@ class BleBeaconAdvAdapter(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun start(payload: ByteArray): BleAdvertisingEvent.Started {
-        Log.d(TAG, "start: data size=${payload.size}")
-        val maxPayloadBytes: Int = btManager.adapter.getLeMaximumAdvertisingDataLength()
-        Log.d(TAG, "start: max payload bytes=$maxPayloadBytes")
         Log.d(TAG, "start: payload size=${payload.size}")
         val advertiser = advertiser()
 
