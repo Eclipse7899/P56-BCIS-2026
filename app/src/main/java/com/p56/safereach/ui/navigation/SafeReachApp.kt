@@ -6,9 +6,15 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -154,7 +160,6 @@ fun SafeReachAppContent(
     }
 
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
-
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             AppDestinations.entries.forEach {
@@ -183,54 +188,68 @@ fun SafeReachAppContent(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                if (!notificationsEnabled) {
-                    NotificationPermissionBanner(
-                        modifier = Modifier.padding(8.dp),
-                        onEnableClick = onEnableNotifications
-                    )
-                }
-                if (!connectedDevicePermissionGranted) {
-                    ConnectedDevicesPermissionBanner(
-                        modifier = Modifier.padding(8.dp),
-                        onGrantClick = onGrantConnectedDevicePermission
-                    )
-                }
-                if (!locationPermissionGranted) {
-                    LocationPermissionBanner(
-                        modifier = Modifier.padding(8.dp),
-                        onGrantClick = onGrantLocationPermission
-                    )
-                }
-                if (isBatteryOptimizationOn) {
-                    BatteryOptimizationBanner(
-                        modifier = Modifier.padding(8.dp),
-                        onDisableClick = {
-                            BatteryOptimizationHelper.openBatteryOptimizationSettings(context)
+                // Banner region is capped at half the screen. It only grows as tall as its
+                // content and scrolls once the banners no longer fit within that cap.
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val scrollState = rememberScrollState()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = maxHeight * 0.5f)
+                            .verticalScroll(scrollState)
+                    ) {
+                        if (!notificationsEnabled) {
+                            NotificationPermissionBanner(
+                                modifier = Modifier.padding(8.dp),
+                                onEnableClick = onEnableNotifications
+                            )
                         }
-                    )
-                }
-                if (bluetoothState == BluetoothState.Disabled) {
-                    BluetoothDisabledBanner(
-                        modifier = Modifier.padding(8.dp),
-                        onEnableClick = {
-                            if (ActivityCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.BLUETOOTH_CONNECT
-                                ) != PackageManager.PERMISSION_GRANTED
-                            ) {
-                                return@BluetoothDisabledBanner
-                            }
-                            BluetoothHelper.requestEnableBluetooth(context)
+                        if (!connectedDevicePermissionGranted) {
+                            ConnectedDevicesPermissionBanner(
+                                modifier = Modifier.padding(8.dp),
+                                onGrantClick = onGrantConnectedDevicePermission
+                            )
                         }
-                    )
+                        if (!locationPermissionGranted) {
+                            LocationPermissionBanner(
+                                modifier = Modifier.padding(8.dp),
+                                onGrantClick = onGrantLocationPermission
+                            )
+                        }
+                        if (isBatteryOptimizationOn) {
+                            BatteryOptimizationBanner(
+                                modifier = Modifier.padding(8.dp),
+                                onDisableClick = {
+                                    BatteryOptimizationHelper.openBatteryOptimizationSettings(context)
+                                }
+                            )
+                        }
+                        if (bluetoothState == BluetoothState.Disabled) {
+                            BluetoothDisabledBanner(
+                                modifier = Modifier.padding(8.dp),
+                                onEnableClick = {
+                                    if (ActivityCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.BLUETOOTH_CONNECT
+                                        ) != PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        return@BluetoothDisabledBanner
+                                    }
+                                    BluetoothHelper.requestEnableBluetooth(context)
+                                }
+                            )
+                        }
+                    }
                 }
-                when (currentDestination) {
-                    AppDestinations.HOME -> HomeRoute()
-                    AppDestinations.ALERTS -> AlertHistoryRoute()
-                    AppDestinations.PROFILE -> ProfileScreen()
-                    AppDestinations.DEBUG -> {
-                        val vm = hiltViewModel<DebugViewModel>()
-                        DebugRoute(viewModel = vm)
+                Box(modifier = Modifier.weight(1f)) {
+                    when (currentDestination) {
+                        AppDestinations.HOME -> HomeRoute()
+                        AppDestinations.ALERTS -> AlertHistoryRoute()
+                        AppDestinations.PROFILE -> ProfileScreen()
+                        AppDestinations.DEBUG -> {
+                            val vm = hiltViewModel<DebugViewModel>()
+                            DebugRoute(viewModel = vm)
+                        }
                     }
                 }
             }
@@ -238,22 +257,12 @@ fun SafeReachAppContent(
     }
 }
 
-/**
- * Kicks off the mesh foreground service once every BLE permission it needs is granted.
- * Called after the permission banners grant access so the mesh starts without the user
- * having to relaunch the app.
- */
 private fun startMeshServiceIfPermissionsGranted(context: Context) {
     if (BlePermissions.hasBlePermissions(context)) {
         MeshForegroundService.start(context)
     }
 }
 
-/**
- * Requests the given permissions when the system can still prompt for them. If the
- * user previously chose "don't ask again", the request would silently do nothing, so
- * we send them to the app settings screen instead where they can grant it manually.
- */
 private fun requestPermissionsOrOpenSettings(
     context: Context,
     permissions: List<String>,
