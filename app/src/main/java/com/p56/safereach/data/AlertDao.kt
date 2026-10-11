@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AlertDao {
 
-    @Query("SELECT * FROM alerts ORDER BY severity DESC, timestamp DESC")
+    @Query("SELECT * FROM alerts ORDER BY timestamp DESC")
     fun observeAll(): Flow<List<AlertEntity>>
 
     @Query("SELECT * FROM alerts WHERE id = :id")
