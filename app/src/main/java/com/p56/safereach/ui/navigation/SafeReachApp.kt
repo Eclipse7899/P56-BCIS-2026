@@ -188,8 +188,6 @@ fun SafeReachAppContent(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // Banner region is capped at half the screen. It only grows as tall as its
-                // content and scrolls once the banners no longer fit within that cap.
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val scrollState = rememberScrollState()
                     Column(
