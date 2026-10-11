@@ -46,9 +46,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        startGeonetListener()
-        // to subscribe app to the topic
-        com.google.firebase.messaging.FirebaseMessaging.getInstance().subscribeToTopic("alerts")
         ensureBleServiceRunning()
         enableEdgeToEdge()
         setContent {

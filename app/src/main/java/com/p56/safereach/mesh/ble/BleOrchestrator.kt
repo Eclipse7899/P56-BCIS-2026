@@ -15,6 +15,7 @@ import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.scanning.BleScanController
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import com.p56.safereach.service.MeshStatusStore
 import com.p56.safereach.util.ApplicationScope
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -36,9 +37,10 @@ private data class Snapshot(
 
 @Singleton
 class BleOrchestrator @Inject constructor(
-    @ApplicationScope private val scope: CoroutineScope,
+    @param:ApplicationScope private val scope: CoroutineScope,
     private val advertiser: BleAdvertisingController,
     private val scanner: BleScanController,
+    private val meshStatusStore: MeshStatusStore
 ) {
     private val _state: MutableStateFlow<AggregateBleState> =
         MutableStateFlow(
@@ -65,6 +67,7 @@ class BleOrchestrator @Inject constructor(
                     Log.d(TAG, "State transition: ${_state.value} -> $newState")
                 }
                 _state.value = newState
+                meshStatusStore.updateOrchestratorState(newState)
                 Log.d(TAG, "Reconciling snapshot: $snapshot")
                 reconcile(snapshot.desired)
             }
