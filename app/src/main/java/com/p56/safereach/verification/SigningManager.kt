@@ -1,13 +1,10 @@
 package com.p56.safereach.verification
 
-import android.annotation.SuppressLint
 import android.content.Context
-import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.security.PrivateKey
 import java.security.PublicKey
 
 
