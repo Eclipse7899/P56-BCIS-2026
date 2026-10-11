@@ -3,6 +3,7 @@ package com.p56.safereach.ui.debug
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.components.BuildConfig
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
@@ -63,10 +64,9 @@ class DebugViewModel @Inject constructor(
                 validUntil = alert.expiresAt,
                 timestamp = alert.timestamp,
             )
-            val signature = signingManager.sign(data.toDto().toByteArray())
             val message = SignedMessage(
                 payload = data.toDto().toByteArray(),
-                signature = signature,
+                signature = ByteArray(0),
                 receivedAt = System.currentTimeMillis(),
                 receivedFrom = "Debug"
             )

@@ -2,6 +2,7 @@ package com.p56.safereach.service
 
 import android.util.Log
 import com.google.protobuf.InvalidProtocolBufferException
+import com.p56.safereach.BuildConfig
 import com.p56.safereach.android.AlertNotifier
 import com.p56.safereach.data.AlertUpsertResult
 import com.p56.safereach.data.AppDatabase
@@ -76,9 +77,11 @@ class AlertRepository @Inject constructor(
     suspend fun addSigned(
         signedMessage: SignedMessage,
     ) {
-        if (!signingManager.verify(signedMessage.payload, signedMessage.signature)) {
-            Log.w(TAG, "Failed to verify alert")
-            return
+        if (!BuildConfig.DEBUG) {
+            if (!signingManager.verify(signedMessage.payload, signedMessage.signature)) {
+                Log.w(TAG, "Failed to verify alert")
+                return
+            }
         }
         try {
             val innerData = MessageDataDto.parseFrom(signedMessage.payload)
