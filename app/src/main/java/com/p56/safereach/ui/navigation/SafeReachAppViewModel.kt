@@ -11,4 +11,5 @@ class SafeReachAppViewModel @Inject constructor(
 ) : ViewModel() {
 
     val bluetoothState = meshStatusStore.bluetoothState
+    val bluetoothIncompatibilities = meshStatusStore.bluetoothIncompatibilities
 }

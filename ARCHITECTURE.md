@@ -343,8 +343,8 @@ Required permissions vary by Android version:
 The user must keep Bluetooth enabled. Android scan behavior also depends on device
 location settings and battery optimization, so the manifest also declares
 `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`. The UI exposes notification, connected-device,
-location-permission, battery-optimization, and Bluetooth-disabled banners, and re-checks the
-notification and permission banners whenever the app resumes.
+location-permission, battery-optimization, Bluetooth-disabled, and Bluetooth-incompatibility
+banners, and re-checks the notification and permission banners whenever the app resumes.
 
 ## UI data flow
 
@@ -356,7 +356,7 @@ AlertRepository.receivedMessage / activeAlerts
 MeshStatusStore
   -> DebugViewModel.uiState
   -> DebugScreen
-  -> SafeReachApp (Bluetooth-disabled banner)
+  -> SafeReachApp (Bluetooth-disabled and Bluetooth-incompatibility banners)
 
 AlertRepository.activeAlerts
   -> HomeViewModel

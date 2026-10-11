@@ -15,6 +15,7 @@ import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.R
 import com.p56.safereach.mesh.BleScanResultQueue
 import com.p56.safereach.mesh.BleStateReceiver
+import com.p56.safereach.mesh.ble.BleCapabilities
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
@@ -59,18 +60,9 @@ class MeshForegroundService : Service() {
         btManager: BluetoothManager,
     ) {
         val receiver = BleStateReceiver { enabled ->
-            if (enabled){
-                meshStatusStore.updateBluetoothState(BluetoothState.Enabled)
-            } else {
-                meshStatusStore.updateBluetoothState(BluetoothState.Disabled)
-            }
+            updateBluetoothState(btManager, enabled)
         }
-        val enabled = btManager.adapter?.isEnabled == true
-        if (enabled) {
-            meshStatusStore.updateBluetoothState(BluetoothState.Enabled)
-        } else {
-            meshStatusStore.updateBluetoothState(BluetoothState.Disabled)
-        }
+        updateBluetoothState(btManager, btManager.adapter?.isEnabled == true)
         ContextCompat.registerReceiver(
             this,
             receiver,
@@ -78,6 +70,18 @@ class MeshForegroundService : Service() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         bleStateReceiver = receiver
+    }
+
+    private fun updateBluetoothState(btManager: BluetoothManager, enabled: Boolean) {
+        if (enabled) {
+            meshStatusStore.updateBluetoothState(BluetoothState.Enabled)
+            meshStatusStore.updateBluetoothIncompatibilities(
+                BleCapabilities.missingFeatures(btManager.adapter)
+            )
+        } else {
+            meshStatusStore.updateBluetoothState(BluetoothState.Disabled)
+            meshStatusStore.updateBluetoothIncompatibilities(emptyList())
+        }
     }
 
     private fun observeMessageState() {

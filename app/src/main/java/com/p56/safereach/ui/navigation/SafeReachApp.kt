@@ -44,10 +44,12 @@ import com.p56.safereach.android.permissions.BatteryOptimizationHelper
 import com.p56.safereach.android.permissions.BluetoothHelper
 import com.p56.safereach.android.MeshForegroundService
 import com.p56.safereach.android.permissions.NotificationPermissionHelper
+import com.p56.safereach.mesh.ble.BleFeature
 import com.p56.safereach.mesh.ble.BlePermissions
 import com.p56.safereach.mesh.ble.fsm.BluetoothState
 import com.p56.safereach.ui.BatteryOptimizationBanner
 import com.p56.safereach.ui.BluetoothDisabledBanner
+import com.p56.safereach.ui.BluetoothIncompatibilityBanner
 import com.p56.safereach.ui.ConnectedDevicesPermissionBanner
 import com.p56.safereach.ui.LocationPermissionBanner
 import com.p56.safereach.ui.NotificationPermissionBanner
@@ -62,6 +64,8 @@ import com.p56.safereach.ui.theme.SafeReachTheme
 fun SafeReachApp() {
     val viewModel: SafeReachAppViewModel = hiltViewModel()
     val bluetoothState by viewModel.bluetoothState.collectAsStateWithLifecycle()
+    val bluetoothIncompatibilities by viewModel.bluetoothIncompatibilities
+        .collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -107,6 +111,7 @@ fun SafeReachApp() {
 
     SafeReachAppContent(
         bluetoothState = bluetoothState,
+        bluetoothIncompatibilities = bluetoothIncompatibilities,
         notificationsEnabled = notificationsEnabled,
         connectedDevicePermissionGranted = connectedDevicePermissionGranted,
         locationPermissionGranted = locationPermissionGranted,
@@ -133,6 +138,7 @@ fun SafeReachApp() {
 @Composable
 fun SafeReachAppContent(
     bluetoothState: BluetoothState,
+    bluetoothIncompatibilities: List<BleFeature> = emptyList(),
     notificationsEnabled: Boolean = true,
     connectedDevicePermissionGranted: Boolean = true,
     locationPermissionGranted: Boolean = true,
@@ -235,6 +241,14 @@ fun SafeReachAppContent(
                                     }
                                     BluetoothHelper.requestEnableBluetooth(context)
                                 }
+                            )
+                        }
+                        if (bluetoothState == BluetoothState.Enabled &&
+                            bluetoothIncompatibilities.isNotEmpty()
+                        ) {
+                            BluetoothIncompatibilityBanner(
+                                modifier = Modifier.padding(8.dp),
+                                missingFeatures = bluetoothIncompatibilities
                             )
                         }
                     }

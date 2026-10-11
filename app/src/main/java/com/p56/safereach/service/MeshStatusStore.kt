@@ -1,5 +1,6 @@
 package com.p56.safereach.service
 
+import com.p56.safereach.mesh.ble.BleFeature
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.fsm.BluetoothState
@@ -22,6 +23,10 @@ class MeshStatusStore @Inject constructor() {
 
     val bluetoothState: StateFlow<BluetoothState> = _bluetoothState.asStateFlow()
 
+    private val _bluetoothIncompatibilities = MutableStateFlow<List<BleFeature>>(emptyList())
+    val bluetoothIncompatibilities: StateFlow<List<BleFeature>> =
+        _bluetoothIncompatibilities.asStateFlow()
+
     private val _advertiserState = MutableStateFlow<BleAdvertisingState>(BleAdvertisingState.Idle)
     val advertiserState: StateFlow<BleAdvertisingState> = _advertiserState.asStateFlow()
 
@@ -38,6 +43,10 @@ class MeshStatusStore @Inject constructor() {
 
     fun updateBluetoothState(state: BluetoothState) {
         _bluetoothState.value = state
+    }
+
+    fun updateBluetoothIncompatibilities(features: List<BleFeature>) {
+        _bluetoothIncompatibilities.value = features
     }
 
     fun updateAdvertiserState(state: BleAdvertisingState) {
