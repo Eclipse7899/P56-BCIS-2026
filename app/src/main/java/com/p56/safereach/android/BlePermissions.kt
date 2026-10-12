@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import kotlin.collections.plusAssign
 
 object BlePermissions {
     fun requiredBlePermissions(): Set<String> {

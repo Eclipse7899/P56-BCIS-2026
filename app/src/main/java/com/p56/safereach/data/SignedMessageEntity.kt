@@ -19,8 +19,8 @@ data class SignedMessageEntity(
         if (this === other) return true
         if (other !is SignedMessageEntity) return false
         return timestamp == other.timestamp &&
-            data.contentEquals(other.data) &&
-            signature.contentEquals(other.signature)
+                data.contentEquals(other.data) &&
+                signature.contentEquals(other.signature)
     }
 
     override fun hashCode(): Int {

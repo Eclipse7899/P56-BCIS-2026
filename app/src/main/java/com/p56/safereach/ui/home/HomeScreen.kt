@@ -63,9 +63,7 @@ import com.mapbox.turf.TurfMeasurement
 import com.mapbox.turf.TurfTransformation
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.AlertType
-import com.p56.safereach.model.LatLong
 import com.p56.safereach.model.Severity
-import com.p56.safereach.model.Shape
 import com.p56.safereach.ui.alert.AlertCard
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.ui.theme.StatusError
@@ -190,9 +188,9 @@ fun HomeScreen(
                 val geoSourceState = remember { GeoJsonSourceState() }
                 geoSourceState.data = GeoJSONData(polygonCircle)
                 FillLayer(
-                            sourceState = geoSourceState,
+                    sourceState = geoSourceState,
                     layerId = "alert-circle-${alert.id}"
-                        ) {
+                ) {
                     fillColor = ColorValue(color)
                     fillOutlineColor = ColorValue(borderColor)
                 }
@@ -213,7 +211,7 @@ fun HomeScreen(
                         val pixel = mapView.mapboxMap.pixelForCoordinate(point)
                         calloutView.x = pixel.x.toFloat() - calloutView.width / 2f
                         calloutView.y = pixel.y.toFloat() -
-                            calloutView.height - (8f * localDensity.density)
+                                calloutView.height - (8f * localDensity.density)
                         withFrameNanos { }
                     }
                 } finally {

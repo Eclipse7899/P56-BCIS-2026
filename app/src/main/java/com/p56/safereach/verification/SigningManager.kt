@@ -8,7 +8,6 @@ import jakarta.inject.Singleton
 import java.security.PublicKey
 
 
-
 @Singleton
 class SigningManager {
     private val context: Context

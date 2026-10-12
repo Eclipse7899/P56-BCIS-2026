@@ -1,7 +1,7 @@
 package com.p56.safereach.service
 
-import com.p56.safereach.mesh.ble.features.BleFeature
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
+import com.p56.safereach.mesh.ble.features.BleFeature
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.fsm.BluetoothState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
@@ -19,7 +19,8 @@ class MeshStatusStore @Inject constructor() {
     private val _bleOrchestratorState = MutableStateFlow<AggregateBleState>(AggregateBleState.Off)
     val bleOrchestratorState: StateFlow<AggregateBleState> = _bleOrchestratorState.asStateFlow()
 
-    private val _bluetoothState: MutableStateFlow<BluetoothState> = MutableStateFlow(BluetoothState.Disabled)
+    private val _bluetoothState: MutableStateFlow<BluetoothState> =
+        MutableStateFlow(BluetoothState.Disabled)
 
     val bluetoothState: StateFlow<BluetoothState> = _bluetoothState.asStateFlow()
 

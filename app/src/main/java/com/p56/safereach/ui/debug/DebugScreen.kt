@@ -61,7 +61,6 @@ import com.p56.safereach.model.AlertType
 import com.p56.safereach.model.LatLong
 import com.p56.safereach.model.ReceivedMessage
 import com.p56.safereach.model.Severity
-import com.p56.safereach.model.Shape
 import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.ui.theme.StatusError
 import com.p56.safereach.ui.theme.StatusInfo

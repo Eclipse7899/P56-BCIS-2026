@@ -64,7 +64,7 @@ fun BluetoothIncompatibilityBanner(
             }
             Text(
                 text = "This device's Bluetooth does not support the features " +
-                    "$APP_DISPLAY_NAME needs for the emergency mesh:",
+                        "$APP_DISPLAY_NAME needs for the emergency mesh:",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )

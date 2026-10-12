@@ -62,8 +62,8 @@ fun NotificationPermissionBanner(
             }
             Text(
                 text = "The emergency mesh runs as a foreground service, which needs to show a " +
-                    "notification. Notifications are disabled, so SafeReach can't keep the mesh " +
-                    "running in the background.",
+                        "notification. Notifications are disabled, so SafeReach can't keep the mesh " +
+                        "running in the background.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )

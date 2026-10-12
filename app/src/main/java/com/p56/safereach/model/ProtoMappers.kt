@@ -24,7 +24,7 @@ fun getExpiresAt(expiresInSec: Int, timestamp: Long): Long {
     return timestamp + expiresInMs
 }
 
-fun getExpiresInSeconds(expiresAtMs: Long, timestampMs: Long): Int{
+fun getExpiresInSeconds(expiresAtMs: Long, timestampMs: Long): Int {
     val expiresIn = (expiresAtMs - timestampMs).coerceAtLeast(0)
     return (expiresIn / 1000).toInt()
 }

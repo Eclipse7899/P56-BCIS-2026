@@ -62,7 +62,7 @@ fun LocationPermissionBanner(
             }
             Text(
                 text = "Bluetooth scanning requires location access. Without the location " +
-                    "permission, SafeReach can't start.",
+                        "permission, SafeReach can't start.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )

@@ -62,7 +62,7 @@ fun ConnectedDevicesPermissionBanner(
             }
             Text(
                 text = "The emergency mesh uses Bluetooth to find and share alerts. Without the " +
-                    "Nearby devices permission, SafeReach can't start.",
+                        "Nearby devices permission, SafeReach can't start.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )

@@ -99,9 +99,11 @@ fun SignInScreen(
         ) {
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it
-                                emailError = null
-                                signInError = null},
+                onValueChange = {
+                    email = it
+                    emailError = null
+                    signInError = null
+                },
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -113,9 +115,11 @@ fun SignInScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it
-                                passwordError = null
-                                signInError = null},
+                onValueChange = {
+                    password = it
+                    passwordError = null
+                    signInError = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Password") },
                 singleLine = true,
@@ -123,7 +127,7 @@ fun SignInScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 isError = passwordError != null,
-                supportingText = { passwordError?.let { Text (it) } },
+                supportingText = { passwordError?.let { Text(it) } },
                 trailingIcon = {
                     val painter = if (passwordVisible)
                         painterResource(id = R.drawable.ic_visibility_24px)

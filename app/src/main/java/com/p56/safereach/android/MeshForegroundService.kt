@@ -13,14 +13,14 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.R
-import com.p56.safereach.mesh.ble.scanning.BleScanResultQueue
 import com.p56.safereach.mesh.BleStateReceiver
-import com.p56.safereach.mesh.ble.features.BleCapabilities
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
+import com.p56.safereach.mesh.ble.features.BleCapabilities
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.fsm.BluetoothState
+import com.p56.safereach.mesh.ble.scanning.BleScanResultQueue
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.model.toDto
 import com.p56.safereach.service.AlertRepository
@@ -38,10 +38,13 @@ import kotlinx.coroutines.launch
 class MeshForegroundService : Service() {
     private var bleStateReceiver: BleStateReceiver? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Inject
     lateinit var alertRepository: AlertRepository
+
     @Inject
     lateinit var orchestrator: BleOrchestrator
+
     @Inject
     lateinit var meshStatusStore: MeshStatusStore
 

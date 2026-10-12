@@ -1,9 +1,7 @@
 package com.p56.safereach.data
 
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.AlertType
 import com.p56.safereach.model.Severity

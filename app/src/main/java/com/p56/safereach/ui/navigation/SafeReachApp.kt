@@ -39,21 +39,21 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.p56.safereach.BuildConfig
 import com.p56.safereach.R
+import com.p56.safereach.android.BlePermissions
+import com.p56.safereach.android.MeshForegroundService
 import com.p56.safereach.android.permissions.AppSettingsHelper
 import com.p56.safereach.android.permissions.BatteryOptimizationHelper
 import com.p56.safereach.android.permissions.BluetoothHelper
-import com.p56.safereach.android.MeshForegroundService
 import com.p56.safereach.android.permissions.NotificationPermissionHelper
 import com.p56.safereach.mesh.ble.features.BleFeature
-import com.p56.safereach.android.BlePermissions
 import com.p56.safereach.mesh.ble.fsm.BluetoothState
+import com.p56.safereach.ui.alert.AlertHistoryRoute
 import com.p56.safereach.ui.banners.BatteryOptimizationBanner
 import com.p56.safereach.ui.banners.BluetoothDisabledBanner
 import com.p56.safereach.ui.banners.BluetoothIncompatibilityBanner
 import com.p56.safereach.ui.banners.ConnectedDevicesPermissionBanner
 import com.p56.safereach.ui.banners.LocationPermissionBanner
 import com.p56.safereach.ui.banners.NotificationPermissionBanner
-import com.p56.safereach.ui.alert.AlertHistoryRoute
 import com.p56.safereach.ui.debug.DebugRoute
 import com.p56.safereach.ui.debug.DebugViewModel
 import com.p56.safereach.ui.home.HomeRoute
@@ -224,7 +224,9 @@ fun SafeReachAppContent(
                             BatteryOptimizationBanner(
                                 modifier = Modifier.padding(8.dp),
                                 onDisableClick = {
-                                    BatteryOptimizationHelper.openBatteryOptimizationSettings(context)
+                                    BatteryOptimizationHelper.openBatteryOptimizationSettings(
+                                        context
+                                    )
                                 }
                             )
                         }
@@ -285,7 +287,7 @@ private fun requestPermissionsOrOpenSettings(
     }
     val activity = context as? Activity
     val canRequest = activity != null &&
-        permissions.any { ActivityCompat.shouldShowRequestPermissionRationale(activity, it) }
+            permissions.any { ActivityCompat.shouldShowRequestPermissionRationale(activity, it) }
     if (canRequest) {
         onRequest(permissions.toTypedArray())
     } else {

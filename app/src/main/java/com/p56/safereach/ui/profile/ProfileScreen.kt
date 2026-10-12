@@ -251,7 +251,8 @@ fun ProfileContent(
             modifier = Modifier.fillMaxWidth(),
             onClick = onSignOut
         ) {
-            Text(text = "Sign Out",
+            Text(
+                text = "Sign Out",
                 fontWeight = FontWeight.Bold
             )
         }
@@ -295,7 +296,7 @@ private fun OfflineAreaPicker(
                 .align(Alignment.BottomCenter)
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
-        ){
+        ) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

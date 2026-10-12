@@ -9,7 +9,6 @@ import com.p56.safereach.data.AppDatabase
 import com.p56.safereach.data.toDomain
 import com.p56.safereach.data.toEntity
 import com.p56.safereach.model.Alert
-import com.p56.safereach.model.AlertBatch
 import com.p56.safereach.model.ReceivedMessage
 import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.model.isActive
@@ -68,7 +67,7 @@ class AlertRepository @Inject constructor(
         }
         scope.launch {
             database.alertDao().observeAll().collect { entities ->
-                val alerts = entities.map {it.toDomain()}
+                val alerts = entities.map { it.toDomain() }
                 allAlertsState.value = alerts
                 activeAlertsState.value = alerts.filter { it.isActive() }
             }
@@ -87,7 +86,7 @@ class AlertRepository @Inject constructor(
         try {
             val innerData = AlertBatchDto.parseFrom(signedMessage.payload)
             innerData.alertsList
-                .map{ it.toDomain() }
+                .map { it.toDomain() }
                 .forEach { addAlert(it) }
             database.signedMessageDao().upsertIfNewer(
                 signedMessage.toEntity(timestamp = innerData.timestamp)

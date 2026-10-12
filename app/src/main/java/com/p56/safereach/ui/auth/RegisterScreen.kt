@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,18 +45,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.p56.safereach.R
-import androidx.compose.foundation.layout.Row
 
 @Composable
 private fun PasswordRequirements(password: String) {
     val hasMinLength = password.length >= 8
-    val hasNumber = password.any{it.isDigit()}
-    val hasCapitalLetter = password.any{it.isUpperCase()}
-    Column(modifier = Modifier.padding(
-        start = 8.dp,
-        top = 4.dp,
-        bottom = 4.dp
-    )){
+    val hasNumber = password.any { it.isDigit() }
+    val hasCapitalLetter = password.any { it.isUpperCase() }
+    Column(
+        modifier = Modifier.padding(
+            start = 8.dp,
+            top = 4.dp,
+            bottom = 4.dp
+        )
+    ) {
         PasswordRequirement(
             met = hasMinLength,
             text = "Password must be at least 8 characters"
@@ -75,16 +77,18 @@ private fun PasswordRequirements(password: String) {
 private fun PasswordRequirement(
     met: Boolean,
     text: String
-){
-    Row{Text(
-        text = if (met) "✓ $text" else "✕ $text",
-        color = if (met){
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.error
-        },
-        fontWeight = FontWeight.Bold
-    )}
+) {
+    Row {
+        Text(
+            text = if (met) "✓ $text" else "✕ $text",
+            color = if (met) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.error
+            },
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @Composable
@@ -142,8 +146,10 @@ fun RegisterScreen(
         ) {
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it
-                                emailError = null },
+                onValueChange = {
+                    email = it
+                    emailError = null
+                },
                 label = { Text("Email") },
                 placeholder = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
@@ -157,8 +163,10 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it
-                                passwordError = null},
+                onValueChange = {
+                    password = it
+                    passwordError = null
+                },
                 label = { Text("Password") },
                 placeholder = { Text("Password") },
                 modifier = Modifier.fillMaxWidth(),
@@ -195,8 +203,10 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it
-                                confirmPasswordError = null},
+                onValueChange = {
+                    confirmPassword = it
+                    confirmPasswordError = null
+                },
                 label = { Text("Confirm Password") },
                 placeholder = { Text("Confirm Password") },
                 modifier = Modifier.fillMaxWidth(),
@@ -232,7 +242,9 @@ fun RegisterScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             val buttonDisabled =
-                loading || email.isBlank() || password.isBlank() || confirmPassword.isBlank() || !isValidPassword(password) || password != confirmPassword
+                loading || email.isBlank() || password.isBlank() || confirmPassword.isBlank() || !isValidPassword(
+                    password
+                ) || password != confirmPassword
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !buttonDisabled,
@@ -242,19 +254,22 @@ fun RegisterScreen(
                     emailError = null
                     passwordError = null
                     confirmPasswordError = null
-                    when{
+                    when {
                         !isValidEmail(email) -> {
                             emailError = "Please enter a valid email address."
                             return@Button
                         }
+
                         !isValidPassword(password) -> {
                             passwordError = "Password must meet all the requirements."
                             return@Button
                         }
+
                         confirmPassword.isBlank() -> {
                             confirmPasswordError = "Please confirm your password."
                             return@Button
                         }
+
                         password != confirmPassword -> {
                             confirmPasswordError = "Passwords do not match."
                             return@Button
