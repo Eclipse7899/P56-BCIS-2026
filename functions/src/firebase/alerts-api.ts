@@ -18,7 +18,7 @@ export const alertsApi = onRequest(
         .get();
 
       const messages = snapshot.docs.map(
-        (doc) => alertFromFirestore(doc.data(), doc.id)
+        (doc) => alertFromFirestore(doc.data())
       );
 
       res.json({messages});

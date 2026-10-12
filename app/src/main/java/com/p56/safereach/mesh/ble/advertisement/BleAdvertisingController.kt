@@ -116,7 +116,8 @@ class BleAdvertisingController @Inject constructor(
                 }
 
                 is BleAdvertisingEffect.Update -> runAdapter {
-                    adapter.update(effect.payload, effect.advertisingSet)
+                    adapter.stop()
+                    adapter.start(effect.payload)
                     BleAdvertisingEvent.Started(effect.advertisingSet, effect.payload)
                 }
 

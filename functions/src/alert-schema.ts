@@ -1,6 +1,12 @@
 import {Timestamp} from "firebase-admin/firestore";
 import {z} from "zod";
-import {AlertTypeDto, SeverityDto} from "./models";
+import {AlertType, Severity} from "./models";
+
+const uint32 = z
+  .number()
+  .int()
+  .nonnegative()
+  .max(0xffffffff);
 
 const uint64 = z
   .number()
@@ -8,34 +14,16 @@ const uint64 = z
   .nonnegative()
   .max(Number.MAX_SAFE_INTEGER);
 
-const latLongSchema = z.strictObject({
-  latitude: z.number(),
-  longitude: z.number(),
-});
-
-const circleSchema = z.strictObject({
-  center: latLongSchema,
-  radius: z.number().nonnegative(),
-});
-
-const polygonSchema = z.strictObject({
-  points: z.array(latLongSchema),
-});
-
-const shapeSchema = z.union([
-  z.strictObject({circle: circleSchema}),
-  z.strictObject({polygon: polygonSchema}),
-]);
-
 export const alertDocSchema = z.strictObject({
-  id: z.string(),
+  id: uint32,
   timestamp: uint64,
   title: z.string(),
   description: z.string(),
-  type: z.enum(AlertTypeDto),
-  severity: z.enum(SeverityDto),
-  shape: shapeSchema.optional(),
-  version: uint64,
+  type: z.enum(AlertType),
+  severity: z.enum(Severity),
+  latitude: z.number(),
+  longitude: z.number(),
+  radius: uint32,
   expiresAt: uint64,
   invalidated: z.boolean(),
 });
@@ -58,14 +46,11 @@ function toEpochMillis(value: unknown, field: string): number {
 }
 
 export function alertFromFirestore(
-  data: Record<string, unknown>,
-  id: string
+  data: Record<string, unknown>
 ): AlertDoc {
   return alertDocSchema.parse({
     ...data,
-    id,
     timestamp: toEpochMillis(data.timestamp, "timestamp"),
-    version: toEpochMillis(data.version, "version"),
     expiresAt: toEpochMillis(data.expiresAt, "expiresAt"),
   });
 }

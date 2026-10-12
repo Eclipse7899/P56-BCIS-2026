@@ -249,7 +249,7 @@ class BleBeaconAdvAdapter(
             return
         }
         return withAdvertisingTimeout {
-            awaitOperation<Unit>(
+            awaitOperation(
                 advertiser,
                 callback,
                 operation = {
@@ -258,25 +258,6 @@ class BleBeaconAdvAdapter(
             ) {
                 Log.d(TAG, "Executing stopAdvertisingSet")
                 advertiser.stopAdvertisingSet(callback)
-            }
-        }
-    }
-
-    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
-    suspend fun update(payload: ByteArray, set: AdvertisingSet) {
-        Log.d(TAG, "update: data size=${payload.size}")
-        val advertiser = advertiser()
-        val callback = currentCallback
-        return withAdvertisingTimeout {
-            awaitOperation<Unit>(
-                advertiser,
-                callback,
-                operation = {
-                    OperationStatus.Updating(it)
-                }
-            ) {
-                Log.d(TAG, "Executing setAdvertisingData")
-                set.setAdvertisingData(buildAdvertiseData(payload))
             }
         }
     }
@@ -315,7 +296,7 @@ class BleBeaconAdvAdapter(
         Log.d(TAG, "stopCurrentSet: releasing previous advertising set")
         try {
             withAdvertisingTimeout {
-                awaitOperation<Unit>(
+                awaitOperation(
                     advertiser,
                     callback,
                     operation = { OperationStatus.Stopping(it) }

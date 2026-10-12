@@ -14,22 +14,22 @@ interface AlertDao {
     fun observeAll(): Flow<List<AlertEntity>>
 
     @Query("SELECT * FROM alerts WHERE id = :id")
-    suspend fun findById(id: String): AlertEntity?
+    suspend fun findById(id: Int): AlertEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(alert: AlertEntity)
 
     @Transaction
-    suspend fun upsertIfNewer(alert: AlertEntity): AlertUpsertResult {
-        val stored = findById(alert.id)
+    suspend fun upsertIfNewer(newAlert: AlertEntity): AlertUpsertResult {
+        val stored = findById(newAlert.id)
         return when {
             stored == null -> {
-                upsert(alert)
+                upsert(newAlert)
                 AlertUpsertResult.INSERTED
             }
 
-            stored.version < alert.version -> {
-                upsert(alert)
+            stored.timestamp < newAlert.timestamp -> {
+                upsert(newAlert)
                 AlertUpsertResult.UPDATED
             }
 

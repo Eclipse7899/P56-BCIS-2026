@@ -9,11 +9,12 @@ import com.p56.safereach.data.AppDatabase
 import com.p56.safereach.data.toDomain
 import com.p56.safereach.data.toEntity
 import com.p56.safereach.model.Alert
+import com.p56.safereach.model.AlertBatch
 import com.p56.safereach.model.ReceivedMessage
 import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.model.isActive
 import com.p56.safereach.model.toDomain
-import com.p56.safereach.proto.MessageDataDto
+import com.p56.safereach.proto.AlertBatchDto
 import com.p56.safereach.util.ApplicationScope
 import com.p56.safereach.verification.SigningManager
 import jakarta.inject.Inject
@@ -54,7 +55,7 @@ class AlertRepository @Inject constructor(
                     receivedMessageState.value = null
                     return@collect
                 }
-                val data = runCatching { MessageDataDto.parseFrom(entity.data) }.getOrNull()
+                val data = runCatching { AlertBatchDto.parseFrom(entity.data) }.getOrNull()
                 receivedMessageState.value = data?.let {
                     ReceivedMessage(
                         signedMessage = entity.toDomain(),
@@ -84,8 +85,8 @@ class AlertRepository @Inject constructor(
             return
         }
         try {
-            val innerData = MessageDataDto.parseFrom(signedMessage.payload)
-            innerData.msgList
+            val innerData = AlertBatchDto.parseFrom(signedMessage.payload)
+            innerData.alertsList
                 .map{ it.toDomain() }
                 .forEach { addAlert(it) }
             database.signedMessageDao().upsertIfNewer(

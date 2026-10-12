@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -143,16 +142,14 @@ fun HomeScreen(
             mapViewportState = mapViewportState,
             onMapClickListener = { point ->
                 val hit = alerts.firstOrNull { alert ->
-                    val shape = alert.shape
-                    shape is Shape.Circle &&
-                        TurfMeasurement.distance(
-                            Point.fromLngLat(
-                                shape.center.longitude,
-                                shape.center.latitude
-                            ),
-                            point,
-                            TurfConstants.UNIT_METERS
-                        ) <= shape.radius
+                    TurfMeasurement.distance(
+                        Point.fromLngLat(
+                            alert.longitude,
+                            alert.latitude
+                        ),
+                        point,
+                        TurfConstants.UNIT_METERS
+                    ) <= alert.radius
                 }
                 selectedAlert = hit
                 hit != null
@@ -168,59 +165,46 @@ fun HomeScreen(
                 mapViewportState.transitionToFollowPuckState()
             }
             alerts.forEach { alert ->
-                when (val shape = alert.shape) {
-                    is Shape.Circle -> key(alert.id) {
-                        val point = Point.fromLngLat(
-                            shape.center.longitude,
-                            shape.center.latitude
-                        )
-                        val color = when (alert.severity) {
-                            Severity.LOW -> alertShapeFillColorSeverityLow
-                            Severity.MEDIUM -> alertShapeFillColorSeverityMedium
-                            Severity.HIGH -> alertShapeFillColorSeverityHigh
-                            Severity.UNKNOWN -> alertShapeFillColorSeverityLow
-                        }
-                        val borderColor = when (alert.severity) {
-                            Severity.LOW -> alertShapeBorderColorSeverityLow
-                            Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
-                            Severity.HIGH -> alertShapeBorderColorSeverityHigh
-                            Severity.UNKNOWN -> alertShapeBorderColorSeverityLow
-                        }
-                        val polygonCircle = TurfTransformation.circle(
-                            point,
-                            shape.radius,
-                            64,
-                            TurfConstants.UNIT_METERS
-                        )
-                        val geoSourceState = remember { GeoJsonSourceState() }
-                        geoSourceState.data = GeoJSONData(polygonCircle)
-                        FillLayer(
+                val point = Point.fromLngLat(
+                    alert.longitude,
+                    alert.latitude
+                )
+                val color = when (alert.severity) {
+                    Severity.LOW -> alertShapeFillColorSeverityLow
+                    Severity.MEDIUM -> alertShapeFillColorSeverityMedium
+                    Severity.HIGH -> alertShapeFillColorSeverityHigh
+                    Severity.UNKNOWN -> alertShapeFillColorSeverityLow
+                }
+                val borderColor = when (alert.severity) {
+                    Severity.LOW -> alertShapeBorderColorSeverityLow
+                    Severity.MEDIUM -> alertShapeBorderColorSeverityMedium
+                    Severity.HIGH -> alertShapeBorderColorSeverityHigh
+                    Severity.UNKNOWN -> alertShapeBorderColorSeverityLow
+                }
+                val polygonCircle = TurfTransformation.circle(
+                    point,
+                    alert.radius.toDouble(),
+                    64,
+                    TurfConstants.UNIT_METERS
+                )
+                val geoSourceState = remember { GeoJsonSourceState() }
+                geoSourceState.data = GeoJSONData(polygonCircle)
+                FillLayer(
                             sourceState = geoSourceState,
-                            layerId = "alert-circle-${alert.id}"
+                    layerId = "alert-circle-${alert.id}"
                         ) {
-                            fillColor = ColorValue(color)
-                            fillOutlineColor = ColorValue(borderColor)
-                        }
-                    }
-                    is Shape.Polygon -> {
-                        // Polygon alerts are not rendered on the home map yet; only
-                        // circles are drawn here (AlertHistory/Debug screens show details).
-                    }
-                    null -> {
-                        // No alert shape available.
-                    }
+                    fillColor = ColorValue(color)
+                    fillOutlineColor = ColorValue(borderColor)
                 }
             }
 
             val calloutAlert = selectedAlert
-            val calloutShape = calloutAlert?.shape
             val localDensity = LocalDensity.current
             MapEffect(calloutAlert?.id) { mapView ->
                 val alert = calloutAlert ?: return@MapEffect
-                val shape = calloutShape as? Shape.Circle ?: return@MapEffect
                 val point = Point.fromLngLat(
-                    shape.center.longitude,
-                    shape.center.latitude
+                    alert.longitude,
+                    alert.latitude
                 )
                 val calloutView = createAlertCalloutView(context, alert)
                 mapView.addView(calloutView)
@@ -384,17 +368,15 @@ fun HomeScreenPreview() {
         HomeScreen(
             alerts = listOf(
                 Alert(
-                    id = "preview",
+                    id = 1,
                     timestamp = now,
                     title = "Test Alert",
                     description = "Preview alert near San Francisco.",
                     type = AlertType.FIRE,
                     severity = Severity.HIGH,
-                    shape = Shape.Circle(
-                        center = LatLong(37.7749, -122.4194),
-                        radius = 100.0,
-                    ),
-                    version = now,
+                    latitude = 1.toDouble(),
+                    longitude = 0.toDouble(),
+                    radius = 0,
                     expiresAt = now + 60_000,
                     invalidated = false,
                 )

@@ -154,28 +154,10 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Location", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            when (val shape = alert.shape) {
-                is Shape.Circle -> {
-                    Text(
-                        text = "Circle: Radius: ${shape.radius} meters",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                is Shape.Polygon -> {
-                    Text(
-                        text = "Polygon: ${shape.points.size} points",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                null -> {
-                    Text(
-                        text = "Unknown shape type",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
+            Text(
+                text = "Circle: Radius: ${alert.radius} meters",
+                style = MaterialTheme.typography.bodySmall
+            )
             Spacer(modifier = Modifier.height(4.dp))
             val formattedAlertTime = remember(alert) {
                 SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -349,24 +331,18 @@ fun GenerateAlertDebugCard(
             }
             Button(
                 onClick = {
-                    val shape = Shape.Circle(
-                        center = LatLong(
-                            latitude = latitude ?: 0.0,
-                            longitude = longitude ?: 0.0,
-                        ),
-                        radius = radius ?: 0.0,
-                    )
                     val version = System.currentTimeMillis()
                     val alert = Alert(
-                        id = "debug",
+                        id = Int.MIN_VALUE,
                         timestamp = version,
                         title = title.ifBlank { "" },
                         description = description.ifBlank { "" },
                         type = selectedType,
                         severity = selectedSeverity,
-                        shape = shape,
-                        version = version,
                         expiresAt = version + DEFAULT_ALERT_LIFETIME_MILLIS,
+                        latitude = latitude!!,
+                        longitude = longitude!!,
+                        radius = radius!!.toInt(),
                         invalidated = false,
                     )
                     onAlertGenerated(alert)
@@ -452,7 +428,7 @@ fun MeshStatusCollapsibleCard(
                         BleAdvertisingState.Idle -> "Idle"
                         is BleAdvertisingState.Starting -> "Starting"
                         BleAdvertisingState.Stopping -> "Stopping"
-                        is BleAdvertisingState.Retrying -> "Retrying (${advertiserState.error})"
+                        is BleAdvertisingState.Retrying -> "Retrying (${advertiserState.error}), Attempt ${advertiserState.attempt}"
                     }
                     val advertiserStatusColor = when (advertiserState) {
                         is BleAdvertisingState.Advertising -> StatusSuccess
@@ -687,17 +663,15 @@ fun DebugScreenPreview() {
                 batch = AlertBatch(
                     alerts = listOf(
                         Alert(
-                            id = "preview",
+                            id = 1,
                             timestamp = now,
                             title = "Test Alert",
                             description = "This is a test alert for preview purposes.",
                             type = AlertType.FIRE,
                             severity = Severity.HIGH,
-                            shape = Shape.Circle(
-                                center = LatLong(37.7749, -122.4194),
-                                radius = 100.0,
-                            ),
-                            version = now,
+                            latitude = 39.0,
+                            longitude = -77.0,
+                            radius = 100,
                             expiresAt = now + 60_000,
                             invalidated = false,
                         )

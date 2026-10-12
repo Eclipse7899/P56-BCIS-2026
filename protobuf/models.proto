@@ -1,3 +1,4 @@
+
 syntax = "proto3";
 
 package com.p56.safereach.v1;
@@ -5,62 +6,46 @@ package com.p56.safereach.v1;
 option java_package = "com.p56.safereach.proto";
 option java_multiple_files = true;
 
-message LatLongDto {
-  float latitude = 1;
-  float longitude = 2;
+enum AlertType {
+  EARTHQUAKE = 0;
+  TSUNAMI = 1;
+  FIRE = 2;
+  FLOOD = 3;
 }
 
-message ShapeDto {
-  oneof kind {
-    CircleDto circle = 1;
-    PolygonDto polygon = 2;
-  }
-
-  message CircleDto {
-    LatLongDto center = 1;
-    float radius = 2;
-  }
-
-  message PolygonDto {
-    repeated LatLongDto points = 1;
-  }
-}
-
-enum AlertTypeDto {
-  ALERT_TYPE_EARTHQUAKE = 0;
-  ALERT_TYPE_TSUNAMI = 1;
-  ALERT_TYPE_FIRE = 2;
-  ALERT_TYPE_FLOOD = 3;
-}
-
-enum SeverityDto {
-  SEVERITY_LOW = 0;
-  SEVERITY_MEDIUM = 1;
-  SEVERITY_HIGH = 2;
+enum Severity {
+  LOW = 0;
+  MEDIUM = 1;
+  HIGH = 2;
 }
 
 message AlertDto {
-  string id = 1;
+  uint32 id = 1;
+
   uint64 timestamp = 2;
+
   string title = 3;
   string description = 4;
-  AlertTypeDto type = 5;
-  SeverityDto severity = 6;
-  ShapeDto shape = 7;
-  uint64 version = 8;
-  uint64 expires_at = 9;
-  bool invalidated = 10;
+
+  AlertType type = 5;
+  Severity severity = 6;
+
+  sint32 latitude_e5 = 7;
+  sint32 longitude_e5 = 8;
+
+  uint32 radius_m = 9;
+
+  uint32 expires_in_s = 10;
+  bool invalidated = 11;
+}
+
+message AlertBatchDto {
+  repeated AlertDto alerts = 1;
+  uint64 timestamp = 2;
+  uint32 expires_in_s = 3;
 }
 
 message SignedMessageDto {
   bytes data = 1;
   bytes signature = 2;
-}
-
-message MessageDataDto {
-  // Field number 1 is intentionally skipped (legacy gap). Renumbering the fields below
-  // would break wire compatibility with existing devices, so leave the gap in place.
-  repeated AlertDto msg = 2;
-  uint64 valid_until = 3;
-  uint64 timestamp = 4;
 }

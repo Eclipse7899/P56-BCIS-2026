@@ -63,14 +63,15 @@ class AlertApiClient @Inject constructor() {
     }
 
     private fun parseAlert(json: JSONObject): Alert = Alert(
-        id = json.getString(KEY_ID),
+        id = json.getInt(KEY_ID),
         timestamp = json.getLong(KEY_TIMESTAMP),
         title = json.getString(KEY_TITLE),
         description = json.getString(KEY_DESCRIPTION),
         type = AlertType.fromValue(json.getInt(KEY_TYPE)),
         severity = Severity.fromValue(json.getInt(KEY_SEVERITY)),
-        shape = parseShape(json.optJSONObject(KEY_SHAPE)),
-        version = json.getLong(KEY_VERSION),
+        latitude = json.getDouble(KEY_LATITUDE),
+        longitude = json.getDouble(KEY_LONGITUDE),
+        radius = json.getInt(KEY_RADIUS),
         expiresAt = json.getLong(KEY_EXPIRES_AT),
         invalidated = json.optBoolean(KEY_INVALIDATED, false),
     )
@@ -104,7 +105,6 @@ class AlertApiClient @Inject constructor() {
         private const val KEY_DESCRIPTION = "description"
         private const val KEY_TYPE = "type"
         private const val KEY_SEVERITY = "severity"
-        private const val KEY_SHAPE = "shape"
         private const val KEY_CIRCLE = "circle"
         private const val KEY_CENTER = "center"
         private const val KEY_LATITUDE = "latitude"
@@ -112,7 +112,6 @@ class AlertApiClient @Inject constructor() {
         private const val KEY_RADIUS = "radius"
         private const val KEY_POLYGON = "polygon"
         private const val KEY_POINTS = "points"
-        private const val KEY_VERSION = "version"
         private const val KEY_EXPIRES_AT = "expiresAt"
         private const val KEY_INVALIDATED = "invalidated"
     }

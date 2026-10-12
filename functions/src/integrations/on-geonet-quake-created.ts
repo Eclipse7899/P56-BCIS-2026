@@ -1,25 +1,30 @@
 import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {crc32} from "zlib";
 import {db} from "../db";
 import {AlertDoc, alertDocSchema, alertToFirestore} from "../alert-schema";
 import {geonetDocSchema} from "../geonet-schema";
-import {AlertTypeDto, SeverityDto} from "../models";
+import {AlertType, Severity} from "../models";
 
 const locationPrefix = /^\d+\s*km\s+\w+\s+of\s+/i;
 
 const alertLifetimeMs = 60 * 60 * 1000;
 
-function severityForMagnitude(magnitude: number): SeverityDto {
+function severityForMagnitude(magnitude: number): Severity {
   if (magnitude >= 5) {
-    return SeverityDto.SEVERITY_HIGH;
+    return Severity.HIGH;
   }
   if (magnitude >= 4) {
-    return SeverityDto.SEVERITY_MEDIUM;
+    return Severity.MEDIUM;
   }
-  return SeverityDto.SEVERITY_LOW;
+  return Severity.LOW;
 }
 
 function radiusMetresForMagnitude(magnitude: number): number {
   return Math.round(100 * Math.pow(10, magnitude / 2));
+}
+
+function alertIdForGeonet(geonetId: string): number {
+  return crc32(geonetId) >>> 0;
 }
 
 export const onGeonetQuakeCreated = onDocumentCreated(
@@ -41,22 +46,15 @@ export const onGeonetQuakeCreated = onDocumentCreated(
     const timestamp = geonet.time;
 
     const alert: AlertDoc = alertDocSchema.parse({
-      id: geonetId,
+      id: alertIdForGeonet(geonetId),
       timestamp,
       title: "Earthquake Warning",
       description,
-      type: AlertTypeDto.ALERT_TYPE_EARTHQUAKE,
+      type: AlertType.EARTHQUAKE,
       severity: severityForMagnitude(magnitude),
-      shape: {
-        circle: {
-          center: {
-            latitude: geonet.latitude,
-            longitude: geonet.longitude,
-          },
-          radius: radiusMetresForMagnitude(magnitude),
-        },
-      },
-      version: timestamp,
+      latitude: geonet.latitude,
+      longitude: geonet.longitude,
+      radius: radiusMetresForMagnitude(magnitude),
       expiresAt: timestamp + alertLifetimeMs,
       invalidated: false,
     });
