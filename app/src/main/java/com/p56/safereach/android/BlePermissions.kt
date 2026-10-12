@@ -19,7 +19,7 @@ object BlePermissions {
         val permissions = mutableSetOf<String>()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions plusAssign Manifest.permission.POST_NOTIFICATIONS
+            permissions.plusAssign(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         permissions.addAll(requiredBlePermissions())
@@ -30,9 +30,9 @@ object BlePermissions {
     fun requiredConnectedDevicePermissions(): Set<String> {
         val permissions = mutableSetOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions plusAssign Manifest.permission.BLUETOOTH_SCAN
-            permissions plusAssign Manifest.permission.BLUETOOTH_CONNECT
-            permissions plusAssign Manifest.permission.BLUETOOTH_ADVERTISE
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_SCAN)
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_CONNECT)
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_ADVERTISE)
         }
         return permissions
     }
@@ -40,21 +40,21 @@ object BlePermissions {
     fun requiredLocationPermissions(): Set<String> {
         val permissions = mutableSetOf(Manifest.permission.ACCESS_FINE_LOCATION)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            permissions plusAssign Manifest.permission.ACCESS_COARSE_LOCATION
+            permissions.plusAssign(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
         return permissions
     }
 
     fun requiredScanPermissions(): Set<String> {
         val permissions = mutableSetOf<String>()
-        permissions plusAssign Manifest.permission.ACCESS_FINE_LOCATION
+        permissions.plusAssign(Manifest.permission.ACCESS_FINE_LOCATION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions plusAssign Manifest.permission.BLUETOOTH_SCAN
-            permissions plusAssign Manifest.permission.BLUETOOTH_CONNECT
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_SCAN)
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_CONNECT)
         } else {
-            permissions plusAssign Manifest.permission.BLUETOOTH
-            permissions plusAssign Manifest.permission.BLUETOOTH_ADMIN
-            permissions plusAssign Manifest.permission.ACCESS_COARSE_LOCATION
+            permissions.plusAssign(Manifest.permission.BLUETOOTH)
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_ADMIN)
+            permissions.plusAssign(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
         return permissions
     }
@@ -62,10 +62,10 @@ object BlePermissions {
     fun requiredAdvertisingPermissions(): Set<String> {
         val permissions = mutableSetOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions plusAssign Manifest.permission.BLUETOOTH_ADVERTISE
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_ADVERTISE)
         } else {
-            permissions plusAssign Manifest.permission.BLUETOOTH
-            permissions plusAssign Manifest.permission.BLUETOOTH_ADMIN
+            permissions.plusAssign(Manifest.permission.BLUETOOTH)
+            permissions.plusAssign(Manifest.permission.BLUETOOTH_ADMIN)
         }
         return permissions
     }
