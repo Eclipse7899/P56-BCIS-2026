@@ -4,7 +4,8 @@ data class SignedMessage(
     val payload: ByteArray,
     val signature: ByteArray,
     val receivedFrom: String,
-    val receivedAt: Long
+    val receivedAt: Long,
+    val dismissed: Boolean,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

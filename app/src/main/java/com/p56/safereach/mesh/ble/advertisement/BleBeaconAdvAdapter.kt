@@ -20,6 +20,7 @@ import com.p56.safereach.Constants
 import com.p56.safereach.Constants.MAX_DATA_PAYLOAD
 import com.p56.safereach.Constants.SERVICE_UUIDS
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -90,7 +91,10 @@ class BleBeaconAdvAdapter(
 
     private val mutex = Mutex()
 
-    private val callback = object : AdvertisingSetCallback() {
+    @Volatile
+    private var currentCallback: AdvertisingSetCallback? = null
+
+    private fun createCallback(): AdvertisingSetCallback = object : AdvertisingSetCallback() {
         override fun onAdvertisingSetStarted(
             advertisingSet: AdvertisingSet?,
             txPower: Int,
@@ -150,6 +154,9 @@ class BleBeaconAdvAdapter(
                     onEvent(BleAdvertisingEvent.Stopped)
                 }
             }
+            if (currentCallback === this) {
+                currentCallback = null
+            }
         }
 
         override fun onAdvertisingDataSet(advertisingSet: AdvertisingSet?, status: Int) {
@@ -197,34 +204,36 @@ class BleBeaconAdvAdapter(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun start(payload: ByteArray): BleAdvertisingEvent.Started {
-        Log.d(TAG, "start: data size=${payload.size}")
-        val maxPayloadBytes: Int = btManager.adapter.getLeMaximumAdvertisingDataLength()
-        Log.d(TAG, "start: max payload bytes=$maxPayloadBytes")
         Log.d(TAG, "start: payload size=${payload.size}")
-        val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
-                Log.e(
-                    TAG,
-                    "BluetoothLeAdvertiser is null"
-                )
-            }
-        val set = withAdvertisingTimeout {
-            awaitOperation(
-                advertiser,
-                operation = {
-                    OperationStatus.Starting(it)
+        val advertiser = advertiser()
+
+        stopCurrentSet(advertiser)
+
+        val callback = createCallback()
+        currentCallback = callback
+        val set = try {
+            withAdvertisingTimeout {
+                awaitOperation<AdvertisingSet>(
+                    advertiser,
+                    callback,
+                    operation = {
+                        OperationStatus.Starting(it)
+                    }
+                ) {
+                    Log.d(TAG, "Executing startAdvertisingSet")
+                    advertiser.startAdvertisingSet(
+                        params,
+                        buildAdvertiseData(payload),
+                        null,
+                        null,
+                        null,
+                        callback
+                    )
                 }
-            ) {
-                Log.d(TAG, "Executing startAdvertisingSet")
-                advertiser.startAdvertisingSet(
-                    params,
-                    buildAdvertiseData(payload),
-                    null,
-                    null,
-                    null,
-                    callback
-                )
             }
+        } catch (e: Throwable) {
+            releaseCallback(advertiser, callback)
+            throw e
         }
         Log.d(TAG, "start: completed")
         return BleAdvertisingEvent.Started(set, payload)
@@ -233,16 +242,16 @@ class BleBeaconAdvAdapter(
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     suspend fun stop() {
         Log.d(TAG, "stop")
-        val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
-                Log.e(
-                    TAG,
-                    "BluetoothLeAdvertiser is null"
-                )
-            }
+        val advertiser = advertiser()
+        val callback = currentCallback
+        if (callback == null) {
+            Log.d(TAG, "stop: no active advertising set")
+            return
+        }
         return withAdvertisingTimeout {
             awaitOperation(
                 advertiser,
+                callback,
                 operation = {
                     OperationStatus.Stopping(it)
                 }
@@ -254,31 +263,9 @@ class BleBeaconAdvAdapter(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
-    suspend fun update(payload: ByteArray, set: AdvertisingSet) {
-        Log.d(TAG, "update: data size=${payload.size}")
-        val advertiser = btManager.adapter.bluetoothLeAdvertiser
-            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
-                Log.e(
-                    TAG,
-                    "BluetoothLeAdvertiser is null"
-                )
-            }
-        return withAdvertisingTimeout {
-            awaitOperation(
-                advertiser,
-                operation = {
-                    OperationStatus.Updating(it)
-                }
-            ) {
-                Log.d(TAG, "Executing setAdvertisingData")
-                set.setAdvertisingData(buildAdvertiseData(payload))
-            }
-        }
-    }
-
-    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private suspend fun <T> awaitOperation(
         advertiser: BluetoothLeAdvertiser,
+        callback: AdvertisingSetCallback?,
         operation: (Continuation<T>) -> OperationStatus,
         start: () -> Unit
     ): T = mutex.withLock {
@@ -292,13 +279,60 @@ class BleBeaconAdvAdapter(
                 }
 
                 continuation.invokeOnCancellation {
-                    advertiser.stopAdvertisingSet(callback)
+                    callback?.let { advertiser.stopAdvertisingSet(it) }
+                    if (callback != null && currentCallback === callback) {
+                        currentCallback = null
+                    }
                 }
             }
         } finally {
             operationStatus = OperationStatus.Idle
         }
     }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+    private suspend fun stopCurrentSet(advertiser: BluetoothLeAdvertiser) {
+        val callback = currentCallback ?: return
+        Log.d(TAG, "stopCurrentSet: releasing previous advertising set")
+        try {
+            withAdvertisingTimeout {
+                awaitOperation(
+                    advertiser,
+                    callback,
+                    operation = { OperationStatus.Stopping(it) }
+                ) {
+                    Log.d(TAG, "Executing stopAdvertisingSet (before start)")
+                    advertiser.stopAdvertisingSet(callback)
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "stopCurrentSet: stop failed or timed out, releasing callback", e)
+            releaseCallback(advertiser, callback)
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+    private fun releaseCallback(
+        advertiser: BluetoothLeAdvertiser,
+        callback: AdvertisingSetCallback
+    ) {
+        try {
+            advertiser.stopAdvertisingSet(callback)
+        } catch (e: Throwable) {
+            Log.w(TAG, "releaseCallback: failed to release callback", e)
+        }
+        if (currentCallback === callback) {
+            currentCallback = null
+        }
+    }
+
+    private fun advertiser(): BluetoothLeAdvertiser =
+        btManager.adapter.bluetoothLeAdvertiser
+            ?: throw BleAdvertisingException(BleAdvertisingFail.InternalError).also {
+                Log.e(TAG, "BluetoothLeAdvertiser is null")
+            }
 
     private suspend fun <T> withAdvertisingTimeout(block: suspend () -> T): T =
         try {

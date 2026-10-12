@@ -37,7 +37,10 @@ class FirebaseAlertMessagingService : FirebaseMessagingService() {
                 if (task.isSuccessful) {
                     Log.d(TAG, "Automatically subscribed to '$targetTopic' topic.")
                 } else {
-                    Log.e(TAG, "Auto-subscription to '$targetTopic' failed: ${task.exception?.message}")
+                    Log.e(
+                        TAG,
+                        "Auto-subscription to '$targetTopic' failed: ${task.exception?.message}"
+                    )
                 }
             }
     }

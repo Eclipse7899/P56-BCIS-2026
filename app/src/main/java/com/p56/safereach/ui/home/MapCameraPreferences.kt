@@ -12,7 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -34,8 +33,6 @@ object MapCameraPreferences {
     private lateinit var dataStore: DataStore<Preferences>
 
     private val _savedCameraOptions = MutableStateFlow<CameraOptions?>(null)
-
-    val savedCameraOptions = _savedCameraOptions.asStateFlow()
 
     fun initialize(context: Context) {
         if (::dataStore.isInitialized) return

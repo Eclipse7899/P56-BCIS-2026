@@ -1,6 +1,5 @@
-package com.p56.safereach.mesh
+package com.p56.safereach.mesh.ble.scanning
 
-import com.p56.safereach.mesh.ble.scanning.BleScanResult
 import kotlinx.coroutines.channels.Channel
 
 object BleScanResultQueue {

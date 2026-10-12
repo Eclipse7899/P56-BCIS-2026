@@ -58,9 +58,10 @@ fun AlertHistoryScreen(
     alerts: List<Alert>,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier
-        .fillMaxSize()
-        .padding(16.dp)
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
         Text(
             text = "Alert History",
@@ -68,11 +69,11 @@ fun AlertHistoryScreen(
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(16.dp))
-        if (alerts.isEmpty()){
+        if (alerts.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center
-            ){
+            ) {
                 Text(
                     text = "No Previous Alerts",
                     style = MaterialTheme.typography.titleMedium,
@@ -91,7 +92,8 @@ fun AlertHistoryScreen(
             ) {
                 items(
                     items = alerts,
-                    key = { alert -> alert.id}) {alert -> AlertCard(alert = alert)
+                    key = { alert -> alert.id }) { alert ->
+                    AlertCard(alert = alert)
                 }
             }
         }
@@ -106,7 +108,7 @@ fun AlertCard(
     val isActive = alert.isActive()
     Card(
         modifier = Modifier.fillMaxWidth()
-    ){
+    ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             // Severity accent stripe.
             Box(
@@ -167,15 +169,6 @@ fun AlertCard(
                         label = "Reported",
                         value = getDateInstance().format(Date(alert.timestamp)),
                         modifier = Modifier.weight(1f)
-                    )
-                }
-                if (alert.shape != null) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Includes mapped area",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -251,7 +244,7 @@ private fun relativeTime(
 
 @Preview(showBackground = true)
 @Composable
-fun AlertHistoryScreenPreview(){
+fun AlertHistoryScreenPreview() {
     SafeReachTheme {
         AlertHistoryScreen(alerts = emptyList())
     }
@@ -268,46 +261,49 @@ private fun AlertCardPreview() {
         ) {
             AlertCard(
                 alert = Alert(
-                    id = "1",
+                    id = 1,
                     timestamp = now - 45 * 60_000,
                     title = "Tsunami advisory issued",
                     description = "Sea level gauges have returned to normal. The evacuation " +
-                        "advisory for the east coast has been lifted effective immediately.",
+                            "advisory for the east coast has been lifted effective immediately.",
                     type = AlertType.TSUNAMI,
                     severity = Severity.HIGH,
-                    shape = null,
-                    version = 1,
                     expiresAt = now - 15 * 60_000,
+                    latitude = 39.0,
+                    longitude = -77.0,
+                    radius = 100,
                     invalidated = false
                 )
             )
             AlertCard(
                 alert = Alert(
-                    id = "2",
+                    id = 2,
                     timestamp = now - 5 * 3_600_000,
                     title = "Coastal flood warning",
                     description = "Minor flooding expected along low-lying roads during the " +
-                        "next high tide.",
+                            "next high tide.",
                     type = AlertType.FLOOD,
                     severity = Severity.MEDIUM,
-                    shape = null,
-                    version = 1,
                     expiresAt = now + 3_600_000,
+                    latitude = 39.0,
+                    longitude = -77.0,
+                    radius = 100,
                     invalidated = false
                 )
             )
             AlertCard(
                 alert = Alert(
-                    id = "3",
+                    id = 3,
                     timestamp = now - 32 * 86_400_000,
                     title = "Earthquake early-warning test",
                     description = "Routine test of the regional early-warning network. " +
-                        "No action was required.",
+                            "No action was required.",
                     type = AlertType.EARTHQUAKE,
                     severity = Severity.LOW,
-                    shape = null,
-                    version = 1,
+                    latitude = 39.0,
+                    longitude = -77.0,
                     expiresAt = now - 32 * 86_400_000,
+                    radius = 100,
                     invalidated = true
                 )
             )

@@ -12,7 +12,8 @@ This document outlines coding standards, development workflows, testing procedur
 4. [Version Control & Git Workflow](#version-control--git-workflow)
 5. [Testing Strategy](#testing-strategy)
 6. [CI/CD Pipeline](#cicd-pipeline)
-7. [Definition of Done](#definition-of-done)
+7. [Cloud Functions (Backend)](#cloud-functions-backend)
+8. [Definition of Done](#definition-of-done)
 
 ---
 
@@ -47,12 +48,12 @@ type's role is obvious from its name:
 | `toEntity()`            | Mapper from a domain model into a Room entity                  | `Alert.toEntity()`                                        |
 | `toDto()`               | Mapper from a domain model into a Protobuf wire type           | `Alert.toDto()`                                           |
 | `*Entity` / `*Dao`      | Room entity / data-access object                               | `AlertEntity`, `AlertDao`                                 |
-| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager` |
+| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services. A stateless helper may also use `*Manager` (for example `AlertSyncManager`). | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager` |
 | `*Service`              | Reserved for real `android.app.Service` subclasses             | `MeshForegroundService`, `FirebaseAlertMessagingService`  |
-| `*Command`              | Desired-state input to a state machine in `*/fsm`              | `BleCommand`, `BleScanCommand`, `BleAdvertisingCommand`   |
-| `*State` / `*Event`     | Observed condition / transition trigger of a state machine     | `BleState`, `BleScanState`, `BleAdvertisingEvent`         |
+| `*Intent`               | Desired-state input to a state machine in `*/fsm`              | `BleIntent`, `BleScanIntent`, `BleAdvertisingIntent`      |
+| `*State` / `*Event`     | Observed condition / transition trigger of a state machine     | `AggregateBleState`, `BleScanState`, `BleAdvertisingEvent` |
 | `*Controller` / `*Adapter` | State-machine owner / Android platform gateway              | `BleScanController`, `BleBeaconScanAdapter`               |
-| `*Route` / `*Screen` / `*Content` | Compose stateful entry / screen / stateless body    | `HomeRoute`, `HomeScreen`, `ProfileRoute`                 |
+| `*Route` / `*Screen` / `*Content` | Compose stateful entry / screen / stateless body    | `HomeRoute`, `HomeScreen`, `AlertHistoryScreen`          |
 
 Note: `SignedMessage.receivedFrom` and `receivedAt` are also populated for locally
 authored messages (for example the debug flow uses `receivedFrom = "Debug"`), so they mean
@@ -250,6 +251,11 @@ const val FIREBASE_API_KEY = "AIzaSyD1234567890"
 val firebaseApiKey = System.getenv("FIREBASE_API_KEY")
 ```
 
+The project already follows this pattern for alert signing: the Android app ships only a
+public key (`app/src/main/res/raw/public_key.pem`) and CI injects it from the `PUBLIC_KEY`
+GitHub secret, while the Cloud Function reads the matching private key from the
+`SIGNING_KEY` parameter. Never commit the private key.
+
 ### Additional Security Practices
 
 - Keep dependencies updated and scan for CVEs
@@ -400,7 +406,7 @@ Examples:
 
 - **Kotlin:** ktlint (see status note below)
 - **Kotlin / Android:** Android Lint (`./gradlew lint`)
-- **TypeScript (planned):** Prettier + ESLint
+- **TypeScript (Cloud Functions):** ESLint (`npm --prefix functions run lint`)
 
 #### What Gets Checked
 
@@ -421,9 +427,9 @@ Examples:
 #   ./gradlew ktlint          # Check
 #   ./gradlew ktlintFormat    # Auto-fix
 
-# TypeScript (Firebase Functions) - if/when these exist
-npm run lint              # Check
-npm run lint:fix          # Auto-fix
+# TypeScript (Cloud Functions) - configured in functions/
+npm --prefix functions run lint    # Check (eslint --ext .js,.ts .)
+npm --prefix functions run build   # Type-check/compile (tsc)
 ```
 
 ### Unit Tests
@@ -483,6 +489,10 @@ fun validateEmail_emptyString_returnsFalse() {
 # Generate coverage report
 ./gradlew testDebugUnitTest
 ```
+
+Existing unit tests cover the BLE retry/backoff policy (`RetryBackoffTest`), the offline
+region size limits (`OfflineRegionSizeTest`), and the advertising failure mappings
+(`BleAdvertisingFailTest`).
 
 ### Integration Tests
 
@@ -566,17 +576,19 @@ Feature: User Emergency Alert
 
 ### Overview
 
-GitHub Actions automates build, test, and artifact export processes.
+GitHub Actions automates build, test, lint, and artifact export. Two workflows live in
+`.github/workflows`:
 
-### Automated Checks
+- **`development-check.yml`** ("Dev Branch Pull Request Check") runs on pushes and pull
+  requests to `development`. It installs JDK 17, materializes
+  `app/src/main/res/raw/public_key.pem` from the `PUBLIC_KEY` secret, then runs
+  `./gradlew lint`, `./gradlew build`, and `./gradlew test`.
+- **`build.yml`** ("Test and Build main branch") runs on pushes to `main`. It performs the
+  same lint/build/test steps, then `./gradlew assembleRelease` and uploads the release APK
+  as the `SafeReach-release-apk` artifact.
 
-The pipeline automatically runs on every push and pull request:
-
-- **Linting** - Code style validation
-- **Unit Tests** - Function-level tests
-- **Integration Tests** - Component interaction tests
-- **Build** - APK generation
-- **Artifact Export** - Ready for deployment
+Both workflows ignore changes to documentation, `functions/**`, `firebase.json`, and
+`.firebaserc`, so backend-only changes do not trigger the Android pipeline.
 
 ### Failure Handling
 
@@ -617,6 +629,47 @@ gh run list
 
 ---
 
+## Cloud Functions (Backend)
+
+The `functions/` directory is a TypeScript Firebase Cloud Functions codebase (Node 24) that
+owns GeoNet ingestion, alert authoring, signing, and the `alertsApi` endpoint (see
+[ARCHITECTURE.md](./ARCHITECTURE.md#cloud-backend)).
+
+### Prerequisites
+
+- Node.js 24
+- The Firebase CLI (`npm install -g firebase-tools`)
+- A `SIGNING_KEY` parameter holding the Ed25519 private key, set with
+  `firebase functions:secrets:set SIGNING_KEY` (or as an environment parameter)
+
+### Common commands
+
+```bash
+# Install dependencies
+npm --prefix functions install
+
+# Regenerate the protobuf-ts types from protobuf/models.proto after changing it
+npm --prefix functions run proto:generate
+
+# Type-check / compile to lib/
+npm --prefix functions run build
+
+# Lint
+npm --prefix functions run lint
+
+# Run the emulator suite
+npm --prefix functions run serve
+
+# Deploy the functions
+npm --prefix functions run deploy
+```
+
+Guard the wire contract: any change to `protobuf/models.proto` must be regenerated for both
+Kotlin (the Gradle `protobuf` task) and TypeScript (`proto:generate`), and must keep the same
+field numbers so mixed-version devices and the backend stay compatible.
+
+---
+
 ## Definition of Done
 
 A feature is **only considered complete** when ALL the following criteria are met:
@@ -649,8 +702,7 @@ A feature is **only considered complete** when ALL the following criteria are me
 
 ### Documentation
 - **Code Documented** - KDoc/TSDoc comments added
-- **README Updated** - If affecting user workflow
-- **CHANGELOG Updated** - Notable changes documented
+- **Docs Updated** - README/ARCHITECTURE/DEVELOPMENT updated when behavior or architecture changes
 
 ---
 

@@ -1,11 +1,13 @@
 package com.p56.safereach.mesh.ble.scanning.fsm
 
-import com.p56.safereach.mesh.ble.scanning.BleScanResult
+import com.p56.safereach.mesh.ble.scanning.BleScanFail
+
 
 sealed interface BleScanEvent {
-    data object Started : BleScanEvent
-    data class Scanned(val result: BleScanResult) : BleScanEvent
-    data object Stopped : BleScanEvent
-    data object Failed : BleScanEvent
-    data object NoOp : BleScanEvent
+
+    data object ScanStarted : BleScanEvent
+
+    data object ScanStopped : BleScanEvent
+
+    data class Failed(val error: BleScanFail) : BleScanEvent
 }

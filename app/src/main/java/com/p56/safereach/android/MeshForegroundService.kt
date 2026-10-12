@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
@@ -12,14 +13,14 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.R
-import com.p56.safereach.mesh.BleScanResultQueue
 import com.p56.safereach.mesh.BleStateReceiver
 import com.p56.safereach.mesh.ble.BleOrchestrator
-import com.p56.safereach.mesh.ble.advertisement.BleAdvertisingController
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
-import com.p56.safereach.mesh.ble.fsm.BleCommand
-import com.p56.safereach.mesh.ble.fsm.BleState
-import com.p56.safereach.mesh.ble.scanning.BleScanController
+import com.p56.safereach.mesh.ble.features.BleCapabilities
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState
+import com.p56.safereach.mesh.ble.fsm.BleIntent
+import com.p56.safereach.mesh.ble.fsm.BluetoothState
+import com.p56.safereach.mesh.ble.scanning.BleScanResultQueue
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.model.toDto
 import com.p56.safereach.service.AlertRepository
@@ -35,9 +36,6 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MeshForegroundService : Service() {
-    private lateinit var orchestrator: BleOrchestrator
-    private lateinit var advertiserController: BleAdvertisingController
-    private lateinit var scannerController: BleScanController
     private var bleStateReceiver: BleStateReceiver? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -45,37 +43,29 @@ class MeshForegroundService : Service() {
     lateinit var alertRepository: AlertRepository
 
     @Inject
+    lateinit var orchestrator: BleOrchestrator
+
+    @Inject
     lateinit var meshStatusStore: MeshStatusStore
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         val btManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-
         meshStatusStore.updateServiceRunning(true)
-        advertiserController = BleAdvertisingController(serviceScope, btManager)
-        scannerController = BleScanController(serviceScope, btManager, this)
-        orchestrator = BleOrchestrator(serviceScope, advertiserController, scannerController)
-        observeBluetoothState(btManager, advertiserController, scannerController)
+        observeBluetoothState(btManager)
         observeMessageState()
+        observeBleState()
         observeIncomingData()
-        observeOrchestratorState()
-        observeSubsystemStates(advertiserController, scannerController)
     }
 
     private fun observeBluetoothState(
         btManager: BluetoothManager,
-        advertiserController: BleAdvertisingController,
-        scannerController: BleScanController
     ) {
         val receiver = BleStateReceiver { enabled ->
-            advertiserController.onBluetoothStateChanged(enabled)
-            scannerController.onBluetoothStateChanged(enabled)
+            updateBluetoothState(btManager, enabled)
         }
-
-        val isBluetoothEnabled = btManager.adapter?.isEnabled == true
-        advertiserController.onBluetoothStateChanged(isBluetoothEnabled)
-        scannerController.onBluetoothStateChanged(isBluetoothEnabled)
-
+        updateBluetoothState(btManager, btManager.adapter?.isEnabled == true)
         ContextCompat.registerReceiver(
             this,
             receiver,
@@ -85,19 +75,15 @@ class MeshForegroundService : Service() {
         bleStateReceiver = receiver
     }
 
-    private fun observeSubsystemStates(
-        advertiserController: BleAdvertisingController,
-        scannerController: BleScanController
-    ) {
-        serviceScope.launch {
-            advertiserController.state.collect {
-                meshStatusStore.updateAdvertiserState(it)
-            }
-        }
-        serviceScope.launch {
-            scannerController.state.collect {
-                meshStatusStore.updateScannerState(it)
-            }
+    private fun updateBluetoothState(btManager: BluetoothManager, enabled: Boolean) {
+        if (enabled) {
+            meshStatusStore.updateBluetoothState(BluetoothState.Enabled)
+            meshStatusStore.updateBluetoothIncompatibilities(
+                BleCapabilities.missingFeatures(btManager.adapter)
+            )
+        } else {
+            meshStatusStore.updateBluetoothState(BluetoothState.Disabled)
+            meshStatusStore.updateBluetoothIncompatibilities(emptyList())
         }
     }
 
@@ -106,11 +92,11 @@ class MeshForegroundService : Service() {
             alertRepository.receivedMessage.collect { wrapper ->
                 if (wrapper == null) {
                     Log.d(TAG, "No alerts to send")
-                    orchestrator.send(BleCommand.Passive)
+                    orchestrator.send(BleIntent.Passive)
                     return@collect
                 }
                 Log.d(TAG, "Sending alert intent")
-                orchestrator.send(BleCommand.Active(wrapper.signedMessage.toDto().toByteArray()))
+                orchestrator.send(BleIntent.Active(wrapper.signedMessage.toDto().toByteArray()))
             }
         }
     }
@@ -131,43 +117,49 @@ class MeshForegroundService : Service() {
         }
     }
 
-    private fun observeOrchestratorState() {
+    private fun observeBleState() {
         serviceScope.launch {
-            orchestrator.state.collect {
-                meshStatusStore.updateOrchestratorState(it)
+            meshStatusStore.bleOrchestratorState.collect {
                 when (it) {
-                    is BleState.Active -> {
+                    is AggregateBleState.Active -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is running",
                             "Scanning and advertising in the background"
                         )
                     }
 
-                    BleState.Failed -> {
+                    AggregateBleState.PartialFail -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is running",
+                            "One mesh subsystem failed to start"
+                        )
+                    }
+
+                    AggregateBleState.CompleteFail -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is stopped",
                             "Failed to start mesh"
                         )
                     }
 
-                    BleState.Off -> {
+                    AggregateBleState.Unknown -> {
+                        updateNotification(
+                            "$APP_DISPLAY_NAME is stopped",
+                            "Mesh is in an unknown state"
+                        )
+                    }
+
+                    AggregateBleState.Off -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is stopped",
                             "Mesh stopped"
                         )
                     }
 
-                    BleState.Passive -> {
+                    AggregateBleState.Passive -> {
                         updateNotification(
                             "$APP_DISPLAY_NAME is running",
                             "Scanning in the background"
-                        )
-                    }
-
-                    BleState.Disabled -> {
-                        updateNotification(
-                            "$APP_DISPLAY_NAME is stopped",
-                            "Bluetooth has been disabled. Mesh stopped"
                         )
                     }
                 }
@@ -176,18 +168,19 @@ class MeshForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        orchestrator.send(BleCommand.Passive)
+        orchestrator.send(BleIntent.Passive)
         startForeground(NOTIFICATION_ID, buildNotification())
         return START_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        isRunning = false
         meshStatusStore.updateServiceRunning(false)
-        meshStatusStore.updateOrchestratorState(BleState.Off)
+        meshStatusStore.updateOrchestratorState(AggregateBleState.Off)
         meshStatusStore.updateAdvertiserState(BleAdvertisingState.Idle)
         meshStatusStore.updateScannerState(BleScanState.Idle)
-        orchestrator.send(BleCommand.Off)
+        orchestrator.send(BleIntent.Off)
         bleStateReceiver?.let { receiver ->
             try {
                 unregisterReceiver(receiver)
@@ -235,5 +228,19 @@ class MeshForegroundService : Service() {
         private const val TAG = "BleService"
         private const val NOTIFICATION_CHANNEL_ID = "ble_service"
         private const val NOTIFICATION_ID = 1001
+
+        @Volatile
+        private var isRunning = false
+
+        fun start(context: Context) {
+            if (isRunning) {
+                Log.d(TAG, "Mesh service already running, ignoring start request")
+                return
+            }
+            ContextCompat.startForegroundService(
+                context,
+                Intent(context, MeshForegroundService::class.java)
+            )
+        }
     }
 }

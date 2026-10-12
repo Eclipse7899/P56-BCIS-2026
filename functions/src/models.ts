@@ -11,71 +11,13 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * @generated from protobuf message com.p56.safereach.v1.LatLongDto
- */
-export interface LatLongDto {
-    /**
-     * @generated from protobuf field: float latitude = 1
-     */
-    latitude: number;
-    /**
-     * @generated from protobuf field: float longitude = 2
-     */
-    longitude: number;
-}
-/**
- * @generated from protobuf message com.p56.safereach.v1.ShapeDto
- */
-export interface ShapeDto {
-    /**
-     * @generated from protobuf oneof: kind
-     */
-    kind: {
-        oneofKind: "circle";
-        /**
-         * @generated from protobuf field: com.p56.safereach.v1.ShapeDto.CircleDto circle = 1
-         */
-        circle: ShapeDto_CircleDto;
-    } | {
-        oneofKind: "polygon";
-        /**
-         * @generated from protobuf field: com.p56.safereach.v1.ShapeDto.PolygonDto polygon = 2
-         */
-        polygon: ShapeDto_PolygonDto;
-    } | {
-        oneofKind: undefined;
-    };
-}
-/**
- * @generated from protobuf message com.p56.safereach.v1.ShapeDto.CircleDto
- */
-export interface ShapeDto_CircleDto {
-    /**
-     * @generated from protobuf field: com.p56.safereach.v1.LatLongDto center = 1
-     */
-    center?: LatLongDto;
-    /**
-     * @generated from protobuf field: float radius = 2
-     */
-    radius: number;
-}
-/**
- * @generated from protobuf message com.p56.safereach.v1.ShapeDto.PolygonDto
- */
-export interface ShapeDto_PolygonDto {
-    /**
-     * @generated from protobuf field: repeated com.p56.safereach.v1.LatLongDto points = 1
-     */
-    points: LatLongDto[];
-}
-/**
  * @generated from protobuf message com.p56.safereach.v1.AlertDto
  */
 export interface AlertDto {
     /**
-     * @generated from protobuf field: string id = 1
+     * @generated from protobuf field: uint32 id = 1
      */
-    id: string;
+    id: number;
     /**
      * @generated from protobuf field: uint64 timestamp = 2
      */
@@ -89,29 +31,50 @@ export interface AlertDto {
      */
     description: string;
     /**
-     * @generated from protobuf field: com.p56.safereach.v1.AlertTypeDto type = 5
+     * @generated from protobuf field: com.p56.safereach.v1.AlertType type = 5
      */
-    type: AlertTypeDto;
+    type: AlertType;
     /**
-     * @generated from protobuf field: com.p56.safereach.v1.SeverityDto severity = 6
+     * @generated from protobuf field: com.p56.safereach.v1.Severity severity = 6
      */
-    severity: SeverityDto;
+    severity: Severity;
     /**
-     * @generated from protobuf field: com.p56.safereach.v1.ShapeDto shape = 7
+     * @generated from protobuf field: sint32 latitude_e5 = 7
      */
-    shape?: ShapeDto;
+    latitudeE5: number;
     /**
-     * @generated from protobuf field: uint64 version = 8
+     * @generated from protobuf field: sint32 longitude_e5 = 8
      */
-    version: bigint;
+    longitudeE5: number;
     /**
-     * @generated from protobuf field: uint64 expires_at = 9
+     * @generated from protobuf field: uint32 radius_m = 9
      */
-    expiresAt: bigint;
+    radiusM: number;
     /**
-     * @generated from protobuf field: bool invalidated = 10
+     * @generated from protobuf field: uint32 expires_in_s = 10
+     */
+    expiresInS: number;
+    /**
+     * @generated from protobuf field: bool invalidated = 11
      */
     invalidated: boolean;
+}
+/**
+ * @generated from protobuf message com.p56.safereach.v1.AlertBatchDto
+ */
+export interface AlertBatchDto {
+    /**
+     * @generated from protobuf field: repeated com.p56.safereach.v1.AlertDto alerts = 1
+     */
+    alerts: AlertDto[];
+    /**
+     * @generated from protobuf field: uint64 timestamp = 2
+     */
+    timestamp: bigint;
+    /**
+     * @generated from protobuf field: uint32 expires_in_s = 3
+     */
+    expiresInS: number;
 }
 /**
  * @generated from protobuf message com.p56.safereach.v1.SignedMessageDto
@@ -127,302 +90,72 @@ export interface SignedMessageDto {
     signature: Uint8Array;
 }
 /**
- * @generated from protobuf message com.p56.safereach.v1.MessageDataDto
+ * @generated from protobuf enum com.p56.safereach.v1.AlertType
  */
-export interface MessageDataDto {
+export enum AlertType {
     /**
-     * @generated from protobuf field: repeated com.p56.safereach.v1.AlertDto msg = 2
+     * @generated from protobuf enum value: EARTHQUAKE = 0;
      */
-    msg: AlertDto[];
+    EARTHQUAKE = 0,
     /**
-     * @generated from protobuf field: uint64 valid_until = 3
+     * @generated from protobuf enum value: TSUNAMI = 1;
      */
-    validUntil: bigint;
+    TSUNAMI = 1,
     /**
-     * @generated from protobuf field: uint64 timestamp = 4
+     * @generated from protobuf enum value: FIRE = 2;
      */
-    timestamp: bigint;
+    FIRE = 2,
+    /**
+     * @generated from protobuf enum value: FLOOD = 3;
+     */
+    FLOOD = 3
 }
 /**
- * @generated from protobuf enum com.p56.safereach.v1.AlertTypeDto
+ * @generated from protobuf enum com.p56.safereach.v1.Severity
  */
-export enum AlertTypeDto {
+export enum Severity {
     /**
-     * @generated from protobuf enum value: ALERT_TYPE_EARTHQUAKE = 0;
+     * @generated from protobuf enum value: LOW = 0;
      */
-    ALERT_TYPE_EARTHQUAKE = 0,
+    LOW = 0,
     /**
-     * @generated from protobuf enum value: ALERT_TYPE_TSUNAMI = 1;
+     * @generated from protobuf enum value: MEDIUM = 1;
      */
-    ALERT_TYPE_TSUNAMI = 1,
+    MEDIUM = 1,
     /**
-     * @generated from protobuf enum value: ALERT_TYPE_FIRE = 2;
+     * @generated from protobuf enum value: HIGH = 2;
      */
-    ALERT_TYPE_FIRE = 2,
-    /**
-     * @generated from protobuf enum value: ALERT_TYPE_FLOOD = 3;
-     */
-    ALERT_TYPE_FLOOD = 3
+    HIGH = 2
 }
-/**
- * @generated from protobuf enum com.p56.safereach.v1.SeverityDto
- */
-export enum SeverityDto {
-    /**
-     * @generated from protobuf enum value: SEVERITY_LOW = 0;
-     */
-    SEVERITY_LOW = 0,
-    /**
-     * @generated from protobuf enum value: SEVERITY_MEDIUM = 1;
-     */
-    SEVERITY_MEDIUM = 1,
-    /**
-     * @generated from protobuf enum value: SEVERITY_HIGH = 2;
-     */
-    SEVERITY_HIGH = 2
-}
-// @generated message type with reflection information, may provide speed optimized methods
-class LatLongDto$Type extends MessageType<LatLongDto> {
-    constructor() {
-        super("com.p56.safereach.v1.LatLongDto", [
-            { no: 1, name: "latitude", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ },
-            { no: 2, name: "longitude", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ }
-        ]);
-    }
-    create(value?: PartialMessage<LatLongDto>): LatLongDto {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.latitude = 0;
-        message.longitude = 0;
-        if (value !== undefined)
-            reflectionMergePartial<LatLongDto>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: LatLongDto): LatLongDto {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* float latitude */ 1:
-                    message.latitude = reader.float();
-                    break;
-                case /* float longitude */ 2:
-                    message.longitude = reader.float();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: LatLongDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* float latitude = 1; */
-        if (message.latitude !== 0)
-            writer.tag(1, WireType.Bit32).float(message.latitude);
-        /* float longitude = 2; */
-        if (message.longitude !== 0)
-            writer.tag(2, WireType.Bit32).float(message.longitude);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.p56.safereach.v1.LatLongDto
- */
-export const LatLongDto = new LatLongDto$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ShapeDto$Type extends MessageType<ShapeDto> {
-    constructor() {
-        super("com.p56.safereach.v1.ShapeDto", [
-            { no: 1, name: "circle", kind: "message", oneof: "kind", T: () => ShapeDto_CircleDto },
-            { no: 2, name: "polygon", kind: "message", oneof: "kind", T: () => ShapeDto_PolygonDto }
-        ]);
-    }
-    create(value?: PartialMessage<ShapeDto>): ShapeDto {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.kind = { oneofKind: undefined };
-        if (value !== undefined)
-            reflectionMergePartial<ShapeDto>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ShapeDto): ShapeDto {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* com.p56.safereach.v1.ShapeDto.CircleDto circle */ 1:
-                    message.kind = {
-                        oneofKind: "circle",
-                        circle: ShapeDto_CircleDto.internalBinaryRead(reader, reader.uint32(), options, (message.kind as any).circle)
-                    };
-                    break;
-                case /* com.p56.safereach.v1.ShapeDto.PolygonDto polygon */ 2:
-                    message.kind = {
-                        oneofKind: "polygon",
-                        polygon: ShapeDto_PolygonDto.internalBinaryRead(reader, reader.uint32(), options, (message.kind as any).polygon)
-                    };
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ShapeDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* com.p56.safereach.v1.ShapeDto.CircleDto circle = 1; */
-        if (message.kind.oneofKind === "circle")
-            ShapeDto_CircleDto.internalBinaryWrite(message.kind.circle, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* com.p56.safereach.v1.ShapeDto.PolygonDto polygon = 2; */
-        if (message.kind.oneofKind === "polygon")
-            ShapeDto_PolygonDto.internalBinaryWrite(message.kind.polygon, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.p56.safereach.v1.ShapeDto
- */
-export const ShapeDto = new ShapeDto$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ShapeDto_CircleDto$Type extends MessageType<ShapeDto_CircleDto> {
-    constructor() {
-        super("com.p56.safereach.v1.ShapeDto.CircleDto", [
-            { no: 1, name: "center", kind: "message", T: () => LatLongDto },
-            { no: 2, name: "radius", kind: "scalar", T: 2 /*ScalarType.FLOAT*/ }
-        ]);
-    }
-    create(value?: PartialMessage<ShapeDto_CircleDto>): ShapeDto_CircleDto {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.radius = 0;
-        if (value !== undefined)
-            reflectionMergePartial<ShapeDto_CircleDto>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ShapeDto_CircleDto): ShapeDto_CircleDto {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* com.p56.safereach.v1.LatLongDto center */ 1:
-                    message.center = LatLongDto.internalBinaryRead(reader, reader.uint32(), options, message.center);
-                    break;
-                case /* float radius */ 2:
-                    message.radius = reader.float();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ShapeDto_CircleDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* com.p56.safereach.v1.LatLongDto center = 1; */
-        if (message.center)
-            LatLongDto.internalBinaryWrite(message.center, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        /* float radius = 2; */
-        if (message.radius !== 0)
-            writer.tag(2, WireType.Bit32).float(message.radius);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.p56.safereach.v1.ShapeDto.CircleDto
- */
-export const ShapeDto_CircleDto = new ShapeDto_CircleDto$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class ShapeDto_PolygonDto$Type extends MessageType<ShapeDto_PolygonDto> {
-    constructor() {
-        super("com.p56.safereach.v1.ShapeDto.PolygonDto", [
-            { no: 1, name: "points", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => LatLongDto }
-        ]);
-    }
-    create(value?: PartialMessage<ShapeDto_PolygonDto>): ShapeDto_PolygonDto {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.points = [];
-        if (value !== undefined)
-            reflectionMergePartial<ShapeDto_PolygonDto>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ShapeDto_PolygonDto): ShapeDto_PolygonDto {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* repeated com.p56.safereach.v1.LatLongDto points */ 1:
-                    message.points.push(LatLongDto.internalBinaryRead(reader, reader.uint32(), options));
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: ShapeDto_PolygonDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated com.p56.safereach.v1.LatLongDto points = 1; */
-        for (let i = 0; i < message.points.length; i++)
-            LatLongDto.internalBinaryWrite(message.points[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.p56.safereach.v1.ShapeDto.PolygonDto
- */
-export const ShapeDto_PolygonDto = new ShapeDto_PolygonDto$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class AlertDto$Type extends MessageType<AlertDto> {
     constructor() {
         super("com.p56.safereach.v1.AlertDto", [
-            { no: 1, name: "id", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
+            { no: 1, name: "id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 2, name: "timestamp", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
             { no: 3, name: "title", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
             { no: 4, name: "description", kind: "scalar", T: 9 /*ScalarType.STRING*/ },
-            { no: 5, name: "type", kind: "enum", T: () => ["com.p56.safereach.v1.AlertTypeDto", AlertTypeDto] },
-            { no: 6, name: "severity", kind: "enum", T: () => ["com.p56.safereach.v1.SeverityDto", SeverityDto] },
-            { no: 7, name: "shape", kind: "message", T: () => ShapeDto },
-            { no: 8, name: "version", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 9, name: "expires_at", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 10, name: "invalidated", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
+            { no: 5, name: "type", kind: "enum", T: () => ["com.p56.safereach.v1.AlertType", AlertType] },
+            { no: 6, name: "severity", kind: "enum", T: () => ["com.p56.safereach.v1.Severity", Severity] },
+            { no: 7, name: "latitude_e5", kind: "scalar", T: 17 /*ScalarType.SINT32*/ },
+            { no: 8, name: "longitude_e5", kind: "scalar", T: 17 /*ScalarType.SINT32*/ },
+            { no: 9, name: "radius_m", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 10, name: "expires_in_s", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 11, name: "invalidated", kind: "scalar", T: 8 /*ScalarType.BOOL*/ }
         ]);
     }
     create(value?: PartialMessage<AlertDto>): AlertDto {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.id = "";
+        message.id = 0;
         message.timestamp = 0n;
         message.title = "";
         message.description = "";
         message.type = 0;
         message.severity = 0;
-        message.version = 0n;
-        message.expiresAt = 0n;
+        message.latitudeE5 = 0;
+        message.longitudeE5 = 0;
+        message.radiusM = 0;
+        message.expiresInS = 0;
         message.invalidated = false;
         if (value !== undefined)
             reflectionMergePartial<AlertDto>(this, message, value);
@@ -433,8 +166,8 @@ class AlertDto$Type extends MessageType<AlertDto> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* string id */ 1:
-                    message.id = reader.string();
+                case /* uint32 id */ 1:
+                    message.id = reader.uint32();
                     break;
                 case /* uint64 timestamp */ 2:
                     message.timestamp = reader.uint64().toBigInt();
@@ -445,22 +178,25 @@ class AlertDto$Type extends MessageType<AlertDto> {
                 case /* string description */ 4:
                     message.description = reader.string();
                     break;
-                case /* com.p56.safereach.v1.AlertTypeDto type */ 5:
+                case /* com.p56.safereach.v1.AlertType type */ 5:
                     message.type = reader.int32();
                     break;
-                case /* com.p56.safereach.v1.SeverityDto severity */ 6:
+                case /* com.p56.safereach.v1.Severity severity */ 6:
                     message.severity = reader.int32();
                     break;
-                case /* com.p56.safereach.v1.ShapeDto shape */ 7:
-                    message.shape = ShapeDto.internalBinaryRead(reader, reader.uint32(), options, message.shape);
+                case /* sint32 latitude_e5 */ 7:
+                    message.latitudeE5 = reader.sint32();
                     break;
-                case /* uint64 version */ 8:
-                    message.version = reader.uint64().toBigInt();
+                case /* sint32 longitude_e5 */ 8:
+                    message.longitudeE5 = reader.sint32();
                     break;
-                case /* uint64 expires_at */ 9:
-                    message.expiresAt = reader.uint64().toBigInt();
+                case /* uint32 radius_m */ 9:
+                    message.radiusM = reader.uint32();
                     break;
-                case /* bool invalidated */ 10:
+                case /* uint32 expires_in_s */ 10:
+                    message.expiresInS = reader.uint32();
+                    break;
+                case /* bool invalidated */ 11:
                     message.invalidated = reader.bool();
                     break;
                 default:
@@ -475,9 +211,9 @@ class AlertDto$Type extends MessageType<AlertDto> {
         return message;
     }
     internalBinaryWrite(message: AlertDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* string id = 1; */
-        if (message.id !== "")
-            writer.tag(1, WireType.LengthDelimited).string(message.id);
+        /* uint32 id = 1; */
+        if (message.id !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.id);
         /* uint64 timestamp = 2; */
         if (message.timestamp !== 0n)
             writer.tag(2, WireType.Varint).uint64(message.timestamp);
@@ -487,24 +223,27 @@ class AlertDto$Type extends MessageType<AlertDto> {
         /* string description = 4; */
         if (message.description !== "")
             writer.tag(4, WireType.LengthDelimited).string(message.description);
-        /* com.p56.safereach.v1.AlertTypeDto type = 5; */
+        /* com.p56.safereach.v1.AlertType type = 5; */
         if (message.type !== 0)
             writer.tag(5, WireType.Varint).int32(message.type);
-        /* com.p56.safereach.v1.SeverityDto severity = 6; */
+        /* com.p56.safereach.v1.Severity severity = 6; */
         if (message.severity !== 0)
             writer.tag(6, WireType.Varint).int32(message.severity);
-        /* com.p56.safereach.v1.ShapeDto shape = 7; */
-        if (message.shape)
-            ShapeDto.internalBinaryWrite(message.shape, writer.tag(7, WireType.LengthDelimited).fork(), options).join();
-        /* uint64 version = 8; */
-        if (message.version !== 0n)
-            writer.tag(8, WireType.Varint).uint64(message.version);
-        /* uint64 expires_at = 9; */
-        if (message.expiresAt !== 0n)
-            writer.tag(9, WireType.Varint).uint64(message.expiresAt);
-        /* bool invalidated = 10; */
+        /* sint32 latitude_e5 = 7; */
+        if (message.latitudeE5 !== 0)
+            writer.tag(7, WireType.Varint).sint32(message.latitudeE5);
+        /* sint32 longitude_e5 = 8; */
+        if (message.longitudeE5 !== 0)
+            writer.tag(8, WireType.Varint).sint32(message.longitudeE5);
+        /* uint32 radius_m = 9; */
+        if (message.radiusM !== 0)
+            writer.tag(9, WireType.Varint).uint32(message.radiusM);
+        /* uint32 expires_in_s = 10; */
+        if (message.expiresInS !== 0)
+            writer.tag(10, WireType.Varint).uint32(message.expiresInS);
+        /* bool invalidated = 11; */
         if (message.invalidated !== false)
-            writer.tag(10, WireType.Varint).bool(message.invalidated);
+            writer.tag(11, WireType.Varint).bool(message.invalidated);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -515,6 +254,69 @@ class AlertDto$Type extends MessageType<AlertDto> {
  * @generated MessageType for protobuf message com.p56.safereach.v1.AlertDto
  */
 export const AlertDto = new AlertDto$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class AlertBatchDto$Type extends MessageType<AlertBatchDto> {
+    constructor() {
+        super("com.p56.safereach.v1.AlertBatchDto", [
+            { no: 1, name: "alerts", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => AlertDto },
+            { no: 2, name: "timestamp", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
+            { no: 3, name: "expires_in_s", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<AlertBatchDto>): AlertBatchDto {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.alerts = [];
+        message.timestamp = 0n;
+        message.expiresInS = 0;
+        if (value !== undefined)
+            reflectionMergePartial<AlertBatchDto>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: AlertBatchDto): AlertBatchDto {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated com.p56.safereach.v1.AlertDto alerts */ 1:
+                    message.alerts.push(AlertDto.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                case /* uint64 timestamp */ 2:
+                    message.timestamp = reader.uint64().toBigInt();
+                    break;
+                case /* uint32 expires_in_s */ 3:
+                    message.expiresInS = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: AlertBatchDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated com.p56.safereach.v1.AlertDto alerts = 1; */
+        for (let i = 0; i < message.alerts.length; i++)
+            AlertDto.internalBinaryWrite(message.alerts[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        /* uint64 timestamp = 2; */
+        if (message.timestamp !== 0n)
+            writer.tag(2, WireType.Varint).uint64(message.timestamp);
+        /* uint32 expires_in_s = 3; */
+        if (message.expiresInS !== 0)
+            writer.tag(3, WireType.Varint).uint32(message.expiresInS);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message com.p56.safereach.v1.AlertBatchDto
+ */
+export const AlertBatchDto = new AlertBatchDto$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class SignedMessageDto$Type extends MessageType<SignedMessageDto> {
     constructor() {
@@ -570,66 +372,3 @@ class SignedMessageDto$Type extends MessageType<SignedMessageDto> {
  * @generated MessageType for protobuf message com.p56.safereach.v1.SignedMessageDto
  */
 export const SignedMessageDto = new SignedMessageDto$Type();
-// @generated message type with reflection information, may provide speed optimized methods
-class MessageDataDto$Type extends MessageType<MessageDataDto> {
-    constructor() {
-        super("com.p56.safereach.v1.MessageDataDto", [
-            { no: 2, name: "msg", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => AlertDto },
-            { no: 3, name: "valid_until", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ },
-            { no: 4, name: "timestamp", kind: "scalar", T: 4 /*ScalarType.UINT64*/, L: 0 /*LongType.BIGINT*/ }
-        ]);
-    }
-    create(value?: PartialMessage<MessageDataDto>): MessageDataDto {
-        const message = globalThis.Object.create((this.messagePrototype!));
-        message.msg = [];
-        message.validUntil = 0n;
-        message.timestamp = 0n;
-        if (value !== undefined)
-            reflectionMergePartial<MessageDataDto>(this, message, value);
-        return message;
-    }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: MessageDataDto): MessageDataDto {
-        let message = target ?? this.create(), end = reader.pos + length;
-        while (reader.pos < end) {
-            let [fieldNo, wireType] = reader.tag();
-            switch (fieldNo) {
-                case /* repeated com.p56.safereach.v1.AlertDto msg */ 2:
-                    message.msg.push(AlertDto.internalBinaryRead(reader, reader.uint32(), options));
-                    break;
-                case /* uint64 valid_until */ 3:
-                    message.validUntil = reader.uint64().toBigInt();
-                    break;
-                case /* uint64 timestamp */ 4:
-                    message.timestamp = reader.uint64().toBigInt();
-                    break;
-                default:
-                    let u = options.readUnknownField;
-                    if (u === "throw")
-                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
-                    let d = reader.skip(wireType);
-                    if (u !== false)
-                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
-            }
-        }
-        return message;
-    }
-    internalBinaryWrite(message: MessageDataDto, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* repeated com.p56.safereach.v1.AlertDto msg = 2; */
-        for (let i = 0; i < message.msg.length; i++)
-            AlertDto.internalBinaryWrite(message.msg[i], writer.tag(2, WireType.LengthDelimited).fork(), options).join();
-        /* uint64 valid_until = 3; */
-        if (message.validUntil !== 0n)
-            writer.tag(3, WireType.Varint).uint64(message.validUntil);
-        /* uint64 timestamp = 4; */
-        if (message.timestamp !== 0n)
-            writer.tag(4, WireType.Varint).uint64(message.timestamp);
-        let u = options.writeUnknownFields;
-        if (u !== false)
-            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
-        return writer;
-    }
-}
-/**
- * @generated MessageType for protobuf message com.p56.safereach.v1.MessageDataDto
- */
-export const MessageDataDto = new MessageDataDto$Type();

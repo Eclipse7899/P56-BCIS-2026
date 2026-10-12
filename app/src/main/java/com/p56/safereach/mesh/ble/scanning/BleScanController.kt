@@ -1,154 +1,141 @@
 package com.p56.safereach.mesh.ble.scanning
 
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothManager
-import android.content.Context
 import android.util.Log
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanCommand
+import com.p56.safereach.mesh.ble.fsm.BluetoothState
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanDesiredState
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanEffect
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanEvent
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanFsm
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Disabled
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Failed
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Idle
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState.Scanning
+import com.p56.safereach.service.MeshStatusStore
+import com.p56.safereach.util.ApplicationScope
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-
-
-private sealed interface Message {
-    data class Intent(val intent: BleScanCommand) : Message
-    data class Event(val event: BleScanEvent) : Message
-    data class BluetoothState(val enabled: Boolean) : Message
-}
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration.Companion.nanoseconds
 
 private const val TAG = "BleScanController"
 
-@SuppressLint("MissingPermission")
-class BleScanController(
-    scope: CoroutineScope,
-    manager: BluetoothManager,
-    context: Context,
+@Singleton
+class BleScanController @Inject constructor(
+    private val meshStatusStore: MeshStatusStore,
+    @param:ApplicationScope private val scope: CoroutineScope,
+    private val adapter: BleBeaconScanAdapter,
 ) {
+    private val _state = MutableStateFlow<BleScanState>(BleScanState.Idle)
+    val state: StateFlow<BleScanState> = _state.asStateFlow()
 
-    private val _state = MutableStateFlow<BleScanState>(Idle)
+    private val intentFlow = MutableStateFlow<BleScanIntent>(BleScanIntent.Stop)
+    private val retryTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    val state = _state.asStateFlow()
-
-    private val messages = Channel<Message>(Channel.UNLIMITED)
-
-    private val adapter = BleBeaconScanAdapter(
-        btManager = manager,
-        context = context
-    )
 
     init {
         scope.launch {
-            for (msg in messages) {
-                Log.d(TAG, "Received message: $msg")
-                when (msg) {
-                    is Message.BluetoothState -> {
-                        val newState = if (msg.enabled) {
-                            if (_state.value is Disabled) {
-                                Idle
-                            } else {
-                                _state.value
-                            }
-                        } else {
-                            Disabled
-                        }
-                        if (newState != _state.value) {
-                            Log.d(
-                                TAG,
-                                "State transition: ${_state.value} -> $newState via bluetooth enabled=${msg.enabled}"
-                            )
-                        }
-                        _state.value = newState
-                    }
+            combine(
+                intentFlow,
+                meshStatusStore.bluetoothState,
+                retryTrigger.onStart { emit(Unit) }
+            ) { intent, btState, _ ->
+                getDesiredState(intent, btState)
+            }.collect { desiredState ->
+                settle(event = null, desiredState = desiredState)
+            }
+        }
 
-                    is Message.Event -> {
-                        val newState = reduce(_state.value, msg.event)
-                        if (newState != _state.value) {
-                            Log.d(
-                                TAG,
-                                "State transition: ${_state.value} -> $newState via external event ${msg.event}"
-                            )
-                        }
-                        _state.value = newState
-                    }
+        scope.launch {
+            observeAdapterFailures()
+        }
+    }
 
-                    is Message.Intent -> {
-                        val event = execute(msg.intent)
-                        val newState = reduce(_state.value, event)
-                        if (newState != _state.value) {
-                            Log.d(
-                                TAG,
-                                "State transition: ${_state.value} -> $newState via ${msg.intent} -> $event"
-                            )
-                        }
-                        _state.value = newState
-                    }
+    fun getDesiredState(
+        intent: BleScanIntent,
+        bluetoothState: BluetoothState
+    ): BleScanDesiredState {
+        return if (intent == BleScanIntent.Start && bluetoothState == BluetoothState.Enabled) {
+            BleScanDesiredState.Scanning
+        } else {
+            BleScanDesiredState.Idle
+        }
+    }
+
+    fun send(intent: BleScanIntent) {
+        intentFlow.value = intent
+    }
+
+    private suspend fun observeAdapterFailures() {
+        for (error in BleScanErrorQueue.channel) {
+            val desired = getDesiredState(intentFlow.value, meshStatusStore.bluetoothState.value)
+            settle(event = BleScanEvent.Failed(error), desiredState = desired)
+        }
+    }
+
+    fun settle(event: BleScanEvent?, desiredState: BleScanDesiredState) {
+        var pending = event
+        while (true) {
+            val result = BleScanFsm.evaluate(
+                current = _state.value,
+                desired = desiredState,
+                event = pending,
+                nowNanos = System.nanoTime(),
+            )
+            publish(result.state)
+
+            if (result.state is BleScanState.Retrying && pending is BleScanEvent.Failed) {
+                scheduleRetry(result.state.retryAtNanos)
+            }
+
+            pending = when (result.effect) {
+                BleScanEffect.NoOp -> return
+                BleScanEffect.Start -> runAdapter {
+                    adapter.scan()
+                    BleScanEvent.ScanStarted
+                }
+
+                BleScanEffect.Stop -> runAdapter {
+                    adapter.stop()
+                    BleScanEvent.ScanStopped
                 }
             }
         }
     }
 
-    fun reduce(state: BleScanState, event: BleScanEvent): BleScanState {
-        return when (event) {
-            BleScanEvent.Failed -> Failed
-            is BleScanEvent.Started -> Scanning
-            BleScanEvent.Stopped -> Idle
-            BleScanEvent.NoOp -> state
-            is BleScanEvent.Scanned -> state
+    private var retryJob: Job? = null
+
+    private fun scheduleRetry(retryAtNanos: Long) {
+        retryJob?.cancel()
+        retryJob = scope.launch {
+            val delayNanos = (retryAtNanos - System.nanoTime()).coerceAtLeast(0L)
+            delay(delayNanos.nanoseconds)
+            retryTrigger.tryEmit(Unit)
         }
     }
 
-    private fun execute(intent: BleScanCommand): BleScanEvent {
-        return when (intent) {
-            BleScanCommand.Start -> {
-                when (_state.value) {
-                    Idle, is Failed -> {
-                        try {
-                            adapter.scan()
-                            BleScanEvent.Started
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to start scan", e)
-                            BleScanEvent.Failed
-                        }
-                    }
-
-                    else -> {
-                        BleScanEvent.NoOp
-                    }
-                }
-            }
-
-            BleScanCommand.Stop -> {
-                when (_state.value) {
-                    is Scanning -> {
-                        try {
-                            adapter.stop()
-                            BleScanEvent.Stopped
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to stop scan", e)
-                            BleScanEvent.Failed
-                        }
-                    }
-
-                    else -> BleScanEvent.NoOp
-                }
-            }
+    private inline fun runAdapter(block: () -> BleScanEvent): BleScanEvent {
+        return try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "BLE scan operation failed", e)
+            BleScanEvent.Failed(BleScanFail.InternalError)
         }
     }
 
-
-    fun send(intent: BleScanCommand) {
-        messages.trySend(Message.Intent(intent))
-    }
-
-    fun onBluetoothStateChanged(enabled: Boolean) {
-        messages.trySend(Message.BluetoothState(enabled))
+    private fun publish(newState: BleScanState) {
+        if (newState == _state.value) return
+        Log.d(TAG, "State transition: ${_state.value} -> $newState")
+        _state.value = newState
+        meshStatusStore.updateScannerState(newState)
     }
 }

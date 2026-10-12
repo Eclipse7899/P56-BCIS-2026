@@ -1,53 +1,9 @@
 package com.p56.safereach.model
 
 import com.google.protobuf.ByteString
+import com.p56.safereach.proto.AlertBatchDto
 import com.p56.safereach.proto.AlertDto
-import com.p56.safereach.proto.LatLongDto
-import com.p56.safereach.proto.MessageDataDto
-import com.p56.safereach.proto.ShapeDto
 import com.p56.safereach.proto.SignedMessageDto
-
-fun LatLongDto.toDomain(): LatLong = LatLong(
-    latitude = latitude.toDouble(),
-    longitude = longitude.toDouble(),
-)
-
-fun LatLong.toDto(): LatLongDto = LatLongDto.newBuilder()
-    .setLatitude(latitude.toFloat())
-    .setLongitude(longitude.toFloat())
-    .build()
-
-fun ShapeDto.toDomain(): Shape? = when (kindCase) {
-    ShapeDto.KindCase.CIRCLE -> Shape.Circle(
-        center = circle.center.toDomain(),
-        radius = circle.radius.toDouble(),
-    )
-
-    ShapeDto.KindCase.POLYGON -> Shape.Polygon(
-        points = polygon.pointsList.map { it.toDomain() },
-    )
-
-    else -> null
-}
-
-fun Shape.toDto(): ShapeDto {
-    val builder = ShapeDto.newBuilder()
-    when (this) {
-        is Shape.Circle -> builder.setCircle(
-            ShapeDto.CircleDto.newBuilder()
-                .setCenter(center.toDto())
-                .setRadius(radius.toFloat())
-                .build()
-        )
-
-        is Shape.Polygon -> builder.setPolygon(
-            ShapeDto.PolygonDto.newBuilder()
-                .addAllPoints(points.map { it.toDto() })
-                .build()
-        )
-    }
-    return builder.build()
-}
 
 fun AlertDto.toDomain(): Alert = Alert(
     id = id,
@@ -56,11 +12,22 @@ fun AlertDto.toDomain(): Alert = Alert(
     description = description,
     type = AlertType.fromValue(typeValue),
     severity = Severity.fromValue(severityValue),
-    shape = if (hasShape()) shape.toDomain() else null,
-    version = version,
-    expiresAt = expiresAt,
-    invalidated = invalidated,
+    latitude = latitudeE5 / 1E5,
+    longitude = longitudeE5 / 1E5,
+    expiresAt = getExpiresAt(expiresInS, timestamp),
+    radius = radiusM,
+    invalidated = invalidated
 )
+
+fun getExpiresAt(expiresInSec: Int, timestamp: Long): Long {
+    val expiresInMs = expiresInSec * 1000L
+    return timestamp + expiresInMs
+}
+
+fun getExpiresInSeconds(expiresAtMs: Long, timestampMs: Long): Int {
+    val expiresIn = (expiresAtMs - timestampMs).coerceAtLeast(0)
+    return (expiresIn / 1000).toInt()
+}
 
 fun Alert.toDto(): AlertDto = AlertDto.newBuilder()
     .setId(id)
@@ -69,10 +36,7 @@ fun Alert.toDto(): AlertDto = AlertDto.newBuilder()
     .setDescription(description)
     .setTypeValue(type.value)
     .setSeverityValue(severity.value)
-    .setShape(shape?.toDto())
-    .setVersion(version)
-    .setExpiresAt(expiresAt)
-    .setInvalidated(invalidated)
+    .setExpiresInS(getExpiresInSeconds(expiresAt, timestamp))
     .build()
 
 fun SignedMessageDto.toDomain(receivedFrom: String, receivedAt: Long): SignedMessage =
@@ -80,7 +44,8 @@ fun SignedMessageDto.toDomain(receivedFrom: String, receivedAt: Long): SignedMes
         payload = data.toByteArray(),
         signature = signature.toByteArray(),
         receivedFrom = receivedFrom,
-        receivedAt = receivedAt
+        receivedAt = receivedAt,
+        dismissed = false,
     )
 
 fun SignedMessage.toDto(): SignedMessageDto = SignedMessageDto.newBuilder()
@@ -88,14 +53,14 @@ fun SignedMessage.toDto(): SignedMessageDto = SignedMessageDto.newBuilder()
     .setSignature(ByteString.copyFrom(signature))
     .build()
 
-fun MessageDataDto.toDomain(): AlertBatch = AlertBatch(
-    alerts = msgList.map { it.toDomain() },
-    validUntil = validUntil,
+fun AlertBatchDto.toDomain(): AlertBatch = AlertBatch(
+    alerts = alertsList.map { it.toDomain() },
+    validUntil = getExpiresAt(expiresInS, timestamp),
     timestamp = timestamp,
 )
 
-fun AlertBatch.toDto(): MessageDataDto = MessageDataDto.newBuilder()
-    .addAllMsg(alerts.map { it.toDto() })
-    .setValidUntil(validUntil)
+fun AlertBatch.toDto(): AlertBatchDto = AlertBatchDto.newBuilder()
+    .addAllAlerts(alerts.map { it.toDto() })
+    .setExpiresInS(getExpiresInSeconds(validUntil, timestamp))
     .setTimestamp(timestamp)
     .build()

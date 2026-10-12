@@ -53,7 +53,7 @@ import com.mapbox.maps.plugin.PuckBearing
 import com.mapbox.maps.plugin.locationcomponent.createDefault2DPuck
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
-import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.AlertBatch
@@ -61,7 +61,6 @@ import com.p56.safereach.model.AlertType
 import com.p56.safereach.model.LatLong
 import com.p56.safereach.model.ReceivedMessage
 import com.p56.safereach.model.Severity
-import com.p56.safereach.model.Shape
 import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.ui.theme.StatusError
 import com.p56.safereach.ui.theme.StatusInfo
@@ -130,7 +129,7 @@ fun DebugScreen(
 fun AlertDebugCard(
     alert: Alert,
     wrapper: ReceivedMessage,
-    onDelete: () -> Unit = {},
+    onDelete: () -> Unit,
 ) {
     val signed = wrapper.signedMessage
     Card(
@@ -154,28 +153,10 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Location", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
-            when (val shape = alert.shape) {
-                is Shape.Circle -> {
-                    Text(
-                        text = "Circle: Radius: ${shape.radius} meters",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                is Shape.Polygon -> {
-                    Text(
-                        text = "Polygon: ${shape.points.size} points",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                null -> {
-                    Text(
-                        text = "Unknown shape type",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
+            Text(
+                text = "Circle: Radius: ${alert.radius} meters",
+                style = MaterialTheme.typography.bodySmall
+            )
             Spacer(modifier = Modifier.height(4.dp))
             val formattedAlertTime = remember(alert) {
                 SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -193,9 +174,9 @@ fun AlertDebugCard(
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(modifier = Modifier.height(4.dp))
-            val formattedReceivedTime = remember(alert) {
+            val formattedReceivedTime = remember(wrapper) {
                 SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                    .format(Date(alert.timestamp))
+                    .format(Date(wrapper.receivedAt))
             }
             Text(
                 text = "Received at: $formattedReceivedTime",
@@ -219,6 +200,14 @@ fun AlertDebugCard(
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Signed Message", style = MaterialTheme.typography.labelMedium)
             Spacer(modifier = Modifier.height(4.dp))
+            val formattedSignedTimestamp = remember(wrapper) {
+                SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                    .format(Date(wrapper.batch.timestamp))
+            }
+            Text(
+                text = "Timestamp: $formattedSignedTimestamp",
+                style = MaterialTheme.typography.bodySmall
+            )
             Text(
                 text = "Data: ${signed.payload.size} bytes",
                 style = MaterialTheme.typography.bodySmall
@@ -341,24 +330,18 @@ fun GenerateAlertDebugCard(
             }
             Button(
                 onClick = {
-                    val shape = Shape.Circle(
-                        center = LatLong(
-                            latitude = latitude ?: 0.0,
-                            longitude = longitude ?: 0.0,
-                        ),
-                        radius = radius ?: 0.0,
-                    )
                     val version = System.currentTimeMillis()
                     val alert = Alert(
-                        id = "debug-$version",
+                        id = Int.MIN_VALUE,
                         timestamp = version,
                         title = title.ifBlank { "" },
                         description = description.ifBlank { "" },
                         type = selectedType,
                         severity = selectedSeverity,
-                        shape = shape,
-                        version = version,
                         expiresAt = version + DEFAULT_ALERT_LIFETIME_MILLIS,
+                        latitude = latitude!!,
+                        longitude = longitude!!,
+                        radius = radius!!.toInt(),
                         invalidated = false,
                     )
                     onAlertGenerated(alert)
@@ -378,7 +361,7 @@ fun GenerateAlertDebugCard(
 @Composable
 fun MeshStatusCollapsibleCard(
     isMeshRunning: Boolean,
-    orchestratorState: BleState,
+    orchestratorState: AggregateBleState,
     advertiserState: BleAdvertisingState,
     scannerState: BleScanState,
 ) {
@@ -407,18 +390,20 @@ fun MeshStatusCollapsibleCard(
                 indentation = 0
             ) {
                 val orchestratorStatusText = when (orchestratorState) {
-                    is BleState.Active -> "Active"
-                    BleState.Passive -> "Passive"
-                    BleState.Off -> "Off"
-                    BleState.Failed -> "Failed"
-                    BleState.Disabled -> "Disabled"
+                    is AggregateBleState.Active -> "Active"
+                    AggregateBleState.Passive -> "Passive"
+                    AggregateBleState.Off -> "Off"
+                    AggregateBleState.PartialFail -> "Partial failure"
+                    AggregateBleState.CompleteFail -> "Failed"
+                    AggregateBleState.Unknown -> "Unknown"
                 }
                 val orchestratorStatusColor = when (orchestratorState) {
-                    is BleState.Active -> StatusSuccess
-                    BleState.Passive -> StatusInfo
-                    BleState.Off -> StatusNeutral
-                    BleState.Failed -> StatusError
-                    BleState.Disabled -> StatusError
+                    is AggregateBleState.Active -> StatusSuccess
+                    AggregateBleState.Passive -> StatusInfo
+                    AggregateBleState.Off -> StatusNeutral
+                    AggregateBleState.PartialFail -> StatusError
+                    AggregateBleState.CompleteFail -> StatusError
+                    AggregateBleState.Unknown -> StatusNeutral
                 }
 
                 CollapsibleTreeNode(
@@ -429,7 +414,7 @@ fun MeshStatusCollapsibleCard(
                     onToggle = { isOrchestratorExpanded = !isOrchestratorExpanded },
                     indentation = 16
                 ) {
-                    if (orchestratorState is BleState.Active) {
+                    if (orchestratorState is AggregateBleState.Active) {
                         Text(
                             text = "Payload: ${orchestratorState.payload.size} bytes",
                             style = MaterialTheme.typography.bodySmall,
@@ -440,14 +425,16 @@ fun MeshStatusCollapsibleCard(
                     val advertiserStatusText = when (advertiserState) {
                         is BleAdvertisingState.Advertising -> "Advertising"
                         BleAdvertisingState.Idle -> "Idle"
-                        BleAdvertisingState.Disabled -> "Disabled"
-                        is BleAdvertisingState.Failed -> "Failed (${advertiserState.error})"
+                        is BleAdvertisingState.Starting -> "Starting"
+                        BleAdvertisingState.Stopping -> "Stopping"
+                        is BleAdvertisingState.Retrying -> "Retrying (${advertiserState.error}), Attempt ${advertiserState.attempt}"
                     }
                     val advertiserStatusColor = when (advertiserState) {
                         is BleAdvertisingState.Advertising -> StatusSuccess
                         BleAdvertisingState.Idle -> StatusNeutral
-                        BleAdvertisingState.Disabled -> StatusError
-                        is BleAdvertisingState.Failed -> StatusError
+                        is BleAdvertisingState.Starting -> StatusInfo
+                        BleAdvertisingState.Stopping -> StatusInfo
+                        is BleAdvertisingState.Retrying -> StatusError
                     }
 
                     CollapsibleTreeNode(
@@ -469,7 +456,7 @@ fun MeshStatusCollapsibleCard(
                                     bottom = 2.dp
                                 )
                             )
-                        } else if (advertiserState is BleAdvertisingState.Failed) {
+                        } else if (advertiserState is BleAdvertisingState.Retrying) {
                             Text(
                                 text = "Error: ${advertiserState.error}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -485,16 +472,16 @@ fun MeshStatusCollapsibleCard(
 
                     Spacer(modifier = Modifier.height(4.dp))
                     val scannerStatusText = when (scannerState) {
+                        is BleScanState.Starting -> "Starting"
                         is BleScanState.Scanning -> "Scanning"
                         BleScanState.Idle -> "Idle"
-                        BleScanState.Disabled -> "Disabled"
-                        BleScanState.Failed -> "Failed"
+                        BleScanState.Stopping -> "Stopping"
+                        is BleScanState.Retrying -> "Retrying: ${scannerState.error}, attempt ${scannerState.attempt}"
                     }
                     val scannerStatusColor = when (scannerState) {
-                        is BleScanState.Scanning -> StatusSuccess
-                        BleScanState.Idle -> StatusNeutral
-                        BleScanState.Disabled -> StatusError
-                        BleScanState.Failed -> StatusError
+                        is BleScanState.Starting, is BleScanState.Scanning -> StatusSuccess
+                        BleScanState.Idle, BleScanState.Stopping -> StatusNeutral
+                        is BleScanState.Retrying -> StatusError
                     }
 
                     CollapsibleTreeNode(
@@ -504,20 +491,7 @@ fun MeshStatusCollapsibleCard(
                         isExpanded = isScannerExpanded,
                         onToggle = { isScannerExpanded = !isScannerExpanded },
                         indentation = 32
-                    ) {
-                        if (scannerState is BleScanState.Scanning) {
-                            Text(
-                                text = "Callback Active: true",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                modifier = Modifier.padding(
-                                    start = 52.dp,
-                                    top = 2.dp,
-                                    bottom = 2.dp
-                                )
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
@@ -682,22 +656,21 @@ fun DebugScreenPreview() {
                     ByteArray(10),
                     ByteArray(10),
                     "Debug",
-                    1
+                    1,
+                    false
                 ),
                 batch = AlertBatch(
                     alerts = listOf(
                         Alert(
-                            id = "preview",
+                            id = 1,
                             timestamp = now,
                             title = "Test Alert",
                             description = "This is a test alert for preview purposes.",
                             type = AlertType.FIRE,
                             severity = Severity.HIGH,
-                            shape = Shape.Circle(
-                                center = LatLong(37.7749, -122.4194),
-                                radius = 100.0,
-                            ),
-                            version = now,
+                            latitude = 39.0,
+                            longitude = -77.0,
+                            radius = 100,
                             expiresAt = now + 60_000,
                             invalidated = false,
                         )
@@ -709,7 +682,7 @@ fun DebugScreenPreview() {
                 receivedAt = now,
             ),
             isMeshRunning = true,
-            orchestratorState = BleState.Active(ByteArray(10)),
+            orchestratorState = AggregateBleState.Active(ByteArray(10)),
             advertiserState = BleAdvertisingState.Idle,
             scannerState = BleScanState.Scanning
         ),

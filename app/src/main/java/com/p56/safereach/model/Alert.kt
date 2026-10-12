@@ -26,17 +26,19 @@ enum class Severity(val value: Int, val displayName: String) {
 }
 
 data class Alert(
-    val id: String,
+    val id: Int,
     val timestamp: Long,
     val title: String,
     val description: String,
     val type: AlertType,
     val severity: Severity,
-    val shape: Shape?,
-    val version: Long,
+    val latitude: Double,
+    val longitude: Double,
+    val radius: Int,
     val expiresAt: Long,
     val invalidated: Boolean,
-)
+
+    )
 
 fun Alert.isActive(now: Long = System.currentTimeMillis()): Boolean =
     !invalidated && expiresAt > now

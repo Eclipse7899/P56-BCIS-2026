@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
-import com.p56.safereach.mesh.ble.fsm.BleState
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
 import com.p56.safereach.model.Alert
 import com.p56.safereach.model.AlertBatch
@@ -13,7 +13,6 @@ import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.model.toDto
 import com.p56.safereach.service.AlertRepository
 import com.p56.safereach.service.MeshStatusStore
-import com.p56.safereach.verification.SigningManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,25 +24,23 @@ import kotlinx.coroutines.launch
 data class DebugUiState(
     val receivedMessage: ReceivedMessage? = null,
     val isMeshRunning: Boolean = false,
-    val orchestratorState: BleState = BleState.Off,
+    val orchestratorState: AggregateBleState = AggregateBleState.Off,
     val advertiserState: BleAdvertisingState = BleAdvertisingState.Idle,
     val scannerState: BleScanState = BleScanState.Idle,
 )
 
 @HiltViewModel
 class DebugViewModel @Inject constructor(
-    private val signingManager: SigningManager,
     private val alertRepository: AlertRepository,
     meshStatusStore: MeshStatusStore,
 ) : ViewModel() {
     val uiState: StateFlow<DebugUiState> = combine(
         alertRepository.receivedMessage,
         meshStatusStore.isServiceRunning,
-        meshStatusStore.orchestratorState,
+        meshStatusStore.bleOrchestratorState,
         meshStatusStore.advertiserState,
         meshStatusStore.scannerState,
     ) { receivedMessage, isMeshRunning, orchestratorState, advertiserState, scannerState ->
-        Log.d("DebugViewModel", "Received message: $receivedMessage")
         DebugUiState(
             receivedMessage = receivedMessage,
             isMeshRunning = isMeshRunning,
@@ -64,12 +61,12 @@ class DebugViewModel @Inject constructor(
                 validUntil = alert.expiresAt,
                 timestamp = alert.timestamp,
             )
-            val signature = signingManager.sign(data.toDto().toByteArray())
             val message = SignedMessage(
                 payload = data.toDto().toByteArray(),
-                signature = signature,
+                signature = ByteArray(0),
                 receivedAt = System.currentTimeMillis(),
-                receivedFrom = "Debug"
+                receivedFrom = "Debug",
+                dismissed = false,
             )
             alertRepository.addSigned(message)
         }
@@ -78,7 +75,7 @@ class DebugViewModel @Inject constructor(
     fun deleteAlert() {
         viewModelScope.launch {
             Log.d("DebugViewModel", "Deleting message")
-            alertRepository.removeSigned()
+            alertRepository.clearSigned()
         }
     }
 }
