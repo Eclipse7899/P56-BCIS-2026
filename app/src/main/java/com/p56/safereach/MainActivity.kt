@@ -13,7 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.p56.safereach.android.MeshForegroundService
 import com.p56.safereach.ui.auth.MainScreen
-import com.p56.safereach.mesh.ble.BlePermissions
+import com.p56.safereach.android.BlePermissions
 import com.p56.safereach.ui.theme.SafeReachTheme
 import dagger.hilt.android.AndroidEntryPoint
 

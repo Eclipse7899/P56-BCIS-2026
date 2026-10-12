@@ -1,4 +1,4 @@
-package com.p56.safereach.ui
+package com.p56.safereach.ui.banners
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,9 +24,9 @@ import com.p56.safereach.R
 import com.p56.safereach.ui.theme.SafeReachTheme
 
 @Composable
-fun BatteryOptimizationBanner(
+fun LocationPermissionBanner(
     modifier: Modifier = Modifier,
-    onDisableClick: () -> Unit,
+    onGrantClick: () -> Unit,
 ) {
     Card(
         modifier = modifier,
@@ -49,30 +49,32 @@ fun BatteryOptimizationBanner(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_warning),
-                    contentDescription = "Battery Optimization Warning",
+                    contentDescription = "Location Permission Warning",
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Battery Optimization Is On",
+                    text = "Location Permission Needed",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
             Text(
-                text = "Battery optimization may restrict background emergency mesh communication and alerts.",
+                text = "Bluetooth scanning requires location access. Without the location " +
+                    "permission, SafeReach can't start.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onDisableClick,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                onClick = onGrantClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
                 )
             ) {
-                Text(text = "Disable Optimization")
+                Text(text = "Grant Permission")
             }
         }
     }
@@ -80,10 +82,10 @@ fun BatteryOptimizationBanner(
 
 @Preview(showBackground = true)
 @Composable
-fun BatteryOptimizationBannerPreview() {
+fun LocationPermissionBannerPreview() {
     SafeReachTheme {
-        BatteryOptimizationBanner(
-            onDisableClick = {},
+        LocationPermissionBanner(
+            onGrantClick = {},
         )
     }
 }

@@ -1,4 +1,4 @@
-package com.p56.safereach.mesh.ble
+package com.p56.safereach.mesh.ble.features
 
 import android.bluetooth.BluetoothAdapter
 

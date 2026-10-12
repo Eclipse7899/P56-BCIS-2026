@@ -1,6 +1,6 @@
 package com.p56.safereach.service
 
-import com.p56.safereach.mesh.ble.BleFeature
+import com.p56.safereach.mesh.ble.features.BleFeature
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState
 import com.p56.safereach.mesh.ble.fsm.BluetoothState

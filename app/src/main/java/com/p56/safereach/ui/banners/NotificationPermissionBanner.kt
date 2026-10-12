@@ -1,4 +1,4 @@
-package com.p56.safereach.ui
+package com.p56.safereach.ui.banners
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,9 +24,9 @@ import com.p56.safereach.R
 import com.p56.safereach.ui.theme.SafeReachTheme
 
 @Composable
-fun LocationPermissionBanner(
+fun NotificationPermissionBanner(
     modifier: Modifier = Modifier,
-    onGrantClick: () -> Unit,
+    onEnableClick: () -> Unit,
 ) {
     Card(
         modifier = modifier,
@@ -49,32 +49,33 @@ fun LocationPermissionBanner(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_warning),
-                    contentDescription = "Location Permission Warning",
+                    contentDescription = "Notifications Disabled Warning",
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Location Permission Needed",
+                    text = "Notifications Are Disabled",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
             Text(
-                text = "Bluetooth scanning requires location access. Without the location " +
-                    "permission, SafeReach can't start.",
+                text = "The emergency mesh runs as a foreground service, which needs to show a " +
+                    "notification. Notifications are disabled, so SafeReach can't keep the mesh " +
+                    "running in the background.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onGrantClick,
+                onClick = onEnableClick,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError
                 )
             ) {
-                Text(text = "Grant Permission")
+                Text(text = "Enable Notifications")
             }
         }
     }
@@ -82,10 +83,10 @@ fun LocationPermissionBanner(
 
 @Preview(showBackground = true)
 @Composable
-fun LocationPermissionBannerPreview() {
+fun NotificationPermissionBannerPreview() {
     SafeReachTheme {
-        LocationPermissionBanner(
-            onGrantClick = {},
+        NotificationPermissionBanner(
+            onEnableClick = {},
         )
     }
 }

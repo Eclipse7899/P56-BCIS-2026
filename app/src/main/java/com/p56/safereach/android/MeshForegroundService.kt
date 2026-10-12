@@ -13,9 +13,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.p56.safereach.Constants.APP_DISPLAY_NAME
 import com.p56.safereach.R
-import com.p56.safereach.mesh.BleScanResultQueue
+import com.p56.safereach.mesh.ble.scanning.BleScanResultQueue
 import com.p56.safereach.mesh.BleStateReceiver
-import com.p56.safereach.mesh.ble.BleCapabilities
+import com.p56.safereach.mesh.ble.features.BleCapabilities
 import com.p56.safereach.mesh.ble.BleOrchestrator
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
 import com.p56.safereach.mesh.ble.fsm.AggregateBleState

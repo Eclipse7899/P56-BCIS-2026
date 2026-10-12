@@ -1,4 +1,4 @@
-package com.p56.safereach.ui
+package com.p56.safereach.ui.banners
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,9 +24,9 @@ import com.p56.safereach.R
 import com.p56.safereach.ui.theme.SafeReachTheme
 
 @Composable
-fun NotificationPermissionBanner(
+fun ConnectedDevicesPermissionBanner(
     modifier: Modifier = Modifier,
-    onEnableClick: () -> Unit,
+    onGrantClick: () -> Unit,
 ) {
     Card(
         modifier = modifier,
@@ -49,33 +49,32 @@ fun NotificationPermissionBanner(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_warning),
-                    contentDescription = "Notifications Disabled Warning",
+                    contentDescription = "Nearby Devices Permission Warning",
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Notifications Are Disabled",
+                    text = "Nearby Devices Permission Needed",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
             Text(
-                text = "The emergency mesh runs as a foreground service, which needs to show a " +
-                    "notification. Notifications are disabled, so SafeReach can't keep the mesh " +
-                    "running in the background.",
+                text = "The emergency mesh uses Bluetooth to find and share alerts. Without the " +
+                    "Nearby devices permission, SafeReach can't start.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onEnableClick,
+                onClick = onGrantClick,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError
                 )
             ) {
-                Text(text = "Enable Notifications")
+                Text(text = "Grant Permission")
             }
         }
     }
@@ -83,10 +82,10 @@ fun NotificationPermissionBanner(
 
 @Preview(showBackground = true)
 @Composable
-fun NotificationPermissionBannerPreview() {
+fun ConnectedDevicesPermissionBannerPreview() {
     SafeReachTheme {
-        NotificationPermissionBanner(
-            onEnableClick = {},
+        ConnectedDevicesPermissionBanner(
+            onGrantClick = {},
         )
     }
 }

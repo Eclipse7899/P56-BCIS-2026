@@ -11,7 +11,6 @@ import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import com.p56.safereach.Constants.SERVICE_UUIDS
-import com.p56.safereach.mesh.BleScanResultQueue
 
 private const val TAG = "BleScanReceiver"
 
