@@ -2,6 +2,7 @@ package com.p56.safereach.service
 
 import android.util.Log
 import com.google.protobuf.InvalidProtocolBufferException
+import com.p56.safereach.BuildConfig
 import com.p56.safereach.android.AlertNotifier
 import com.p56.safereach.data.AlertUpsertResult
 import com.p56.safereach.data.AppDatabase
@@ -12,7 +13,7 @@ import com.p56.safereach.model.ReceivedMessage
 import com.p56.safereach.model.SignedMessage
 import com.p56.safereach.model.isActive
 import com.p56.safereach.model.toDomain
-import com.p56.safereach.proto.MessageDataDto
+import com.p56.safereach.proto.AlertBatchDto
 import com.p56.safereach.util.ApplicationScope
 import com.p56.safereach.verification.SigningManager
 import jakarta.inject.Inject
@@ -42,6 +43,10 @@ class AlertRepository @Inject constructor(
 
     val activeAlerts: StateFlow<List<Alert>> = activeAlertsState.asStateFlow()
 
+    private val allAlertsState = MutableStateFlow<List<Alert>>(emptyList())
+
+    val allAlerts: StateFlow<List<Alert>> = allAlertsState.asStateFlow()
+
     init {
         scope.launch {
             database.signedMessageDao().observeLatest().collect { entity ->
@@ -49,7 +54,7 @@ class AlertRepository @Inject constructor(
                     receivedMessageState.value = null
                     return@collect
                 }
-                val data = runCatching { MessageDataDto.parseFrom(entity.data) }.getOrNull()
+                val data = runCatching { AlertBatchDto.parseFrom(entity.data) }.getOrNull()
                 receivedMessageState.value = data?.let {
                     ReceivedMessage(
                         signedMessage = entity.toDomain(),
@@ -62,7 +67,9 @@ class AlertRepository @Inject constructor(
         }
         scope.launch {
             database.alertDao().observeAll().collect { entities ->
-                activeAlertsState.value = entities.map { it.toDomain() }.filter { it.isActive() }
+                val alerts = entities.map { it.toDomain() }
+                allAlertsState.value = alerts
+                activeAlertsState.value = alerts.filter { it.isActive() }
             }
         }
     }
@@ -70,21 +77,27 @@ class AlertRepository @Inject constructor(
     suspend fun addSigned(
         signedMessage: SignedMessage,
     ) {
-        if (!signingManager.verify(signedMessage.payload, signedMessage.signature)) {
+        //Do NOT verify in debug mode
+        val isDebug = BuildConfig.DEBUG
+        if (!isDebug && !signingManager.verify(signedMessage.payload, signedMessage.signature)) {
             Log.w(TAG, "Failed to verify alert")
             return
         }
         try {
-            val innerData = MessageDataDto.parseFrom(signedMessage.payload)
-            innerData.msgList
-                .map{ it.toDomain() }
+            val innerData = AlertBatchDto.parseFrom(signedMessage.payload)
+            innerData.alertsList
+                .map { it.toDomain() }
                 .forEach { addAlert(it) }
-            database.signedMessageDao().upsert(
+            database.signedMessageDao().upsertIfNewer(
                 signedMessage.toEntity(timestamp = innerData.timestamp)
             )
         } catch (_: InvalidProtocolBufferException) {
             Log.w(TAG, "Failed to parse message data")
         }
+    }
+
+    suspend fun syncAlerts(alerts: List<Alert>) {
+        alerts.forEach { addAlert(it) }
     }
 
     private suspend fun addAlert(alert: Alert) {
@@ -95,7 +108,7 @@ class AlertRepository @Inject constructor(
         }
     }
 
-    suspend fun removeSigned() {
+    suspend fun clearSigned() {
         database.signedMessageDao().clear()
     }
 }

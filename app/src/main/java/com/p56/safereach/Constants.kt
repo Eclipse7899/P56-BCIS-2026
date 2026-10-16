@@ -32,4 +32,11 @@ object Constants {
     const val BLE_SCAN_INTENT_ACTION = "com.p56.safereach.BLE_SCAN_RESULT"
 
     const val APP_DISPLAY_NAME = "SafeReach"
+
+    const val ALERTS_API_BASE_URL =
+        "https://australia-southeast1-disaster-monitoring-2d085.cloudfunctions.net/alertsApi"
+
+    const val ALERTS_API_PATH = "/alerts"
+
+    const val ALERTS_API_DEFAULT_COUNT = 50
 }

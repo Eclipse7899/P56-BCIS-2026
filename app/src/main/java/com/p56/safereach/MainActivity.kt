@@ -2,7 +2,6 @@
 
 package com.p56.safereach
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,10 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.core.content.ContextCompat
+import com.p56.safereach.android.BlePermissions
 import com.p56.safereach.android.MeshForegroundService
-import com.p56.safereach.auth.MainScreen
-import com.p56.safereach.mesh.ble.BlePermissions
+import com.p56.safereach.ui.auth.MainScreen
 import com.p56.safereach.ui.theme.SafeReachTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -33,8 +31,7 @@ class MainActivity : ComponentActivity() {
     private fun hasBlePermissions(): Boolean = BlePermissions.hasBlePermissions(this)
 
     private fun startBleService() {
-        val intent = Intent(this, MeshForegroundService::class.java)
-        ContextCompat.startForegroundService(this, intent)
+        MeshForegroundService.start(this)
     }
 
     private fun ensureBleServiceRunning() {
@@ -60,6 +57,13 @@ class MainActivity : ComponentActivity() {
                     MainScreen(context = this)
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (hasBlePermissions()) {
+            startBleService()
         }
     }
 }

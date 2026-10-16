@@ -2,23 +2,25 @@ package com.p56.safereach.mesh.ble
 
 import android.util.Log
 import com.p56.safereach.mesh.ble.advertisement.BleAdvertisingController
-import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingCommand
+import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingIntent
 import com.p56.safereach.mesh.ble.advertisement.fsm.BleAdvertisingState
-import com.p56.safereach.mesh.ble.fsm.BleCommand
-import com.p56.safereach.mesh.ble.fsm.BleState
-import com.p56.safereach.mesh.ble.fsm.BleState.Active
-import com.p56.safereach.mesh.ble.fsm.BleState.Disabled
-import com.p56.safereach.mesh.ble.fsm.BleState.Failed
-import com.p56.safereach.mesh.ble.fsm.BleState.Off
-import com.p56.safereach.mesh.ble.fsm.BleState.Passive
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState.Active
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState.CompleteFail
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState.Off
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState.PartialFail
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState.Passive
+import com.p56.safereach.mesh.ble.fsm.AggregateBleState.Unknown
+import com.p56.safereach.mesh.ble.fsm.BleIntent
 import com.p56.safereach.mesh.ble.scanning.BleScanController
-import com.p56.safereach.mesh.ble.scanning.fsm.BleScanCommand
+import com.p56.safereach.mesh.ble.scanning.fsm.BleScanIntent
 import com.p56.safereach.mesh.ble.scanning.fsm.BleScanState
+import com.p56.safereach.service.MeshStatusStore
+import com.p56.safereach.util.ApplicationScope
+import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -26,142 +28,99 @@ private const val TAG = "BleOrchestrator"
 
 
 private data class Snapshot(
-    val desired: BleCommand,
+    val desired: BleIntent,
     val scan: BleScanState,
     val adv: BleAdvertisingState,
 )
 
-class BleOrchestrator(
-    scope: CoroutineScope,
+@Singleton
+class BleOrchestrator @Inject constructor(
+    @param:ApplicationScope private val scope: CoroutineScope,
     private val advertiser: BleAdvertisingController,
     private val scanner: BleScanController,
+    private val meshStatusStore: MeshStatusStore
 ) {
-    private val _state: MutableStateFlow<BleState> =
+    private val _state: MutableStateFlow<AggregateBleState> =
         MutableStateFlow(
             Off
         )
 
-    val state: StateFlow<BleState> = _state.asStateFlow()
-
-    private val desiredState: MutableStateFlow<BleCommand> = MutableStateFlow(
-        BleCommand.Off
+    private val desired: MutableStateFlow<BleIntent> = MutableStateFlow(
+        BleIntent.Off
     )
-
-    private val reconcileRequests = Channel<Snapshot>(Channel.CONFLATED)
 
     init {
         scope.launch {
             combine(
-                desiredState,
+                desired,
                 scanner.state,
                 advertiser.state
             ) { intent, scannerState, advertiserState ->
                 Snapshot(intent, scannerState, advertiserState)
             }.collect { snapshot ->
-                val newState = derive(snapshot.scan, snapshot.adv)
+                val newState = deriveState(snapshot.scan, snapshot.adv)
                 if (newState != _state.value) {
                     Log.d(TAG, "State transition: ${_state.value} -> $newState")
                 }
                 _state.value = newState
-                reconcileRequests.send(snapshot)
-            }
-        }
-
-        scope.launch {
-            for (snapshot in reconcileRequests) {
+                meshStatusStore.updateOrchestratorState(newState)
                 Log.d(TAG, "Reconciling snapshot: $snapshot")
-                reconcile(snapshot.desired, snapshot.scan, snapshot.adv)
+                reconcile(snapshot.desired)
             }
         }
     }
 
 
-    fun send(intent: BleCommand) {
+    fun send(intent: BleIntent) {
         Log.d(TAG, "Setting desired state: $intent")
-        desiredState.value = intent
+        desired.value = intent
     }
 
-    private fun derive(
+    private fun deriveState(
         scanState: BleScanState,
         advState: BleAdvertisingState,
-    ): BleState {
-        return when {
-            scanState is BleScanState.Disabled || advState is BleAdvertisingState.Disabled ->
-                Disabled
+    ): AggregateBleState {
+        return when (scanState) {
+            BleScanState.Idle, BleScanState.Stopping -> when (advState) {
+                is BleAdvertisingState.Advertising -> Unknown
+                is BleAdvertisingState.Starting, BleAdvertisingState.Stopping -> Unknown
+                is BleAdvertisingState.Retrying -> PartialFail
+                BleAdvertisingState.Idle -> Off
+            }
 
-            scanState is BleScanState.Idle && advState is BleAdvertisingState.Idle ->
-                Off
+            is BleScanState.Starting, BleScanState.Scanning -> when (advState) {
+                is BleAdvertisingState.Advertising -> Active(advState.payload)
+                is BleAdvertisingState.Starting, BleAdvertisingState.Stopping -> Unknown
+                is BleAdvertisingState.Retrying -> PartialFail
+                BleAdvertisingState.Idle -> Passive
+            }
 
-            scanState is BleScanState.Failed || advState is BleAdvertisingState.Failed ->
-                Failed
-
-            advState is BleAdvertisingState.Advertising && scanState is BleScanState.Scanning ->
-                Active(
-                    payload = advState.payload,
-                )
-
-            scanState is BleScanState.Scanning && advState is BleAdvertisingState.Idle ->
-                Passive
-
-            else -> Failed
+            is BleScanState.Retrying -> when (advState) {
+                is BleAdvertisingState.Advertising -> PartialFail
+                is BleAdvertisingState.Starting, BleAdvertisingState.Stopping -> PartialFail
+                is BleAdvertisingState.Retrying -> CompleteFail
+                BleAdvertisingState.Idle -> PartialFail
+            }
         }
     }
 
     private fun reconcile(
-        intent: BleCommand,
-        scanState: BleScanState,
-        advState: BleAdvertisingState,
+        intent: BleIntent,
     ) {
         when (intent) {
-            BleCommand.Off -> {
-                if (scanState is BleScanState.Scanning) {
-                    Log.d(TAG, "reconcile(Off): Stopping scanner")
-                    scanner.send(BleScanCommand.Stop)
-                }
-
-                if (advState is BleAdvertisingState.Advertising) {
-                    Log.d(TAG, "reconcile(Off): Stopping advertiser")
-                    advertiser.send(BleAdvertisingCommand.Stop)
-                }
+            BleIntent.Off -> {
+                scanner.send(BleScanIntent.Stop)
+                advertiser.send(BleAdvertisingIntent.Stop)
             }
 
-            BleCommand.Passive -> {
-                if (scanState is BleScanState.Idle || scanState is BleScanState.Failed) {
-                    Log.d(TAG, "reconcile(Passive): Starting scanner (state=$scanState)")
-                    scanner.send(BleScanCommand.Start)
-                }
-
-                if (advState is BleAdvertisingState.Advertising) {
-                    Log.d(TAG, "reconcile(Passive): Stopping advertiser")
-                    advertiser.send(BleAdvertisingCommand.Stop)
-                }
+            BleIntent.Passive -> {
+                scanner.send(BleScanIntent.Start)
+                advertiser.send(BleAdvertisingIntent.Stop)
             }
 
-            is BleCommand.Active -> {
-                if (scanState is BleScanState.Idle || scanState is BleScanState.Failed) {
-                    Log.d(TAG, "reconcile(Active): Starting scanner (state=$scanState)")
-                    scanner.send(BleScanCommand.Start)
-                }
-
-                when (advState) {
-                    // Failed is retryable: a transient advertising error must not leave the mesh
-                    // unable to advertise for the rest of the process lifetime.
-                    BleAdvertisingState.Idle, is BleAdvertisingState.Failed -> {
-                        Log.d(TAG, "reconcile(Active): Starting advertiser (state=$advState)")
-                        advertiser.send(BleAdvertisingCommand.Start(intent.payload))
-                    }
-
-                    is BleAdvertisingState.Advertising -> {
-                        Log.d(TAG, "reconcile(Active): Updating advertising intent ")
-                        advertiser.send(
-                            BleAdvertisingCommand.Start(intent.payload)
-                        )
-                    }
-
-                    BleAdvertisingState.Disabled -> {
-                        Log.d(TAG, "reconcile(Active): Advertiser is in Disabled state")
-                    }
-                }
+            is BleIntent.Active -> {
+                scanner.send(BleScanIntent.Start)
+                advertiser.send(BleAdvertisingIntent.Start(intent.payload))
             }
         }
     }
