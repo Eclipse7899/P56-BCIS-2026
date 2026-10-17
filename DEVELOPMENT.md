@@ -25,35 +25,35 @@ SafeReach follows strict naming conventions for Kotlin and TypeScript to ensure 
 
 #### Kotlin
 
-| Element        | Convention                             | Example                                          |
-|----------------|----------------------------------------|--------------------------------------------------|
-| **Classes**    | PascalCase                             | `class UserRepository`                           |
-| **Interfaces** | PascalCase                             | `interface DataSource`                           |
+| Element        | Convention                             | Example                                                         |
+|----------------|----------------------------------------|-----------------------------------------------------------------|
+| **Classes**    | PascalCase                             | `class UserRepository`                                          |
+| **Interfaces** | PascalCase                             | `interface DataSource`                                          |
 | **Enums**      | PascalCase (class), UPPERCASE (values) | `enum class AppDestinations { HOME, PROFILE, SETTINGS, DEBUG }` |
-| **Functions**  | camelCase                              | `fun getUserData()`                              |
-| **Variables**  | camelCase                              | `val userName`, `var isVisible`                  |
-| **Constants**  | UPPERCASE_WITH_UNDERSCORES             | `const val MAX_RETRIES = 3`                      |
-| **Packages**   | lowercase, no special characters       | `com.p56.safereach.ui.theme`                     |
+| **Functions**  | camelCase                              | `fun getUserData()`                                             |
+| **Variables**  | camelCase                              | `val userName`, `var isVisible`                                 |
+| **Constants**  | UPPERCASE_WITH_UNDERSCORES             | `const val MAX_RETRIES = 3`                                     |
+| **Packages**   | lowercase, no special characters       | `com.p56.safereach.ui.theme`                                    |
 
 #### Project-specific conventions
 
 Beyond the general style rules above, SafeReach uses the following suffixes so that a
 type's role is obvious from its name:
 
-| Suffix / pattern        | Meaning                                                        | Examples                                                  |
-|-------------------------|----------------------------------------------------------------|-----------------------------------------------------------|
-| `*Dto`                  | Protobuf wire type in `com.p56.safereach.proto` (generated)    | `AlertDto`, `SignedMessageDto`, `MessageDataDto`          |
-| *(no suffix)*           | Domain model in `com.p56.safereach.model`                      | `Alert`, `Shape`, `SignedMessage`, `ReceivedMessage`, `AlertBatch` |
-| `toDomain()`            | Mapper into a domain model (from proto **or** Room entity)     | `model/ProtoMappers.kt`, `data/AlertEntity.kt`            |
-| `toEntity()`            | Mapper from a domain model into a Room entity                  | `Alert.toEntity()`                                        |
-| `toDto()`               | Mapper from a domain model into a Protobuf wire type           | `Alert.toDto()`                                           |
-| `*Entity` / `*Dao`      | Room entity / data-access object                               | `AlertEntity`, `AlertDao`                                 |
-| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services. A stateless helper may also use `*Manager` (for example `AlertSyncManager`). | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager` |
-| `*Service`              | Reserved for real `android.app.Service` subclasses             | `MeshForegroundService`, `FirebaseAlertMessagingService`  |
-| `*Intent`               | Desired-state input to a state machine in `*/fsm`              | `BleIntent`, `BleScanIntent`, `BleAdvertisingIntent`      |
-| `*State` / `*Event`     | Observed condition / transition trigger of a state machine     | `AggregateBleState`, `BleScanState`, `BleAdvertisingEvent` |
-| `*Controller` / `*Adapter` | State-machine owner / Android platform gateway              | `BleScanController`, `BleBeaconScanAdapter`               |
-| `*Route` / `*Screen` / `*Content` | Compose stateful entry / screen / stateless body    | `HomeRoute`, `HomeScreen`, `AlertHistoryScreen`          |
+| Suffix / pattern                  | Meaning                                                                                                                                         | Examples                                                           |
+|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
+| `*Dto`                            | Protobuf wire type in `com.p56.safereach.proto` (generated)                                                                                     | `AlertDto`, `SignedMessageDto`, `MessageDataDto`                   |
+| *(no suffix)*                     | Domain model in `com.p56.safereach.model`                                                                                                       | `Alert`, `Shape`, `SignedMessage`, `ReceivedMessage`, `AlertBatch` |
+| `toDomain()`                      | Mapper into a domain model (from proto **or** Room entity)                                                                                      | `model/ProtoMappers.kt`, `data/AlertEntity.kt`                     |
+| `toEntity()`                      | Mapper from a domain model into a Room entity                                                                                                   | `Alert.toEntity()`                                                 |
+| `toDto()`                         | Mapper from a domain model into a Protobuf wire type                                                                                            | `Alert.toDto()`                                                    |
+| `*Entity` / `*Dao`                | Room entity / data-access object                                                                                                                | `AlertEntity`, `AlertDao`                                          |
+| `*Repository`/`*Store`/`*Manager` | Hilt `@Singleton` state holders that are **not** Android services. A stateless helper may also use `*Manager` (for example `AlertSyncManager`). | `AlertRepository`, `MeshStatusStore`, `OfflineRegionManager`       |
+| `*Service`                        | Reserved for real `android.app.Service` subclasses                                                                                              | `MeshForegroundService`, `FirebaseAlertMessagingService`           |
+| `*Intent`                         | Desired-state input to a state machine in `*/fsm`                                                                                               | `BleIntent`, `BleScanIntent`, `BleAdvertisingIntent`               |
+| `*State` / `*Event`               | Observed condition / transition trigger of a state machine                                                                                      | `AggregateBleState`, `BleScanState`, `BleAdvertisingEvent`         |
+| `*Controller` / `*Adapter`        | State-machine owner / Android platform gateway                                                                                                  | `BleScanController`, `BleBeaconScanAdapter`                        |
+| `*Route` / `*Screen` / `*Content` | Compose stateful entry / screen / stateless body                                                                                                | `HomeRoute`, `HomeScreen`, `AlertHistoryScreen`                    |
 
 Note: `SignedMessage.receivedFrom` and `receivedAt` are also populated for locally
 authored messages (for example the debug flow uses `receivedFrom = "Debug"`), so they mean
@@ -633,7 +633,8 @@ gh run list
 
 The `functions/` directory is a TypeScript Firebase Cloud Functions codebase (Node 24) that
 owns GeoNet ingestion, alert authoring, signing, and the `alertsApi` endpoint (see
-[ARCHITECTURE.md](./ARCHITECTURE.md#cloud-backend)).
+[ARCHITECTURE.md](./ARCHITECTURE.md#cloud-backend)). To add a new upstream alert source, follow
+[functions/INTEGRATIONS.md](./functions/INTEGRATIONS.md).
 
 ### Prerequisites
 
