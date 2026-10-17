@@ -38,6 +38,9 @@ The proto field numbers here are the wire contract the Android clients decode (s
 format section), so changes must stay in sync across `protobuf/models.proto`, the generated
 Kotlin types, and `functions/src/models.ts`.
 
+Adding a further alert source (a new ingestion + mapping pair that writes into `alerts`) is
+described step by step in [functions/INTEGRATIONS.md](./functions/INTEGRATIONS.md).
+
 ## Runtime topology
 
 ```text
@@ -385,8 +388,8 @@ concerns around the mesh, not mesh transport components.
 
 ## Source map
 
-| Responsibility                               | Main files                                                                                          |
-|----------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| Responsibility                               | Main files                                                                                           |
+|----------------------------------------------|------------------------------------------------------------------------------------------------------|
 | Android startup and permissions              | `MainActivity.kt`, `App.kt`, `mesh/ble/BlePermissions.kt`, `AndroidManifest.xml`                     |
 | Mesh service lifecycle and packet processing | `android/MeshForegroundService.kt`                                                                   |
 | Desired-state coordination                   | `mesh/ble/BleOrchestrator.kt`, `mesh/ble/fsm/*`                                                      |
@@ -401,10 +404,10 @@ concerns around the mesh, not mesh transport components.
 | Cloud ingress (push)                         | `android/FirebaseAlertMessagingService.kt`                                                           |
 | Cloud ingress (pull)                         | `data/remote/AlertApiClient.kt`, `service/AlertSyncManager.kt`                                       |
 | Notifications                                | `android/AlertNotifier.kt`, `ui/profile/NotificationPreferences.kt`                                  |
-| Authentication                               | `ui/auth/MainScreen.kt`, `SignInScreen.kt`, `RegisterScreen.kt`, `ForgotPasswordScreen.kt`          |
+| Authentication                               | `ui/auth/MainScreen.kt`, `SignInScreen.kt`, `RegisterScreen.kt`, `ForgotPasswordScreen.kt`           |
 | Alert history                                | `ui/alert/AlertHistoryScreen.kt`, `ui/alert/AlertHistoryViewModel.kt`                                |
 | User preferences                             | `ui/theme/ThemePreferences.kt`, `ui/home/MapCameraPreferences.kt`                                    |
-| Offline maps                                 | `service/OfflineRegionManager.kt`, `map/OfflineRegionViewModel.kt`, `map/OfflineRegionPanel.kt`       |
+| Offline maps                                 | `service/OfflineRegionManager.kt`, `map/OfflineRegionViewModel.kt`, `map/OfflineRegionPanel.kt`      |
 | Retry policy                                 | `mesh/ble/RetryBackoff.kt`                                                                           |
 | Cloud functions (backend)                    | `functions/src/index.ts`, `firebase/alerts-api.ts`, `firebase/on-alert-created.ts`, `integrations/*` |
 | UI shell and navigation                      | `auth/MainScreen.kt`, `navigation/SafeReachApp.kt`                                                   |
