@@ -93,9 +93,10 @@ fun SignInScreen(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Column(
             modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.End
         ) {
             OutlinedTextField(
@@ -111,7 +112,9 @@ fun SignInScreen(
                 placeholder = { Text("Email") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 isError = emailError != null,
-                supportingText = { emailError?.let { Text(it) } }
+                supportingText = emailError?.let {
+                    { Text(it) }
+                }
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -128,7 +131,9 @@ fun SignInScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 isError = passwordError != null,
-                supportingText = { passwordError?.let { Text(it) } },
+                supportingText = passwordError?.let {
+                    { Text(it) }
+                },
                 trailingIcon = {
                     val painter = if (passwordVisible)
                         painterResource(id = R.drawable.ic_visibility_24px)
@@ -142,22 +147,16 @@ fun SignInScreen(
                 }
             )
             if (signInError != null) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = signInError!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
                 )
             }
-            TextButton(
-                shape = MaterialTheme.shapes.extraSmall,
-                onClick = { onForgotPasswordClick() }
-            ) {
-                Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             val buttonDisabled = loading || email.isBlank() || password.isBlank()
             Button(
                 modifier = Modifier
@@ -225,6 +224,13 @@ fun SignInScreen(
                 Text(
                     text = "Don't have a profile? Register Now"
                 )
+            }
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraSmall,
+                onClick = { onForgotPasswordClick() }
+            ) {
+                Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
             }
         }
     }
