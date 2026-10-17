@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.p56.safereach.R
 
 @Composable
@@ -182,7 +183,16 @@ fun SignInScreen(
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                signInError = "Email or password is incorrect."
+                                signInError = when ((task.exception as? FirebaseAuthException)?.errorCode) {
+                                    "ERROR_INTERNAL_ERROR",
+                                    "ERROR_NETWORK_REQUEST_FAILED",
+                                    "ERROR_TOO_MANY_REQUESTS" ->
+                                        "Sign in is temporarily unavailable. Please try again."
+
+                                    "ERROR_USER_DISABLED" -> "This account has been disabled."
+
+                                    else -> "Email or password is incorrect."
+                                }
                             }
                         }
                 }
