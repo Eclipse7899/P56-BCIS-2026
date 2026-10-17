@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.p56.safereach.R
 
 @Composable
@@ -92,9 +93,10 @@ fun SignInScreen(
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Column(
             modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.End
         ) {
             OutlinedTextField(
@@ -110,7 +112,9 @@ fun SignInScreen(
                 placeholder = { Text("Email") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 isError = emailError != null,
-                supportingText = { emailError?.let { Text(it) } }
+                supportingText = emailError?.let {
+                    { Text(it) }
+                }
             )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
@@ -127,7 +131,9 @@ fun SignInScreen(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 isError = passwordError != null,
-                supportingText = { passwordError?.let { Text(it) } },
+                supportingText = passwordError?.let {
+                    { Text(it) }
+                },
                 trailingIcon = {
                     val painter = if (passwordVisible)
                         painterResource(id = R.drawable.ic_visibility_24px)
@@ -141,22 +147,16 @@ fun SignInScreen(
                 }
             )
             if (signInError != null) {
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = signInError!!,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
                 )
             }
-            TextButton(
-                shape = MaterialTheme.shapes.extraSmall,
-                onClick = { onForgotPasswordClick() }
-            ) {
-                Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             val buttonDisabled = loading || email.isBlank() || password.isBlank()
             Button(
                 modifier = Modifier
@@ -182,7 +182,16 @@ fun SignInScreen(
                                     Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                signInError = "Email or password is incorrect."
+                                signInError = when ((task.exception as? FirebaseAuthException)?.errorCode) {
+                                    "ERROR_INTERNAL_ERROR",
+                                    "ERROR_NETWORK_REQUEST_FAILED",
+                                    "ERROR_TOO_MANY_REQUESTS" ->
+                                        "Sign in is temporarily unavailable. Please try again."
+
+                                    "ERROR_USER_DISABLED" -> "This account has been disabled."
+
+                                    else -> "Email or password is incorrect."
+                                }
                             }
                         }
                 }
@@ -215,6 +224,13 @@ fun SignInScreen(
                 Text(
                     text = "Don't have a profile? Register Now"
                 )
+            }
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraSmall,
+                onClick = { onForgotPasswordClick() }
+            ) {
+                Text("Forgot Password?", style = MaterialTheme.typography.labelLarge)
             }
         }
     }

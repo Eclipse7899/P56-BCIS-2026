@@ -15,7 +15,6 @@ class SigningManager {
     @Inject
     constructor(@ApplicationContext context: Context) {
         this.context = context
-        setupCrypto()
     }
 
     private val publicKey: PublicKey by lazy {
