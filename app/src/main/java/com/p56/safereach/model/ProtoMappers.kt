@@ -4,6 +4,7 @@ import com.google.protobuf.ByteString
 import com.p56.safereach.proto.AlertBatchDto
 import com.p56.safereach.proto.AlertDto
 import com.p56.safereach.proto.SignedMessageDto
+import kotlin.math.roundToInt
 
 fun AlertDto.toDomain(): Alert = Alert(
     id = id,
@@ -34,9 +35,13 @@ fun Alert.toDto(): AlertDto = AlertDto.newBuilder()
     .setTimestamp(timestamp)
     .setTitle(title)
     .setDescription(description)
+    .setLatitudeE5((latitude * 1E5).roundToInt())
+    .setLongitudeE5((longitude * 1E5).roundToInt())
+    .setRadiusM(radius)
     .setTypeValue(type.value)
     .setSeverityValue(severity.value)
     .setExpiresInS(getExpiresInSeconds(expiresAt, timestamp))
+    .setInvalidated(invalidated)
     .build()
 
 fun SignedMessageDto.toDomain(receivedFrom: String, receivedAt: Long): SignedMessage =

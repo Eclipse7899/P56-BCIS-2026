@@ -25,4 +25,3 @@ val BleAdvertisingFail.isRetryable: Boolean
 
         else -> true
     }
-

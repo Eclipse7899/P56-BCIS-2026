@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +40,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -67,9 +69,13 @@ import com.p56.safereach.model.Severity
 import com.p56.safereach.ui.alert.AlertCard
 import com.p56.safereach.ui.theme.SafeReachTheme
 import com.p56.safereach.ui.theme.StatusError
+import com.p56.safereach.ui.theme.StatusErrorDark
 import com.p56.safereach.ui.theme.StatusInfo
+import com.p56.safereach.ui.theme.StatusInfoDark
 import com.p56.safereach.ui.theme.StatusNeutral
+import com.p56.safereach.ui.theme.StatusNeutralDark
 import com.p56.safereach.ui.theme.StatusWarning
+import com.p56.safereach.ui.theme.StatusWarningDark
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityHigh
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityLow
 import com.p56.safereach.ui.theme.alertShapeBorderColorSeverityMedium
@@ -197,14 +203,15 @@ fun HomeScreen(
             }
 
             val calloutAlert = selectedAlert
+            val colorScheme = MaterialTheme.colorScheme
             val localDensity = LocalDensity.current
-            MapEffect(calloutAlert?.id) { mapView ->
+            MapEffect(calloutAlert?.id, colorScheme) { mapView ->
                 val alert = calloutAlert ?: return@MapEffect
                 val point = Point.fromLngLat(
                     alert.longitude,
                     alert.latitude
                 )
-                val calloutView = createAlertCalloutView(context, alert)
+                val calloutView = createAlertCalloutView(context, alert, colorScheme)
                 mapView.addView(calloutView)
                 try {
                     while (isActive) {
@@ -229,9 +236,15 @@ fun HomeScreen(
 }
 
 
-private fun createAlertCalloutView(context: Context, alert: Alert): View {
+private fun createAlertCalloutView(
+    context: Context,
+    alert: Alert,
+    colorScheme: ColorScheme,
+): View {
     val density = context.resources.displayMetrics.density
     fun dp(value: Int) = (value * density).roundToInt()
+    val isDark = colorScheme.surface.luminance() < 0.5f
+    val severityColor = severityArgb(alert.severity, isDark)
 
     val container = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -242,22 +255,22 @@ private fun createAlertCalloutView(context: Context, alert: Alert): View {
         setPadding(dp(14), dp(12), dp(14), dp(12))
         background = GradientDrawable().apply {
             cornerRadius = dp(14).toFloat()
-            setColor(0xFFFFFFFF.toInt())
-            setStroke(dp(2), severityArgb(alert.severity))
+            setColor(colorScheme.surfaceContainerHigh.toArgb())
+            setStroke(dp(2), severityColor)
         }
         elevation = dp(6).toFloat()
     }
 
     container.addView(TextView(context).apply {
         text = "${alert.severity.displayName.uppercase()} SEVERITY"
-        setTextColor(severityArgb(alert.severity))
+        setTextColor(severityColor)
         textSize = 11f
         setTypeface(typeface, Typeface.BOLD)
     })
 
     container.addView(TextView(context).apply {
         text = alert.title.ifBlank { "${alert.type.displayName} alert" }
-        setTextColor(0xFF1B1B1B.toInt())
+        setTextColor(colorScheme.onSurface.toArgb())
         textSize = 16f
         setTypeface(typeface, Typeface.BOLD)
         setPadding(0, dp(6), 0, 0)
@@ -266,7 +279,7 @@ private fun createAlertCalloutView(context: Context, alert: Alert): View {
     if (alert.description.isNotBlank()) {
         container.addView(TextView(context).apply {
             text = alert.description
-            setTextColor(0xFF4A4A4A.toInt())
+            setTextColor(colorScheme.onSurfaceVariant.toArgb())
             textSize = 13f
             maxLines = 4
             ellipsize = TextUtils.TruncateAt.END
@@ -276,7 +289,7 @@ private fun createAlertCalloutView(context: Context, alert: Alert): View {
 
     container.addView(TextView(context).apply {
         text = "Type: ${alert.type.displayName}"
-        setTextColor(0xFF6B6B6B.toInt())
+        setTextColor(colorScheme.onSurfaceVariant.toArgb())
         textSize = 12f
         setPadding(0, dp(8), 0, 0)
     })
@@ -284,11 +297,11 @@ private fun createAlertCalloutView(context: Context, alert: Alert): View {
     return container
 }
 
-private fun severityArgb(severity: Severity): Int = when (severity) {
-    Severity.LOW -> StatusInfo
-    Severity.MEDIUM -> StatusWarning
-    Severity.HIGH -> StatusError
-    Severity.UNKNOWN -> StatusNeutral
+private fun severityArgb(severity: Severity, isDark: Boolean): Int = when (severity) {
+    Severity.LOW -> if (isDark) StatusInfoDark else StatusInfo
+    Severity.MEDIUM -> if (isDark) StatusWarningDark else StatusWarning
+    Severity.HIGH -> if (isDark) StatusErrorDark else StatusError
+    Severity.UNKNOWN -> if (isDark) StatusNeutralDark else StatusNeutral
 }.toArgb()
 
 @Composable

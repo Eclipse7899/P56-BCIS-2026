@@ -19,6 +19,12 @@ val StatusWarning = Color(0xFFF57C00)
 val StatusInfo = Color(0xFF1976D2)
 val StatusNeutral = Color(0xFF757575)
 
+// Lighter variants for better contrast on dark surfaces
+val StatusErrorDark = Color(0xFFEF9A9A)
+val StatusWarningDark = Color(0xFFFFB74D)
+val StatusInfoDark = Color(0xFF90CAF9)
+val StatusNeutralDark = Color(0xFFBDBDBD)
+
 val alertShapeFillColorSeverityLow = Color(0x81FFE600)
 val alertShapeFillColorSeverityMedium = Color(0x77F57C00)
 val alertShapeFillColorSeverityHigh = Color(0x72C62828)
