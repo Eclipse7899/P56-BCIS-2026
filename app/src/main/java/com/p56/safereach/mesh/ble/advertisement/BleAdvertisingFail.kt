@@ -25,19 +25,3 @@ val BleAdvertisingFail.isRetryable: Boolean
 
         else -> true
     }
-
-/**
- * Whether the failure is expected to be transient. Permission, size, capability, and
- * already-started failures are not retryable; other failures (including timeouts and
- * unknown platform codes) are retried with backoff.
- */
-val BleAdvertisingFail.isRetryable: Boolean
-    get() = when (this) {
-        BleAdvertisingFail.MissingPermissions,
-        BleAdvertisingFail.DataTooLarge,
-        BleAdvertisingFail.FeatureUnsupported,
-        BleAdvertisingFail.AlreadyStarted -> false
-
-        else -> true
-    }
-
